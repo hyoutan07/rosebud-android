@@ -1,13 +1,13 @@
 # Android開発環境
 
-更新日：2026-10-19。状態：**完了（このMacの環境導入、デバッグAPK生成、Android Lint）**。スマホは未接続で、実機起動は未確認。
+更新日：2026-10-19。状態：**完了（このMacの環境導入、デバッグAPK生成、Android Lint、CPH2199へのUSB導入・起動確認）**。音声取得機能は未実装。
 
 ## 対象と範囲
 
 - 作業リポジトリ：`/Users/hyuta/Desktop/hyuta/遊び/bluetooth/rosebud-android`
 - origin：`https://github.com/hyoutan07/rosebud-android.git`、開始時のブランチはmain。
 - Mac：macOS 26.2（25C56）、Apple Silicon／arm64。作業開始時に空き約132 GiB。
-- 対象実機：ユーザー申告のCPH2199、Android 12／ColorOS V12、RAM 6 GB。
+- 対象実機：CPH2199、Android 12／API 31、ビルドCPH2199_11_C.42をadbで確認。ColorOS V12、RAM 6 GBはユーザー申告。
 - この作業は開発環境と起動確認用アプリまで。親のdocs、既存rosebud-app、Intifaceの設定は変更しない。
 
 ## 導入前の調査
@@ -106,6 +106,8 @@ adb -d shell am start -W -n jp.hyoutan.rosebud/.MainActivity
 
 複数台の場合は `-d` の代わりに `-s <adb devicesで表示された対象の番号>` を付け、対象を選ぶ。端末番号は公開文書やGitへ記録しない。
 
+2026-10-19、ユーザーがビルド番号を7回タップして開発者向けオプションを有効にし、USBデバッグを許可した後、上記コマンドで導入・起動に成功した。端末上に追加のインストール確認は出ず、ユーザーがアプリの画面表示を確認した。実際の設定画面全体をこちらで見たわけではないため、ColorOSの全メニュー名・配置を確認済みとはしない。
+
 ## 困ったとき
 
 | 症状 | 確認・対処 |
@@ -133,7 +135,10 @@ adb -d shell am start -W -n jp.hyoutan.rosebud/.MainActivity
 | APKメタデータ | `jp.hyoutan.rosebud`／0.1.0／versionCode 1、minSdk 31、targetSdk 36、起動Activityあり |
 | APK署名 | Build-Toolsの `apksigner verify --verbose` が成功、v2署名あり |
 | 要求権限 | APKに追加のuses-permissionなし |
-| `adb devices -l` | 一覧が空。USB導入・起動コマンドは未実行 |
+| `adb devices -l` | CPH2199がUSB接続で `device` と表示 |
+| `adb -d install -r .../app-debug.apk` | `Success`、インストール成功 |
+| `adb -d shell am start -W -n jp.hyoutan.rosebud/.MainActivity` | `Status: ok`、対象Activityのコールド起動成功 |
+| 実機での稼働・表示 | 対象アプリのプロセス稼働をadbで確認し、ユーザーがスマホの画面表示を確認 |
 | Git除外 | `local.properties`、`.gradle/`、`.kotlin/`、`app/build/` が除外されることを確認 |
 
 APKの絶対パス：
@@ -148,6 +153,6 @@ APKの絶対パス：
 
 初回ビルドではSDK XMLの版4に対してAGP内の解析が版3までという警告も出たが、処理は継続して成功した。最終の再実行では出ていない。上記Lint 1件とは別のビルド環境の案内として記録する。
 
-**未確認**：Studio GUIの初回ウィザード・同期・Run、実機の起動、ColorOSのUSB導入手順と画面表示。内部音声の取得、Chrome／Brave、有線聴取、画面オフ中の継続は、機能未実装のため未検証。ビルド成功を音声取得の成立とは扱わない。
+**未確認**：Studio GUIの初回ウィザード・同期・Run、実機での長時間稼働や各種画面条件。内部音声の取得、Chrome／Brave、有線聴取、画面オフ中の継続は、機能未実装のため未検証。起動成功を音声取得の成立とは扱わない。
 
-次はREADMEの手順でCPH2199をUSB接続し、起動確認用画面を確かめる。その後の機能実装はメインセッションで固める音声取得仕様を引き継ぐ。
+次はメインセッションで固める音声取得仕様を引き継ぎ、今回確認できたUSB接続・APK導入の手順で、機能を追加したアプリを実機検証する。
