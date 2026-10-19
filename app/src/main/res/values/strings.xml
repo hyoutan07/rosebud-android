@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rosebud Probe</string>
+    <string name="setup_status">起動確認用アプリ</string>
+    <string name="setup_description">開発環境を確認するための最小アプリです。\n音声取得は、次の実装で追加します。</string>
+    <string name="app_version">バージョン %1$s（ビルド %2$d）</string>
+</resources>
