@@ -35,6 +35,8 @@ class CaptureService : Service() {
     private var worker: Thread? = null
     private var ownedSession = ""
     private var finished = false
+    private lateinit var controller: MotionController
+    private var controllerClosed = false
     @Volatile private var stopReason: String? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var receiverRegistered = false
@@ -49,22 +51,37 @@ class CaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        (application as ProbeApplication).serviceActive = true
         repo = ProbeRepository.get(this)
+        controller = MotionController(now = { SystemClock.elapsedRealtime() }, event = repo::controlEvent,
+            publish = { (application as ProbeApplication).control = it },
+            fatal = { reason -> main.post { requestStop("control_failure: $reason") } },
+            closed = { main.post { controllerClosed = true; finish() } })
+        val settings = getSharedPreferences("control_settings", MODE_PRIVATE)
+        controller.configure(settings.getBoolean("follow", false), settings.getInt("vibrate_cap", 30), settings.getInt("flicker_cap", 30))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            if (ownedSession.isEmpty()) { stopSelf(); return START_NOT_STICKY }
-            requestStop(intent.getStringExtra("reason") ?: "notification_stop")
-            if (worker == null) finish()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> { requestStop(intent.getStringExtra("reason") ?: "notification_stop"); return START_NOT_STICKY }
+            ACTION_CONNECT -> {
+                foreground(false)
+                controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
+                repo.controlEvent("environment", mapOf("environment" to repo.environment()))
+                controller.connect(intent.getStringExtra("url") ?: "ws://192.168.40.78:12345")
+                return START_NOT_STICKY
+            }
+            ACTION_SCAN -> { controller.scan(); return START_NOT_STICKY }
+            ACTION_SELECT -> { controller.select(intent.getIntExtra("device", -1)); return START_NOT_STICKY }
+            ACTION_SETTINGS -> {
+                controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
+                return START_NOT_STICKY
+            }
+            ACTION_MOTION_START -> { controller.start(SystemClock.elapsedRealtime()); return START_NOT_STICKY }
+            ACTION_MOTION_STOP -> { controller.stopMotion("motion_ui_stop"); return START_NOT_STICKY }
+            ACTION_START -> if (worker != null || projection != null) return START_NOT_STICKY
+            else -> { requestStop("invalid_service_action"); return START_NOT_STICKY }
         }
-        if (intent?.action != ACTION_START || worker != null || projection != null) {
-            if (worker == null) stopSelf()
-            return START_NOT_STICKY
-        }
-        finished = false
-        stopReason = null
         ownedSession = repo.snapshot.session
         try {
             @Suppress("DEPRECATION")
@@ -72,11 +89,7 @@ class CaptureService : Service() {
                 else intent.getParcelableExtra("projection")
             check(data != null) { "missing_projection_token" }
             check(checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) { "record_audio_permission_missing" }
-            getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL, "内部音声の検証", NotificationManager.IMPORTANCE_LOW),
-            )
-            // Consent was obtained in the visible Activity. Foreground first, then getMediaProjection.
-            startForeground(NOTIFICATION, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+            foreground(true)
             projection = getSystemService(MediaProjectionManager::class.java).getMediaProjection(android.app.Activity.RESULT_OK, data)
             checkNotNull(projection).registerCallback(callback, main)
             val filter = IntentFilter().apply {
@@ -93,8 +106,7 @@ class CaptureService : Service() {
             worker = Thread({ capture(token) }, "playback-probe").also { it.start() }
         } catch (e: Exception) {
             repo.event("start_error", mapOf("error" to "${e.javaClass.simpleName}: ${e.message}"))
-            stopReason = "start_error: ${e.javaClass.simpleName}: ${e.message}"
-            finish()
+            requestStop("start_error: ${e.javaClass.simpleName}: ${e.message}")
         }
         return START_NOT_STICKY // Never reuse a permission token or restart capture after process death.
     }
@@ -149,6 +161,7 @@ class CaptureService : Service() {
             recorder.startRecording()
             check(recorder.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "audio_record_not_recording" }
             repo.update(repo.snapshot.copy(phase = "running"), save = true)
+            controller.audioStarted()
             repo.event("audio_record_started", mapOf("buffer_frames" to recorder.bufferSizeInFrames))
             val pcm = ShortArray(9600) // At most 100 ms of interleaved stereo; never retained or written.
             while (running.get()) {
@@ -162,6 +175,7 @@ class CaptureService : Service() {
                     lastRead = now
                     val oldSilence = stats.silenceRunSamples
                     stats.add(pcm, count)
+                    controller.audio(stats.rms, now)
                     if (stats.silenceRunSamples > 0) {
                         if (silenceBegan == null) silenceBegan = now - stats.durationMs(count.toLong())
                         if (!silenceReported && stats.durationMs(stats.silenceRunSamples) >= 1000) {
@@ -183,6 +197,7 @@ class CaptureService : Service() {
                     if (now - lastRead >= 2000 && !gapReported) {
                         gapReported = true
                         repo.event("no_samples_for_2s", mapOf("gap_ms" to (now - lastRead)))
+                        requestStop("no_samples_for_2s")
                     }
                     Thread.sleep(20)
                 }
@@ -203,18 +218,28 @@ class CaptureService : Service() {
                 "start_elapsed_ms" to checkNotNull(silenceBegan), "audio_silence_ms" to stats.durationMs(stats.silenceRunSamples),
             ))
             checkpoint(SystemClock.elapsedRealtime(), final = true)
-            main.post { finish() }
+            main.post { worker = null; finish() }
         }
     }
 
     @Synchronized private fun requestStop(reason: String) {
-        if (ownedSession.isEmpty() || finished) { running.set(false); return }
+        if (finished) return
         if (stopReason == null) {
             stopReason = reason
             repo.event("stop_requested", mapOf("reason" to reason))
-            repo.update(repo.snapshot.copy(phase = "stopping"))
+            if (repo.snapshot.busy) repo.update(repo.snapshot.copy(phase = "stopping"))
         }
         running.set(false)
+        controller.shutdown(reason)
+        finish()
+    }
+
+    private fun foreground(capture: Boolean) {
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(CHANNEL, "音声・機器制御", NotificationManager.IMPORTANCE_LOW))
+        val types = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
+            (if (capture) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION else 0)
+        startForeground(NOTIFICATION, notification(), types)
     }
 
     @SuppressLint("WakelockTimeout")
@@ -239,12 +264,12 @@ class CaptureService : Service() {
     }
 
     private fun finish() {
-        if (finished) return
+        if (finished || !controllerClosed || worker != null) return
         finished = true
         running.set(false)
         cleanup()
         worker = null
-        if (repo.snapshot.busy && repo.snapshot.session == ownedSession) repo.end(stopReason ?: "service_finished")
+        if (repo.snapshot.busy) repo.end(stopReason ?: "service_finished")
         stopSelf()
     }
 
@@ -254,6 +279,7 @@ class CaptureService : Service() {
             cleanup()
             if (worker == null && repo.snapshot.busy && repo.snapshot.session == ownedSession) repo.end(stopReason ?: "service_destroyed")
         }
+        (application as ProbeApplication).serviceActive = false
         super.onDestroy()
     }
 
@@ -262,7 +288,7 @@ class CaptureService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, CaptureService::class.java).setAction(ACTION_STOP)
             .putExtra("reason", "notification_stop"), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_capture)
-            .setContentTitle("内部音声を検証中").setContentText("タップで音量とログを確認できます")
+            .setContentTitle("Rosebud 音声・機器制御").setContentText("停止で機器・音声取得・接続を終了します")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .addAction(Notification.Action.Builder(null, "停止", stop).build()).build()
     }
@@ -270,6 +296,12 @@ class CaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_CONNECT = "jp.hyoutan.rosebud.CONNECT"
+        const val ACTION_SCAN = "jp.hyoutan.rosebud.SCAN"
+        const val ACTION_SELECT = "jp.hyoutan.rosebud.SELECT"
+        const val ACTION_SETTINGS = "jp.hyoutan.rosebud.SETTINGS"
+        const val ACTION_MOTION_START = "jp.hyoutan.rosebud.MOTION_START"
+        const val ACTION_MOTION_STOP = "jp.hyoutan.rosebud.MOTION_STOP"
         const val ACTION_START = "jp.hyoutan.rosebud.START"
         const val ACTION_STOP = "jp.hyoutan.rosebud.STOP"
         private const val CHANNEL = "playback-probe"

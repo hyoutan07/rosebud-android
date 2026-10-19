@@ -6,27 +6,41 @@
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:accessibilityHeading="true"
             android:text="@string/app_name" android:textAppearance="?android:attr/textAppearanceLarge" android:textStyle="bold" />
         <TextView android:id="@+id/app_version" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/description" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/permission_help" />
-        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="@string/ready" android:textStyle="bold" android:accessibilityLiveRegion="polite" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/control_help" />
+        <EditText android:id="@+id/server_url" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="textUri|textNoSuggestions" android:imeOptions="actionDone|flagForceAscii"
+            android:singleLine="true" android:hint="@string/server_url_hint" android:importantForAutofill="no" />
+        <Button android:id="@+id/connect" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/connect" />
+        <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:accessibilityLiveRegion="polite" />
+        <Button android:id="@+id/scan" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/scan" />
+        <Spinner android:id="@+id/devices" android:layout_width="match_parent" android:layout_height="48dp" android:contentDescription="@string/devices" />
+        <Button android:id="@+id/select_device" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/select_device" />
+        <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/start" />
+        <Button android:id="@+id/motion_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/motion_start" />
+        <Button android:id="@+id/motion_stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/motion_stop" />
+        <Button android:id="@+id/all_stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/all_stop" />
+        <CheckBox android:id="@+id/audio_follow" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/audio_follow" />
+        <TextView android:id="@+id/vibrate_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <SeekBar android:id="@+id/vibrate_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/vibrate_cap" />
+        <TextView android:id="@+id/flicker_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <SeekBar android:id="@+id/flicker_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/flicker_cap" />
+        <TextView android:id="@+id/control_values" android:layout_width="match_parent" android:layout_height="wrap_content" android:textIsSelectable="true" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/permission_help" />
+        <Button android:id="@+id/stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/stop" />
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ready" android:accessibilityLiveRegion="polite" />
         <ProgressBar android:id="@+id/meter" style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent" android:layout_height="24dp" android:max="1200" android:contentDescription="@string/meter_hint" />
         <TextView android:id="@+id/levels" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <TextView android:id="@+id/metrics" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/meter_hint" android:textSize="12sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
-            android:text="@string/browser_label" android:labelFor="@+id/browser" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/description" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/browser_label" android:labelFor="@+id/browser" />
         <Spinner android:id="@id/browser" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/browsers" />
         <EditText android:id="@+id/note" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
             android:hint="@string/condition_hint" android:inputType="textCapSentences|textMultiLine" android:maxLength="240" android:maxLines="3" android:importantForAutofill="no" />
-        <CheckBox android:id="@+id/wake_lock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/wake_lock_option" />
+        <CheckBox android:id="@+id/wake_lock" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/wake_lock_option" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/wake_lock_help" android:textSize="12sp" />
-        <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/start" />
-        <Button android:id="@+id/stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/stop" />
         <Button android:id="@+id/mark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/mark" />
         <Button android:id="@+id/share" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/share" />
         <Button android:id="@+id/settings" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/settings" />
+        <TextView android:id="@+id/metrics" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:id="@+id/session" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textIsSelectable="true" />
     </LinearLayout>
 </ScrollView>

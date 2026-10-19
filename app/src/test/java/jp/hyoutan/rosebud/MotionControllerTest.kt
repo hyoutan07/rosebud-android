@@ -1,0 +1,238 @@
+package jp.hyoutan.rosebud
+
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Test
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+
+class MotionControllerTest {
+    private val clock = AtomicLong(10000)
+    private val state = AtomicReference(ControlSnapshot())
+    private val requests = CopyOnWriteArrayList<Pair<String, JSONObject>>()
+    private val events = CopyOnWriteArrayList<String>()
+    private val faults = CopyOnWriteArrayList<String>()
+    private val server = MockWebServer()
+    private lateinit var control: MotionController
+    private lateinit var remote: WebSocket
+    @Volatile private var scalarAck = true
+    @Volatile private var stopAck = true
+    private var pingMs = 0L
+    private var compatible = true
+    private var dual = false
+    private val holdScalars = java.util.concurrent.CopyOnWriteArraySet<Int>()
+    private val rejectStops = java.util.concurrent.CopyOnWriteArraySet<Int>()
+    private val holdStops = java.util.concurrent.CopyOnWriteArraySet<Int>()
+    @Volatile private var ended = false
+
+    private fun setup() {
+        server.enqueue(MockResponse().withWebSocketUpgrade(object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) { remote = webSocket }
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                val msg = JSONArray(text).getJSONObject(0)
+                val type = msg.keys().next()
+                val body = msg.getJSONObject(type)
+                requests.add(type to body)
+                when (type) {
+                    "RequestServerInfo" -> reply("ServerInfo", JSONObject().put("Id", body.getInt("Id")).put("MessageVersion", 3).put("MaxPingTime", pingMs))
+                    "RequestDeviceList" -> reply("DeviceList", JSONObject().put("Id", body.getInt("Id")).put("Devices", JSONArray().put(device()).apply { if (dual) put(device(8)) }))
+                    "ScalarCmd" -> if (scalarAck && body.getInt("DeviceIndex") !in holdScalars) ok(body)
+                    "StopDeviceCmd" -> if (body.getInt("DeviceIndex") in rejectStops) {
+                        reply("Error", JSONObject().put("Id", body.getInt("Id")).put("ErrorCode", 4).put("ErrorMessage", "DeviceNotAvailable"))
+                    } else if (stopAck && body.getInt("DeviceIndex") !in holdStops) ok(body)
+                    else -> ok(body)
+                }
+            }
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { webSocket.close(code, reason) }
+        }))
+        server.start()
+        control = MotionController(now = clock::get, event = { type, _ -> events.add(type) }, publish = state::set,
+            fatal = { faults.add(it); control.shutdown(it) }, closed = { ended = true })
+        control.connect(server.url("/").toString().replace("http://", "ws://"))
+        await { state.get().connection == "接続済み" }
+    }
+    private fun device(index: Int = 7) = JSONObject().put("DeviceIndex", index).put("DeviceName", "test Rosebud")
+        .put("DeviceMessageTimingGap", 150).put("DeviceMessages", JSONObject().put("StopDeviceCmd", JSONObject()).put("ScalarCmd", JSONArray()
+            .put(JSONObject().put("ActuatorType", "Vibrate").put("FeatureDescriptor", "Vibration").put("StepCount", 255))
+            .put(JSONObject().put("ActuatorType", if (compatible) "Rotate" else "Constrict").put("FeatureDescriptor", "Flicker").put("StepCount", 255))
+            .put(JSONObject().put("ActuatorType", "Constrict").put("FeatureDescriptor", "Suction").put("StepCount", 5))))
+    private fun reply(type: String, body: JSONObject) { remote.send(JSONArray().put(JSONObject().put(type, body)).toString()) }
+    private fun ok(body: JSONObject) = reply("Ok", JSONObject().put("Id", body.getInt("Id")))
+    private fun await(condition: () -> Boolean) {
+        val end = System.nanoTime() + 4_000_000_000L
+        while (!condition() && System.nanoTime() < end) Thread.sleep(10)
+        assertTrue("state=${state.get()} faults=$faults requests=${requests.map { it.first }}", condition())
+    }
+    private fun selectAndStart() {
+        control.select(7); await { state.get().selected == listOf(7) }
+        control.start(123); await { state.get().active && requests.any { it.first == "ScalarCmd" } }
+    }
+    private fun advance(ms: Long) { clock.addAndGet(ms); Thread.sleep(70) }
+    @After fun cleanup() {
+        if (::control.isInitialized) {
+            stopAck = true; holdStops.clear(); holdScalars.clear(); rejectStops.clear()
+            control.shutdown("test_cleanup")
+            await { ended || state.get().stopping }
+            advance(10000)
+            await { ended }
+        }
+        server.shutdown()
+    }
+
+    @Test fun connectAndSelectDoNotMoveAndCommandsContainOnlyTwoValidatedFeatures() {
+        setup()
+        assertFalse(requests.any { it.first == "ScalarCmd" })
+        selectAndStart()
+        val s = requests.first { it.first == "ScalarCmd" }.second
+        assertEquals(7, s.getInt("DeviceIndex"))
+        val scalars = s.getJSONArray("Scalars")
+        assertEquals(2, scalars.length())
+        assertEquals("Vibrate", scalars.getJSONObject(0).getString("ActuatorType"))
+        assertEquals("Rotate", scalars.getJSONObject(1).getString("ActuatorType"))
+        assertEquals(1, scalars.getJSONObject(1).getInt("Index"))
+        assertTrue(scalars.getJSONObject(0).getDouble("Scalar") <= 0.3)
+        val count = requests.count { it.first == "ScalarCmd" }
+        advance(100) // Recommended 150 ms gap: no send yet, even if waveform changed.
+        assertEquals(count, requests.count { it.first == "ScalarCmd" })
+    }
+    @Test fun pendingOutputDoesNotQueueAndLateAckCannotReviveAfterStop() {
+        scalarAck = false; setup(); selectAndStart()
+        repeat(4) { advance(200) }
+        assertEquals(1, requests.count { it.first == "ScalarCmd" })
+        control.stopMotion("ui_stop")
+        await { state.get().stopStatus == "停止応答OK（全対象）" }
+        ok(requests.first { it.first == "ScalarCmd" }.second) // Deliberately out of order.
+        advance(500)
+        assertFalse(state.get().active)
+        assertEquals(Output(), state.get().acknowledged)
+        assertEquals(1, requests.count { it.first == "ScalarCmd" })
+        scalarAck = true
+        control.start(456)
+        await { requests.count { it.first == "ScalarCmd" } == 2 }
+        assertTrue(state.get().active)
+    }
+    @Test fun silentSamplesKeepTimeAndPositiveVibrationButNotOriginalFlickerRest() {
+        setup(); control.audioStarted(); control.audio(0.0, clock.get())
+        control.configure(true, 30, 30); await { state.get().follow && state.get().audioReady }
+        selectAndStart()
+        repeat(11) { control.audio(0.0, clock.get() + 200); advance(200) }
+        val s = state.get()
+        assertTrue(s.active && s.elapsedMs >= 2200)
+        assertEquals(0.55, s.multiplier, 0.0)
+        assertTrue(s.plannedRest)
+        assertEquals(0.0, s.sent.flicker, 0.0)
+        assertTrue(s.sent.vibrate > 0)
+        assertTrue(faults.isEmpty())
+    }
+    @Test fun missingSamplesAreFaultEvenWithFollowOff() {
+        setup(); control.audioStarted(); control.audio(0.0, clock.get()); selectAndStart()
+        advance(2100)
+        await { faults.any { it == "audio_samples_stale" } && ended }
+        assertFalse(state.get().active)
+        assertTrue(requests.any { it.first == "StopDeviceCmd" })
+    }
+    @Test fun scalarResponseTimeoutDisarmsAndStopIsAttempted() {
+        scalarAck = false; setup(); selectAndStart()
+        advance(1600)
+        await { faults.any { it.contains("response_timeout: ScalarCmd") } && ended }
+        assertFalse(state.get().active)
+        assertTrue(requests.any { it.first == "StopDeviceCmd" })
+    }
+    @Test fun pingDeadlineAndZeroAreDifferent() {
+        pingMs = 1200; setup(); advance(500)
+        await { requests.any { it.first == "Ping" } }
+        assertEquals(3, requests.first { it.first == "RequestServerInfo" }.second.getInt("MessageVersion"))
+    }
+    @Test fun incompatibleFeatureIsVisibleButNeverDriven() {
+        compatible = false; setup()
+        assertFalse(state.get().devices.single().compatible)
+        control.start(123); advance(100)
+        assertFalse(state.get().active)
+        assertFalse(requests.any { it.first == "ScalarCmd" })
+    }
+    @Test fun deviceRemovedStopsWithoutAutomaticResume() {
+        setup(); selectAndStart()
+        reply("DeviceRemoved", JSONObject().put("Id", 0).put("DeviceIndex", 7))
+        await { faults.contains("selected_device_removed") && ended }
+        val count = requests.count { it.first == "ScalarCmd" }
+        advance(1000)
+        assertEquals(count, requests.count { it.first == "ScalarCmd" })
+        assertFalse(state.get().active)
+    }
+    @Test fun stopWithoutResponseClosesAndReportsUnconfirmed() {
+        stopAck = false; setup(); selectAndStart()
+        control.shutdown("notification_stop")
+        await { state.get().stopping }
+        advance(3100)
+        await { ended }
+        assertEquals("停止応答タイムアウト", state.get().stopStatus)
+        assertFalse(state.get().active)
+    }
+    @Test fun serverDisconnectDisarmsAndDoesNotReconnect() {
+        setup(); selectAndStart()
+        remote.close(1001, "simulated_disconnect")
+        await { ended }
+        assertFalse(state.get().active)
+        assertTrue(faults.any { it.startsWith("server_closing") || it.startsWith("server_closed") })
+        assertEquals(1, server.requestCount)
+    }
+    @Test fun bothDevicesReceiveSameFrameAndStopWaitsForBothAcknowledgements() {
+        dual = true; holdStops.add(8); setup()
+        control.select(-1); await { state.get().selected == listOf(7, 8) }
+        assertFalse(requests.any { it.first == "ScalarCmd" })
+        control.start(123)
+        await { requests.count { it.first == "ScalarCmd" } == 2 }
+        val values = requests.filter { it.first == "ScalarCmd" }.map { it.second.getJSONArray("Scalars").toString() }
+        assertEquals(values[0], values[1])
+        control.stopMotion("both_ui_stop")
+        await { requests.count { it.first == "StopDeviceCmd" } == 2 && state.get().outputs[7]?.stop == "停止応答OK" }
+        assertTrue(state.get().stopping)
+        control.start(456); advance(200)
+        assertFalse(state.get().active)
+        ok(requests.first { it.first == "StopDeviceCmd" && it.second.getInt("DeviceIndex") == 8 }.second)
+        await { !state.get().stopping }
+        assertEquals("停止応答OK（全対象）", state.get().stopStatus)
+        assertTrue(state.get().outputs.values.all { it.acknowledged == Output() })
+        advance(500)
+        assertEquals(2, requests.count { it.first == "ScalarCmd" })
+    }
+    @Test fun delayedPeerHasOnlyOnePendingScalarWhileOtherPeerUsesLatestFrames() {
+        dual = true; holdScalars.add(7); setup()
+        control.select(-1); await { state.get().selected.size == 2 }
+        control.start(123); await { requests.count { it.first == "ScalarCmd" } == 2 }
+        repeat(5) { advance(200) }
+        assertEquals(1, requests.count { it.first == "ScalarCmd" && it.second.getInt("DeviceIndex") == 7 })
+        assertTrue(requests.count { it.first == "ScalarCmd" && it.second.getInt("DeviceIndex") == 8 } > 1)
+        control.shutdown("both_notification_stop")
+        await { ended }
+        assertEquals(setOf(7, 8), requests.filter { it.first == "StopDeviceCmd" }.map { it.second.getInt("DeviceIndex") }.toSet())
+        ok(requests.first { it.first == "ScalarCmd" }.second)
+        assertFalse(state.get().active)
+    }
+
+    @Test fun missingPeerStopErrorStillWaitsForConnectedPeerStopResponse() {
+        dual = true; rejectStops.add(7); holdStops.add(8); setup()
+        control.select(-1); await { state.get().selected.size == 2 }
+        control.start(123); await { requests.count { it.first == "ScalarCmd" } == 2 }
+        reply("DeviceRemoved", JSONObject().put("Id", 0).put("DeviceIndex", 7))
+        await { state.get().outputs[7]?.stop?.contains("停止未確認") == true && requests.count { it.first == "StopDeviceCmd" } == 2 }
+        assertFalse(ended)
+        assertTrue(state.get().stopping)
+        ok(requests.first { it.first == "StopDeviceCmd" && it.second.getInt("DeviceIndex") == 8 }.second)
+        await { ended }
+        assertEquals("停止応答OK", state.get().outputs[8]?.stop)
+        assertTrue(state.get().outputs[7]?.stop?.contains("DeviceNotAvailable") == true)
+        assertEquals("一部の停止未確認（7）", state.get().stopStatus)
+        assertFalse(events.contains("stop_acknowledged"))
+        assertTrue(events.contains("stop_incomplete"))
+    }
+
+}

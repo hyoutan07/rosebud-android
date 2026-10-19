@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Rosebud Probe</string>
+    <string name="app_name">Rosebud</string>
     <string name="app_version">バージョン %1$s（ビルド %2$d）</string>
     <string name="description">同じ端末の再生音を測ります。マイクの音・映像は取得せず、生音声は保存しません。</string>
     <string name="permission_help">「取得を開始」→ 録音の許可 → Android標準の共有許可を操作してください。録音権限は内部音声にも必要です。開始後は通知からも停止できます。</string>
@@ -10,7 +10,7 @@
     <string name="wake_lock_option">比較用：取得中にCPUのWake Lockを使う</string>
     <string name="wake_lock_help">初回はオフの標準設定で試します。オンでも画面オフ・省電力中の継続を保証しません。</string>
     <string name="start">取得を開始</string>
-    <string name="stop">取得を停止</string>
+    <string name="stop">取得を停止・機器も停止</string>
     <string name="share">今回／直近のログを共有</string>
     <string name="share_title">診断ログの共有先</string>
     <string name="mark">現在のメモをログに記録</string>
@@ -32,4 +32,19 @@
     <string name="record_denied">録音権限が拒否されました。再試行するか「アプリの権限・電池設定」から許可してください。</string>
     <string name="projection_denied">共有許可が取り消されました。「取得を開始」から再試行できます。</string>
     <string name="no_note">メモを入力してください</string>
+    <string name="control_help">既存Webの動作を止め、タブを閉じてください。接続・取得だけでは動きません。「対応する機器すべて」を選んで対象を決定し、「動作開始」で始めます。</string>
+    <string name="server_url_hint">MacのIP（例：192.168.11.10）</string>
+    <string name="connect">接続先を保存して接続</string>
+    <string name="scan">機器をスキャン</string>
+    <string name="devices">対象機器一覧</string>
+    <string name="select_device">選んだ対象を決定（すべて／1台）</string>
+    <string name="motion_start">動作開始（19分構成・最初から）</string>
+    <string name="motion_stop">動作だけ停止（音声取得は継続）</string>
+    <string name="all_stop">全停止（取得・接続も終了）</string>
+    <string name="audio_follow">音声追従 ON（比較はOFF）</string>
+    <string name="vibrate_cap">振動の出力上限</string>
+    <string name="flicker_cap">Flickerの出力上限</string>
+    <string name="cap_label">%1$s上限 %2$d%%（元の値へ掛ける割合）</string>
+    <string name="connection_detail">%1$s ／ 対象 %2$s\n%3$s</string>
+    <string name="control_detail">%1$s ／ 経過 %2$.1f秒\n追従 %3$s・包絡 %4$.2f・倍率 %5$.2f\n生成 V %6$.3f / F %7$.3f\n送信 V %8$.3f / F %9$.3f\n応答済 V %10$.3f / F %11$.3f\nFlickerの予定した抜き：%12$s\n停止：%13$s ／ 指令 %14$d回</string>
 </resources>

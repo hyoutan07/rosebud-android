@@ -127,7 +127,6 @@ internal class ProbeRepository(private val context: Context) {
     }
 
     @Synchronized fun export(): File {
-        check(snapshot.session.isNotEmpty()) { "先に取得を開始してください。" }
         val dir = File(root, snapshot.session)
         val exports = File(context.cacheDir, "exports").apply { mkdirs() }
         val out = File(exports, "probe-${UUID.randomUUID()}.txt")
@@ -143,9 +142,33 @@ internal class ProbeRepository(private val context: Context) {
                     part.bufferedReader().use { it.copyTo(writer) }
                 }
             }
+            listOf("control.2.jsonl", "control.1.jsonl", "control.jsonl").forEach { name ->
+                val part = File(context.filesDir, name)
+                if (part.exists()) {
+                    writer.appendLine("\n--- $name ---")
+                    part.bufferedReader().use { it.copyTo(writer) }
+                }
+            }
         }
         exports.listFiles()?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
         return out
+    }
+
+    /** Connection diagnostics exist even before capture consent. Three bounded parts, never PCM. */
+    @Synchronized fun controlEvent(type: String, fields: Map<String, Any> = emptyMap()) = guarded {
+        val file = File(context.filesDir, "control.jsonl")
+        val row = JSONObject().apply {
+            put("utc", Instant.now().toString()); put("elapsed_realtime_ms", SystemClock.elapsedRealtime())
+            put("event", type); put("app_version", BuildConfig.VERSION_NAME)
+            fields.forEach { (key, value) -> put(key, value) }
+        }.toString() + "\n"
+        if (file.length() + row.toByteArray().size > 1024 * 1024) {
+            File(context.filesDir, "control.2.jsonl").delete()
+            File(context.filesDir, "control.1.jsonl").let { if (it.exists()) check(it.renameTo(File(context.filesDir, "control.2.jsonl"))) }
+            check(file.renameTo(File(context.filesDir, "control.1.jsonl")))
+        }
+        file.appendText(row)
+        (fields["state"] as? JSONObject)?.let { prefs.edit().putString("control_snapshot", it.toString()).apply() }
     }
 
     fun environment(): JSONObject {
