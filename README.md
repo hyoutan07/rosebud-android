@@ -6,7 +6,7 @@
 
 2026-10-19、CPH2199で **Brave＋有線の取得・再生／停止への追従と、Wake Lockなしの画面オフ約8分20秒**を確認しました（USB充電中）。ビルド・Lint・単体テスト6件も成功。Chrome、10分以上、非充電条件、共有先での読み取り、許可拒否・取り消しは未検証です。
 
-対象は **CPH2199／Android 12／ColorOS V12**。ビルド成功と取得成功は分けて扱います。最新の実機結果は [docs/verification.md](docs/verification.md)、実装・公式仕様の根拠は [docs/audio-probe.md](docs/audio-probe.md)、構築済みの環境は [docs/environment.md](docs/environment.md) を参照してください。
+対象は **CPH2199／Android 12／ColorOS V12**。ビルド成功と取得成功は分けて扱います。次の担当者は [引き継ぎ資料](docs/handoff.md) から読めます。最新の実機結果は [docs/verification.md](docs/verification.md)、実装・公式仕様の根拠は [docs/audio-probe.md](docs/audio-probe.md)、構築済みの環境は [docs/environment.md](docs/environment.md) を参照してください。
 
 ## まずスマホで使う
 
