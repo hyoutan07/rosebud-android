@@ -1,0 +1,1786 @@
+{
+  "date_jst": "2026-10-20",
+  "app_version": "0.3.2",
+  "version_code": 5,
+  "implementation_commit": "c211912",
+  "apk_sha256": "0b7704d1f6441bd91b2b7313b24dd41eac52945feab79f9c0352c9ab68714666",
+  "signer_certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "automated_tests": {
+    "passed": 25,
+    "failures": 0,
+    "web_reference_frames": 19231,
+    "seed": 65561,
+    "scenarios_sha256": "feb1c30bde6d663f0ff6f52f97a00751b7328ac048dfc24eaef7a8f46a45e1d1",
+    "page_sha256": "4681db8d86ac453196d86648bd9c80c48e649eb6f057cd00059ef71aee12dc1b",
+    "tolerance": 1e-12
+  },
+  "conditions": {
+    "model": "CPH2199",
+    "android": "12",
+    "api": 31,
+    "os_build": "CPH2199_11_C.42",
+    "brave": "1.97.56 (429705604)",
+    "browser_label": "Brave",
+    "condition_note": "",
+    "environment": {
+      "screen_interactive": true,
+      "power_save": true,
+      "device_idle": false,
+      "ignoring_battery_optimizations": false,
+      "battery_level": 60,
+      "plugged": 2,
+      "output_device_types": "1,2,3,18",
+      "media_volume": 6,
+      "media_volume_max": 16
+    }
+  },
+  "user_confirmed": {
+    "listening": "Brave＋有線イヤホン",
+    "two_devices_moving": true,
+    "playback_pause_then_resume": true,
+    "remaining_device_stopped_after_peer_power_off": true,
+    "source_page_and_player": "未記録"
+  },
+  "notification_run": {
+    "seed": 10946873,
+    "start": {
+      "utc": "2026-10-19T15:30:25.490886Z",
+      "elapsed_realtime_ms": 10946877,
+      "event": "motion_started",
+      "app_version": "0.3.2",
+      "state": {
+        "connection": "接続済み",
+        "server": "ws://192.168.11.10:12345",
+        "selected": [
+          2,
+          3
+        ],
+        "device_outputs": [
+          {
+            "device_index": 2,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "動作中"
+          },
+          {
+            "device_index": 3,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "動作中"
+          }
+        ],
+        "devices": [
+          "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+          "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+        ],
+        "active": true,
+        "stopping": false,
+        "audio_ready": true,
+        "follow": false,
+        "vibrate_cap_percent": 35,
+        "flicker_cap_percent": 34,
+        "elapsed_ms": 0,
+        "stage": "待機",
+        "raw_vibrate": 0,
+        "raw_flicker": 0,
+        "sent_vibrate": 0,
+        "sent_flicker": 0,
+        "ack_vibrate": 0,
+        "ack_flicker": 0,
+        "audio_dbfs": -120,
+        "envelope": 0,
+        "multiplier": 1,
+        "planned_flicker_rest": false,
+        "seed": 10946873,
+        "scalar_sends": 0,
+        "max_ack_ms": 4,
+        "max_tick_gap_ms": 0,
+        "stop_status": "動作中",
+        "error": "",
+        "max_ping_ms": 0
+      }
+    },
+    "end": {
+      "utc": "2026-10-19T15:31:45.646652Z",
+      "elapsed_realtime_ms": 11027031,
+      "event": "control_closed",
+      "app_version": "0.3.2",
+      "state": {
+        "connection": "未接続",
+        "server": "ws://192.168.11.10:12345",
+        "selected": [
+          2,
+          3
+        ],
+        "device_outputs": [
+          {
+            "device_index": 2,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "停止応答OK"
+          },
+          {
+            "device_index": 3,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "停止応答OK"
+          }
+        ],
+        "devices": [
+          "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+          "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+        ],
+        "active": false,
+        "stopping": false,
+        "audio_ready": false,
+        "follow": true,
+        "vibrate_cap_percent": 35,
+        "flicker_cap_percent": 34,
+        "elapsed_ms": 80055,
+        "stage": "01. 微かな触れ合い",
+        "raw_vibrate": 0,
+        "raw_flicker": 0,
+        "sent_vibrate": 0,
+        "sent_flicker": 0,
+        "ack_vibrate": 0,
+        "ack_flicker": 0,
+        "audio_dbfs": -51.114837407325396,
+        "envelope": 0.1761314826058198,
+        "multiplier": 0.629259167172619,
+        "planned_flicker_rest": true,
+        "seed": 10946873,
+        "scalar_sends": 910,
+        "max_ack_ms": 219,
+        "max_tick_gap_ms": 133,
+        "stop_status": "停止応答OK（全対象）",
+        "error": "",
+        "max_ping_ms": 0
+      }
+    },
+    "scalar_rows": 910,
+    "counts_by_device": {
+      "2": 457,
+      "3": 453
+    },
+    "mismatches": 0,
+    "positive_vibration": true,
+    "planned_flicker_zero_only": true,
+    "paired_frames": 453,
+    "paired_frame_mismatches": 0,
+    "follow_off_rows": 102,
+    "follow_on_rows": 808,
+    "multiplier_range": [
+      0.5500000002462957,
+      1
+    ],
+    "max_ack_ms": 219,
+    "max_generation_gap_ms": 133,
+    "digital_silence_windows": 14,
+    "digital_silence_elapsed_range": [
+      22497,
+      37647
+    ],
+    "mute_vibration_positive": true,
+    "lifecycle": [
+      {
+        "utc": "2026-10-19T15:30:25.490886Z",
+        "elapsed_realtime_ms": 10946877,
+        "event": "motion_started",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 0,
+          "stage": "待機",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 0,
+          "max_ack_ms": 4,
+          "max_tick_gap_ms": 0,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:30:34.753059Z",
+        "elapsed_realtime_ms": 10956138,
+        "event": "control_settings",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.043137254901960784,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.043137254901960784,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 9192,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.13270771525567399,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.043137254901960784,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.043137254901960784,
+          "audio_dbfs": -55.85892270436553,
+          "envelope": 0.2966968533414274,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 102,
+          "max_ack_ms": 190,
+          "max_tick_gap_ms": 124,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:45.612824Z",
+        "elapsed_realtime_ms": 11026997,
+        "event": "control_shutdown",
+        "app_version": "0.3.2",
+        "reason": "notification_stop"
+      },
+      {
+        "utc": "2026-10-19T15:31:45.613917Z",
+        "elapsed_realtime_ms": 11026998,
+        "event": "stop_sent",
+        "app_version": "0.3.2",
+        "reason": "notification_stop",
+        "device_index": 2
+      },
+      {
+        "utc": "2026-10-19T15:31:45.616847Z",
+        "elapsed_realtime_ms": 11027001,
+        "event": "stop_sent",
+        "app_version": "0.3.2",
+        "reason": "notification_stop",
+        "device_index": 3
+      },
+      {
+        "utc": "2026-10-19T15:31:45.645076Z",
+        "elapsed_realtime_ms": 11027030,
+        "event": "stop_device_acknowledged",
+        "app_version": "0.3.2",
+        "reason": "notification_stop",
+        "device_index": 3,
+        "error": ""
+      },
+      {
+        "utc": "2026-10-19T15:31:45.645709Z",
+        "elapsed_realtime_ms": 11027030,
+        "event": "stop_device_acknowledged",
+        "app_version": "0.3.2",
+        "reason": "notification_stop",
+        "device_index": 2,
+        "error": ""
+      },
+      {
+        "utc": "2026-10-19T15:31:45.645957Z",
+        "elapsed_realtime_ms": 11027030,
+        "event": "stop_acknowledged",
+        "app_version": "0.3.2",
+        "reason": "notification_stop",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": false,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 80055,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -51.114837407325396,
+          "envelope": 0.1761314826058198,
+          "multiplier": 0.629259167172619,
+          "planned_flicker_rest": true,
+          "seed": 10946873,
+          "scalar_sends": 910,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 133,
+          "stop_status": "停止応答OK（全対象）",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:45.646652Z",
+        "elapsed_realtime_ms": 11027031,
+        "event": "control_closed",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "未接続",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": false,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 80055,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -51.114837407325396,
+          "envelope": 0.1761314826058198,
+          "multiplier": 0.629259167172619,
+          "planned_flicker_rest": true,
+          "seed": 10946873,
+          "scalar_sends": 910,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 133,
+          "stop_status": "停止応答OK（全対象）",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      }
+    ],
+    "samples": [
+      {
+        "utc": "2026-10-19T15:30:25.500517Z",
+        "elapsed_realtime_ms": 10946885,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 2,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 10,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.1361634292174131,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.043137254901960784,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -32.00209635833909,
+          "envelope": 0.629456628404711,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 1,
+          "max_ack_ms": 4,
+          "max_tick_gap_ms": 110,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:30:34.576492Z",
+        "elapsed_realtime_ms": 10955961,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 3,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 9080,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.13604425941593945,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.043137254901960784,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.047058823529411764,
+          "audio_dbfs": -56.28277089734274,
+          "envelope": 0.3280370864974951,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 102,
+          "max_ack_ms": 190,
+          "max_tick_gap_ms": 124,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:30:34.786674Z",
+        "elapsed_realtime_ms": 10956171,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 2,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.043137254901960784,
+              "sent_flicker": 0.027450980392156862,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.043137254901960784,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.043137254901960784,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.043137254901960784,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 9294,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.12153934936504812,
+          "sent_vibrate": 0.043137254901960784,
+          "sent_flicker": 0.027450980392156862,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.043137254901960784,
+          "audio_dbfs": -63.65899104859594,
+          "envelope": 0.26032782207696864,
+          "multiplier": 0.667147519934636,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 103,
+          "max_ack_ms": 190,
+          "max_tick_gap_ms": 124,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:45.556439Z",
+        "elapsed_realtime_ms": 11026941,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 3,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.0196078431372549,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.043137254901960784,
+              "ack_flicker": 0.023529411764705882,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.0196078431372549,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.043137254901960784,
+              "ack_flicker": 0.023529411764705882,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 80055,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.1,
+          "raw_flicker": 0,
+          "sent_vibrate": 0.0196078431372549,
+          "sent_flicker": 0,
+          "ack_vibrate": 0.043137254901960784,
+          "ack_flicker": 0.023529411764705882,
+          "audio_dbfs": -51.114837407325396,
+          "envelope": 0.1761314826058198,
+          "multiplier": 0.629259167172619,
+          "planned_flicker_rest": true,
+          "seed": 10946873,
+          "scalar_sends": 910,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 133,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:03.568834Z",
+        "elapsed_realtime_ms": 10984953,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 2,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.0196078431372549,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.023529411764705882,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.023529411764705882,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.023529411764705882,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 38079,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.10849248102167622,
+          "sent_vibrate": 0.03529411764705882,
+          "sent_flicker": 0.0196078431372549,
+          "ack_vibrate": 0.03529411764705882,
+          "ack_flicker": 0.023529411764705882,
+          "audio_dbfs": -120,
+          "envelope": 5.47323567720871e-10,
+          "multiplier": 0.5500000002462957,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 420,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 125,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:28.132361Z",
+        "elapsed_realtime_ms": 11009517,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 2,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.058823529411764705,
+              "sent_flicker": 0.0392156862745098,
+              "ack_vibrate": 0.058823529411764705,
+              "ack_flicker": 0.03137254901960784,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.058823529411764705,
+              "sent_flicker": 0.03137254901960784,
+              "ack_vibrate": 0.058823529411764705,
+              "ack_flicker": 0.03137254901960784,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 62640,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.12981108606327327,
+          "sent_vibrate": 0.058823529411764705,
+          "sent_flicker": 0.0392156862745098,
+          "ack_vibrate": 0.058823529411764705,
+          "ack_flicker": 0.03137254901960784,
+          "audio_dbfs": -31.77677248804395,
+          "envelope": 0.7628521643812765,
+          "multiplier": 0.8932834739715745,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 697,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 133,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:30:48.014523Z",
+        "elapsed_realtime_ms": 10969399,
+        "event": "control_window",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.0196078431372549,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.0196078431372549,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.0196078431372549,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.0196078431372549,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 22497,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.12269163670716808,
+          "sent_vibrate": 0.03529411764705882,
+          "sent_flicker": 0.0196078431372549,
+          "ack_vibrate": 0.03529411764705882,
+          "ack_flicker": 0.0196078431372549,
+          "audio_dbfs": -120,
+          "envelope": 0.014963741276477423,
+          "multiplier": 0.5567336835744149,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 267,
+          "max_ack_ms": 190,
+          "max_tick_gap_ms": 125,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:31:03.226677Z",
+        "elapsed_realtime_ms": 10984611,
+        "event": "control_window",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.0196078431372549,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.0196078431372549,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.03529411764705882,
+              "sent_flicker": 0.0196078431372549,
+              "ack_vibrate": 0.03529411764705882,
+              "ack_flicker": 0.0196078431372549,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 37647,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.12071302236290649,
+          "sent_vibrate": 0.03529411764705882,
+          "sent_flicker": 0.0196078431372549,
+          "ack_vibrate": 0.03529411764705882,
+          "ack_flicker": 0.0196078431372549,
+          "audio_dbfs": -120,
+          "envelope": 1.0395868156577967e-09,
+          "multiplier": 0.5500000004678142,
+          "planned_flicker_rest": false,
+          "seed": 10946873,
+          "scalar_sends": 417,
+          "max_ack_ms": 219,
+          "max_tick_gap_ms": 125,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:30:51.035655Z",
+        "elapsed_realtime_ms": 10972420,
+        "event": "control_window",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.0196078431372549,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.0196078431372549,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.0196078431372549,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.0196078431372549,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": true,
+          "follow": true,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 25489,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.1,
+          "raw_flicker": 0,
+          "sent_vibrate": 0.0196078431372549,
+          "sent_flicker": 0,
+          "ack_vibrate": 0.0196078431372549,
+          "ack_flicker": 0,
+          "audio_dbfs": -120,
+          "envelope": 0.140449956685065,
+          "multiplier": 0.6132024805082793,
+          "planned_flicker_rest": true,
+          "seed": 10946873,
+          "scalar_sends": 303,
+          "max_ack_ms": 190,
+          "max_tick_gap_ms": 125,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      }
+    ],
+    "output_after_close_before_next_explicit_start": 0
+  },
+  "device_disconnect_run": {
+    "seed": 11102314,
+    "start": {
+      "utc": "2026-10-19T15:33:00.930832Z",
+      "elapsed_realtime_ms": 11102315,
+      "event": "motion_started",
+      "app_version": "0.3.2",
+      "state": {
+        "connection": "接続済み",
+        "server": "ws://192.168.11.10:12345",
+        "selected": [
+          2,
+          3
+        ],
+        "device_outputs": [
+          {
+            "device_index": 2,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "動作中"
+          },
+          {
+            "device_index": 3,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "動作中"
+          }
+        ],
+        "devices": [
+          "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+          "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+        ],
+        "active": true,
+        "stopping": false,
+        "audio_ready": false,
+        "follow": false,
+        "vibrate_cap_percent": 35,
+        "flicker_cap_percent": 34,
+        "elapsed_ms": 0,
+        "stage": "待機",
+        "raw_vibrate": 0,
+        "raw_flicker": 0,
+        "sent_vibrate": 0,
+        "sent_flicker": 0,
+        "ack_vibrate": 0,
+        "ack_flicker": 0,
+        "audio_dbfs": -120,
+        "envelope": 0,
+        "multiplier": 1,
+        "planned_flicker_rest": false,
+        "seed": 11102314,
+        "scalar_sends": 0,
+        "max_ack_ms": 7,
+        "max_tick_gap_ms": 0,
+        "stop_status": "動作中",
+        "error": "",
+        "max_ping_ms": 0
+      }
+    },
+    "end": {
+      "utc": "2026-10-19T15:33:19.392891Z",
+      "elapsed_realtime_ms": 11120778,
+      "event": "control_closed",
+      "app_version": "0.3.2",
+      "state": {
+        "connection": "未接続",
+        "server": "ws://192.168.11.10:12345",
+        "selected": [
+          2,
+          3
+        ],
+        "device_outputs": [
+          {
+            "device_index": 2,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0.06666666666666667,
+            "ack_flicker": 0.047058823529411764,
+            "stop": "停止未確認: server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}"
+          },
+          {
+            "device_index": 3,
+            "sent_vibrate": 0,
+            "sent_flicker": 0,
+            "ack_vibrate": 0,
+            "ack_flicker": 0,
+            "stop": "停止応答OK"
+          }
+        ],
+        "devices": [
+          "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+        ],
+        "active": false,
+        "stopping": false,
+        "audio_ready": false,
+        "follow": false,
+        "vibrate_cap_percent": 35,
+        "flicker_cap_percent": 34,
+        "elapsed_ms": 18288,
+        "stage": "01. 微かな触れ合い",
+        "raw_vibrate": 0,
+        "raw_flicker": 0,
+        "sent_vibrate": 0,
+        "sent_flicker": 0,
+        "ack_vibrate": 0.06666666666666667,
+        "ack_flicker": 0.047058823529411764,
+        "audio_dbfs": -120,
+        "envelope": 0,
+        "multiplier": 1,
+        "planned_flicker_rest": false,
+        "seed": 11102314,
+        "scalar_sends": 224,
+        "max_ack_ms": 184,
+        "max_tick_gap_ms": 130,
+        "stop_status": "一部の停止未確認（2）",
+        "error": "stop_error: {2=server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}}",
+        "max_ping_ms": 0
+      }
+    },
+    "scalar_rows": 224,
+    "counts_by_device": {
+      "2": 113,
+      "3": 111
+    },
+    "mismatches": 0,
+    "positive_vibration": true,
+    "planned_flicker_zero_only": true,
+    "paired_frames": 110,
+    "paired_frame_mismatches": 0,
+    "follow_off_rows": 224,
+    "follow_on_rows": 0,
+    "multiplier_range": [
+      1,
+      1
+    ],
+    "max_ack_ms": 184,
+    "max_generation_gap_ms": 130,
+    "digital_silence_windows": 0,
+    "digital_silence_elapsed_range": [],
+    "mute_vibration_positive": true,
+    "lifecycle": [
+      {
+        "utc": "2026-10-19T15:33:00.930832Z",
+        "elapsed_realtime_ms": 11102315,
+        "event": "motion_started",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 0,
+          "stage": "待機",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 0,
+          "max_ack_ms": 7,
+          "max_tick_gap_ms": 0,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:33:19.322900Z",
+        "elapsed_realtime_ms": 11120708,
+        "event": "control_error",
+        "app_version": "0.3.2",
+        "error": "selected_device_removed",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.047058823529411764,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.047058823529411764,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 18288,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.14128591738408433,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.047058823529411764,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.047058823529411764,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 224,
+          "max_ack_ms": 184,
+          "max_tick_gap_ms": 130,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:33:19.329368Z",
+        "elapsed_realtime_ms": 11120714,
+        "event": "control_shutdown",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed"
+      },
+      {
+        "utc": "2026-10-19T15:33:19.331477Z",
+        "elapsed_realtime_ms": 11120716,
+        "event": "stop_sent",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed",
+        "device_index": 2
+      },
+      {
+        "utc": "2026-10-19T15:33:19.332894Z",
+        "elapsed_realtime_ms": 11120717,
+        "event": "stop_sent",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed",
+        "device_index": 3
+      },
+      {
+        "utc": "2026-10-19T15:33:19.338419Z",
+        "elapsed_realtime_ms": 11120723,
+        "event": "stop_device_error",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed",
+        "device_index": 2,
+        "error": "server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}"
+      },
+      {
+        "utc": "2026-10-19T15:33:19.382136Z",
+        "elapsed_realtime_ms": 11120767,
+        "event": "stop_device_acknowledged",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed",
+        "device_index": 3,
+        "error": ""
+      },
+      {
+        "utc": "2026-10-19T15:33:19.385950Z",
+        "elapsed_realtime_ms": 11120771,
+        "event": "stop_incomplete",
+        "app_version": "0.3.2",
+        "reason": "control_failure: selected_device_removed",
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "停止未確認: server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            }
+          ],
+          "devices": [
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": false,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 18288,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.047058823529411764,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 224,
+          "max_ack_ms": 184,
+          "max_tick_gap_ms": 130,
+          "stop_status": "一部の停止未確認（2）",
+          "error": "stop_error: {2=server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}}",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:33:19.392891Z",
+        "elapsed_realtime_ms": 11120778,
+        "event": "control_closed",
+        "app_version": "0.3.2",
+        "state": {
+          "connection": "未接続",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0.06666666666666667,
+              "ack_flicker": 0.047058823529411764,
+              "stop": "停止未確認: server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "停止応答OK"
+            }
+          ],
+          "devices": [
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": false,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 18288,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0,
+          "raw_flicker": 0,
+          "sent_vibrate": 0,
+          "sent_flicker": 0,
+          "ack_vibrate": 0.06666666666666667,
+          "ack_flicker": 0.047058823529411764,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 224,
+          "max_ack_ms": 184,
+          "max_tick_gap_ms": 130,
+          "stop_status": "一部の停止未確認（2）",
+          "error": "stop_error: {2=server_error_4: {\"ButtplugDeviceError\":{\"DeviceNotAvailable\":2}}}",
+          "max_ping_ms": 0
+        }
+      }
+    ],
+    "samples": [
+      {
+        "utc": "2026-10-19T15:33:00.940242Z",
+        "elapsed_realtime_ms": 11102325,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 2,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.047058823529411764,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0,
+              "sent_flicker": 0,
+              "ack_vibrate": 0,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 8,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.14824027047725397,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.047058823529411764,
+          "ack_vibrate": 0,
+          "ack_flicker": 0,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 1,
+          "max_ack_ms": 7,
+          "max_tick_gap_ms": 108,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      },
+      {
+        "utc": "2026-10-19T15:33:19.232870Z",
+        "elapsed_realtime_ms": 11120618,
+        "event": "scalar_sent",
+        "app_version": "0.3.2",
+        "device_index": 3,
+        "state": {
+          "connection": "接続済み",
+          "server": "ws://192.168.11.10:12345",
+          "selected": [
+            2,
+            3
+          ],
+          "device_outputs": [
+            {
+              "device_index": 2,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.047058823529411764,
+              "ack_vibrate": 0.03137254901960784,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            },
+            {
+              "device_index": 3,
+              "sent_vibrate": 0.06666666666666667,
+              "sent_flicker": 0.047058823529411764,
+              "ack_vibrate": 0.03137254901960784,
+              "ack_flicker": 0,
+              "stop": "動作中"
+            }
+          ],
+          "devices": [
+            "2: JoyHub RoseBUD; steps=255/255; gap=0; ",
+            "3: JoyHub RoseBUD; steps=255/255; gap=0; "
+          ],
+          "active": true,
+          "stopping": false,
+          "audio_ready": false,
+          "follow": false,
+          "vibrate_cap_percent": 35,
+          "flicker_cap_percent": 34,
+          "elapsed_ms": 18288,
+          "stage": "01. 微かな触れ合い",
+          "raw_vibrate": 0.2,
+          "raw_flicker": 0.14128591738408433,
+          "sent_vibrate": 0.06666666666666667,
+          "sent_flicker": 0.047058823529411764,
+          "ack_vibrate": 0.03137254901960784,
+          "ack_flicker": 0,
+          "audio_dbfs": -120,
+          "envelope": 0,
+          "multiplier": 1,
+          "planned_flicker_rest": false,
+          "seed": 11102314,
+          "scalar_sends": 224,
+          "max_ack_ms": 184,
+          "max_tick_gap_ms": 130,
+          "stop_status": "動作中",
+          "error": "",
+          "max_ping_ms": 0
+        }
+      }
+    ],
+    "output_after_close_before_next_explicit_start": 0
+  },
+  "audio_lifecycle": [
+    {
+      "utc": "2026-10-19T15:30:04.382709Z",
+      "elapsed_realtime_ms": 10925767,
+      "event": "probe_ui_visible"
+    },
+    {
+      "utc": "2026-10-19T15:30:04.566171Z",
+      "elapsed_realtime_ms": 10925951,
+      "event": "audio_record_started",
+      "buffer_frames": 3072
+    },
+    {
+      "utc": "2026-10-19T15:30:50.464263Z",
+      "elapsed_realtime_ms": 10971849,
+      "event": "probe_ui_visible"
+    },
+    {
+      "utc": "2026-10-19T15:31:03.400823Z",
+      "elapsed_realtime_ms": 10984785,
+      "event": "probe_ui_visible"
+    },
+    {
+      "utc": "2026-10-19T15:31:03.633068Z",
+      "elapsed_realtime_ms": 10985018,
+      "event": "silence_end",
+      "start_elapsed_ms": 10971864,
+      "audio_silence_ms": 13141
+    },
+    {
+      "utc": "2026-10-19T15:31:45.611772Z",
+      "elapsed_realtime_ms": 11026996,
+      "event": "stop_requested",
+      "reason": "notification_stop"
+    },
+    {
+      "utc": "2026-10-19T15:31:45.863393Z",
+      "elapsed_realtime_ms": 11027248,
+      "event": "final_audio_window",
+      "summary": {
+        "session": "1792423764007-1d7fff1d",
+        "busy": true,
+        "phase": "stopping",
+        "reason": "",
+        "elapsed_ms": 101448,
+        "samples": 9699328,
+        "rms": 0.030587752261081822,
+        "peak": 0.104278564453125,
+        "total_rms": 0.017866847500525303,
+        "max_peak": 0.531158447265625,
+        "silent_ms": 37141,
+        "longest_silence_ms": 13141,
+        "read_errors": 0,
+        "last_read_elapsed_ms": 11026991,
+        "max_read_gap_ms": 192,
+        "screen_on": true,
+        "wake_lock": false
+      },
+      "window_samples": 102400,
+      "window_rms_dbfs": -45.96792731656923,
+      "window_peak_dbfs": -19.6360991232191,
+      "captured_audio_ms": 101034,
+      "no_data_age_ms": 236,
+      "zero_reads_total": 4464,
+      "environment": {
+        "screen_interactive": true,
+        "power_save": true,
+        "device_idle": false,
+        "ignoring_battery_optimizations": false,
+        "battery_level": 60,
+        "plugged": 2,
+        "output_device_types": "1,2,3,18",
+        "media_volume": 6,
+        "media_volume_max": 16
+      }
+    },
+    {
+      "utc": "2026-10-19T15:31:45.866121Z",
+      "elapsed_realtime_ms": 11027251,
+      "event": "session_end",
+      "reason": "notification_stop",
+      "summary": {
+        "session": "1792423764007-1d7fff1d",
+        "busy": false,
+        "phase": "ended",
+        "reason": "notification_stop",
+        "elapsed_ms": 101448,
+        "samples": 9699328,
+        "rms": 0,
+        "peak": 0,
+        "total_rms": 0.017866847500525303,
+        "max_peak": 0.531158447265625,
+        "silent_ms": 37141,
+        "longest_silence_ms": 13141,
+        "read_errors": 0,
+        "last_read_elapsed_ms": 11026991,
+        "max_read_gap_ms": 192,
+        "screen_on": true,
+        "wake_lock": false
+      }
+    }
+  ],
+  "unverified": [
+    "二台制御の画面オフ",
+    "非充電・長時間",
+    "AndroidからのWi-Fi／サーバー断時の物理停止",
+    "Chromeの取得",
+    "MediaProjectionのOS側取り消し",
+    "再生ページ・プレイヤー名",
+    "使用感に合う音量補正と出力下限"
+  ],
+  "raw_audio_saved": false,
+  "post_audio_session_control_events": [
+    {
+      "utc": "2026-10-19T15:33:19.327857Z",
+      "elapsed_realtime_ms": 11120713,
+      "event": "stop_requested",
+      "reason": "control_failure: selected_device_removed"
+    }
+  ],
+  "saved_settings_at_close": {
+    "url": "ws://192.168.11.10:12345",
+    "follow": true,
+    "vibrate_cap_percent": 35,
+    "flicker_cap_percent": 34
+  },
+  "end_state": {
+    "service_running": false,
+    "media_projection": null,
+    "device_2_powered_off_by_user": true,
+    "device_3_stop_acknowledged": true,
+    "user_requested_further_testing_stop": true
+  },
+  "earlier_two_device_audio": {
+    "session": "1792423194284-52049d69",
+    "events": [
+      {
+        "utc": "2026-10-19T15:19:55.498797Z",
+        "elapsed_realtime_ms": 10316883,
+        "event": "probe_ui_visible"
+      },
+      {
+        "utc": "2026-10-19T15:20:37.568758Z",
+        "elapsed_realtime_ms": 10358953,
+        "event": "probe_ui_hidden"
+      },
+      {
+        "utc": "2026-10-19T15:20:51.033272Z",
+        "elapsed_realtime_ms": 10372418,
+        "event": "silence_end",
+        "start_elapsed_ms": 10361935,
+        "audio_silence_ms": 10453
+      },
+      {
+        "utc": "2026-10-19T15:20:53.601898Z",
+        "elapsed_realtime_ms": 10374986,
+        "event": "probe_ui_visible"
+      },
+      {
+        "utc": "2026-10-19T15:21:20.992398Z",
+        "elapsed_realtime_ms": 10402377,
+        "event": "session_end",
+        "reason": "all_ui_stop",
+        "summary": {
+          "session": "1792423194284-52049d69",
+          "busy": false,
+          "phase": "ended",
+          "reason": "all_ui_stop",
+          "elapsed_ms": 85443,
+          "samples": 8161280,
+          "rms": 0,
+          "peak": 0,
+          "total_rms": 0.012864268007611156,
+          "max_peak": 0.386505126953125,
+          "silent_ms": 45973,
+          "longest_silence_ms": 10453,
+          "read_errors": 0,
+          "last_read_elapsed_ms": 10402136,
+          "max_read_gap_ms": 231,
+          "screen_on": true,
+          "wake_lock": false
+        }
+      }
+    ]
+  },
+  "known_diagnostic_issues": [
+    "取得終了後の接続専用試験のstop_requestedが直近の音声ログにも入る。session_end以降は別の制御操作として分離。",
+    "未接続時、保存された追従ONのチェックと直近の切断試験OFFの診断表示が異なる場合がある。接続時に保存値を適用。"
+  ]
+}
