@@ -1,6 +1,6 @@
 # Android開発環境
 
-更新日：2026-10-19。状態：**完了（このMacの環境導入、デバッグAPK生成、Android Lint、CPH2199へのUSB導入・起動確認）**。音声取得機能は未実装。
+更新日：2026-10-19。状態：**完了（このMacの環境導入、デバッグAPK生成、Android Lint、CPH2199へのUSB導入・起動確認）**。このページは0.1.0の環境構築時点の記録です。後続の0.2.0音声取得機能と実機結果は [verification.md](verification.md) を参照。
 
 ## 対象と範囲
 
@@ -95,7 +95,7 @@ GUIの初回ウィザードやIDEの同期・Runは、コマンドラインの�
 
 ## 実機接続・APK導入
 
-[README](../README.md#スマホへ入れて起動する) に初心者向けの手順を記載。[Android公式：USBデバッグと実機実行](https://developer.android.com/studio/run/device) を根拠とし、ColorOS固有のメニュー位置・追加確認は実機で確認する。
+[README](../README.md#usbで上書き導入起動する) に初心者向けの手順を記載。[Android公式：USBデバッグと実機実行](https://developer.android.com/studio/run/device) を根拠とし、ColorOS固有のメニュー位置・追加確認は実機で確認する。
 
 `adb devices -l` に1台の実機が `device` と表示されたら：
 

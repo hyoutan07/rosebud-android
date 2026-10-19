@@ -1,7 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Rosebud Probe</string>
-    <string name="setup_status">起動確認用アプリ</string>
-    <string name="setup_description">開発環境を確認するための最小アプリです。\n音声取得は、次の実装で追加します。</string>
     <string name="app_version">バージョン %1$s（ビルド %2$d）</string>
+    <string name="description">同じ端末の再生音を測ります。マイクの音・映像は取得せず、生音声は保存しません。</string>
+    <string name="permission_help">「取得を開始」→ 録音の許可 → Android標準の共有許可を操作してください。録音権限は内部音声にも必要です。開始後は通知からも停止できます。</string>
+    <string name="browser_label">比較するブラウザ（記録用）</string>
+    <string-array name="browsers"><item>Brave</item><item>Chrome</item><item>その他</item></string-array>
+    <string name="condition_hint">試験条件・メモ（有線、再生元、画面状態など）</string>
+    <string name="wake_lock_option">比較用：取得中にCPUのWake Lockを使う</string>
+    <string name="wake_lock_help">初回はオフの標準設定で試します。オンでも画面オフ・省電力中の継続を保証しません。</string>
+    <string name="start">取得を開始</string>
+    <string name="stop">取得を停止</string>
+    <string name="share">今回／直近のログを共有</string>
+    <string name="share_title">診断ログの共有先</string>
+    <string name="mark">現在のメモをログに記録</string>
+    <string name="marked">メモを記録しました</string>
+    <string name="settings">アプリの権限・電池設定を開く</string>
+    <string name="ready">開始できます</string>
+    <string name="permission_wait">Androidの許可画面で操作してください</string>
+    <string name="starting">内部音声の取得を準備中です</string>
+    <string name="running">取得処理が動作中です（音声の成立はメーターと再生・停止で確認）</string>
+    <string name="stale">読み取りが2秒以上届いていません。ログを確認してください</string>
+    <string name="stopping">終了処理中です</string>
+    <string name="ended">終了しました\n理由：%1$s</string>
+    <string name="io_error">診断ログの保存エラー：%1$s</string>
+    <string name="levels">RMS %1$.1f dBFS ／ ピーク %2$.1f dBFS</string>
+    <string name="metrics">経過 %1$s ／ サンプル %2$d\n取得音声 %3$.1f秒 ／ 無音合計 %4$.1f秒\n最長無音 %5$.1f秒 ／ 読み取りエラー %6$d\n最大読み取り間隔 %7$.2f秒\n全体RMS %8$.1f dBFS ／ 最大ピーク %9$.1f dBFS</string>
+    <string name="meter_hint">−120〜0 dBFS（右ほど大きい）。無音の目安はブロックRMS −60 dBFS未満。音が聞こえるのに無音でも、理由は再生元の許可など複数あります。</string>
+    <string name="last_session">セッション：%1$s</string>
+    <string name="error">操作できませんでした：%1$s</string>
+    <string name="record_denied">録音権限が拒否されました。再試行するか「アプリの権限・電池設定」から許可してください。</string>
+    <string name="projection_denied">共有許可が取り消されました。「取得を開始」から再試行できます。</string>
+    <string name="no_note">メモを入力してください</string>
 </resources>
