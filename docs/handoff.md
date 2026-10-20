@@ -1,6 +1,6 @@
 # Androidの引き継ぎ
 
-更新：2026-10-20 JST。**0.7.0／code10実装・70テスト・ビルド・Lint成功、本人全停止と端末更新待ち**。現在の正本は [interaction-refinement-spec.md](interaction-refinement-spec.md)。本人は0.6.0の中間を良い感じ、フィニッシュの停止過多、導入をより弱くと申告。新しい導入/フィニッシュ、中央の個別パターン選択、双方向3段階、承認済みNext.js配色を反映。端末は0.6.0、直近は一時停止・対象2台・停止応答OK、音声取得/接続は残っている。実機は本人全停止後に更新する。
+更新：2026-10-20 JST。**0.7.0／code10実装・70テスト・ビルド・Lint成功、端末更新済み、本人の新動作の感想待ち**。現在の正本は [interaction-refinement-spec.md](interaction-refinement-spec.md)。本人は0.6.0の中間を良い感じ、フィニッシュの停止過多、導入をより弱くと申告。新しい導入/フィニッシュ、中央の個別パターン選択、双方向3段階、承認済みNext.js配色を反映。端末は0.7.0。同じID/署名で更新し、保存設定XML一致・ダーク画面・余白・中央選択欄を確認。動作を開始せず、Serviceなし・MediaProjection nullのプレビュー待機。
 **第2の0.4.0／versionCode 6を実装し、本人との短時間2台動作確認まで完了**。実装・初期値・自動検証・APKの正本は [android-second-task.md](android-second-task.md)、残件は [TODO.md](TODO.md)。第1の0.3.2の実機結果は [android-e2e.md](android-e2e.md) に保持する。
 
 ## 再開

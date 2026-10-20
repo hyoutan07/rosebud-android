@@ -1,7 +1,7 @@
 {
   "version": "0.7.0",
   "version_code": 10,
-  "state": "automated_passed_awaiting_user_stop",
+  "state": "installed_awaiting_user_physical_feedback",
   "tests": {
     "total": 70,
     "failures": 0,
@@ -17,9 +17,9 @@
     "errors": 0,
     "warnings": 6
   },
-  "apk_sha256": "f34425fe527381eb591c48422b47068228254ba46eac7a9f944eb9dc24ef619a",
+  "apk_sha256": "3360a801e8d450517853df91590b049b8540bf9b731a0145dfbd40631bc3f2e0",
   "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
-  "phone_install": false,
+  "phone_install": true,
   "new_physical_motion_test": false,
   "mock_approved": true,
   "feedback_0_6": {
@@ -28,8 +28,13 @@
     "intro": "より弱く約1秒の間を追加"
   },
   "unfinished": [
-    "user stop and install",
-    "read-only native UI confirmation",
-    "user initiated physical feedback"
-  ]
+    "user initiated physical feedback for intro/finish and manual choices/stage return"
+  ],
+  "preinstall_service_absent": true,
+  "preinstall_projection_null": true,
+  "postinstall_service_absent": true,
+  "postinstall_projection_null": true,
+  "settings_xml_identical": true,
+  "native_idle_screenshot_checked": true,
+  "display_only_adjustment": "stage button border and disabled text visibility; assembleDebug/lint passed after adjustment"
 }
