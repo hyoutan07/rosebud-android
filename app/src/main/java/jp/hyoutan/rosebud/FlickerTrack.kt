@@ -1,5 +1,8 @@
 package jp.hyoutan.rosebud
 
+import kotlin.math.floor
+import kotlin.math.roundToInt
+
 internal enum class FlickerPhase { ON, REST_A, REST_B }
 internal data class FlickerFrame(val output: Double, val pattern: Int, val patternStart: Double,
     val patternEnd: Double, val style: Int, val percent: Int, val unitStart: Double,
@@ -7,14 +10,14 @@ internal data class FlickerFrame(val output: Double, val pattern: Int, val patte
     val manualPattern: Int = -1, val pendingPattern: Boolean = false)
 
 internal val flickerPatterns = listOf(
-    Recipe("ゆっくり往復", "小さな一動作から、ゆっくり往復。", "7%・2秒 → 7%・2秒の谷 → 10%・3秒 → 7%・2秒", Shape.WAVE),
-    Recipe("触れて、間を置く", "動きから、小さく動く谷へ。", "10%・2秒 → 7%・2秒の谷 → 7%・2秒 → 7%・2秒の谷", Shape.TOUCH),
-    Recipe("まばらな小波", "動く谷に、小さな山を置く。", "7%・2秒 → 7%・2秒の谷 → 15%・2秒 → 7%・2秒", Shape.SPARSE),
-    Recipe("ずらした二連", "違う長さの二つの動き。", "15%・2秒 → 7%・2秒の谷 → 10%・3秒 → 7%・2秒 → 7%・2秒の谷", Shape.DOUBLE),
-    Recipe("階段と戻り", "一動作ずつ上げ、小さく戻る。", "7%・2秒 → 10%・3秒 → 15%・2秒 → 20%・2秒 → 7%・2秒", Shape.RISE),
-    Recipe("短い山と余韻", "短い山のあとに、弱い余韻。", "40%・1秒 → 15%・2秒 → 7%・2秒 → 7%・2秒の谷", Shape.HOLD),
-    Recipe("ほどける波", "徐々にほどけ、動く谷から戻る。", "15%・3秒 → 10%・2秒 → 7%・2秒 → 7%・2秒の谷 → 20%・2秒", Shape.UNRAVEL),
-    Recipe("変わるまとまり", "長短の一動作を混ぜる。", "20%・2秒 → 7%・2秒 → 40%・1秒 → 10%・3秒 → 7%・2秒の谷", Shape.CLUSTER))
+    Recipe("ゆっくり往復", "広い波をゆっくり上げ、谷へ戻る。", "谷 → 山 → 戻り。進行とともに山が育つ", Shape.WAVE),
+    Recipe("触れて、間を置く", "丸い山から、動いたままの谷へ。", "動く谷 → 丸い山 → 余韻", Shape.TOUCH),
+    Recipe("まばらな小波", "長めの広い波で、山谷を感じる。", "広い谷 → 育つ山 → 谷", Shape.SPARSE),
+    Recipe("ずらした二連", "少しずれた波を、山から次へつなぐ。", "谷 → 山 → 肩 → 次の波", Shape.DOUBLE),
+    Recipe("階段と戻り", "一動作ずつ広い山を上り、戻る。", "上り → 頂点 → 下り → 谷", Shape.RISE),
+    Recipe("短い山と余韻", "やや短い周期で、広い山と余韻。", "谷 → 山 → 余韻。終盤は長い山へ", Shape.HOLD),
+    Recipe("ほどける波", "広い波がほどけ、動く谷から戻る。", "育つ山 → 戻り → 谷 → 次の山", Shape.UNRAVEL),
+    Recipe("変わるまとまり", "丸さと位相を変え、広い波を連ねる。", "谷 → 山 → 肩。進行に合わせて拡大", Shape.CLUSTER))
 
 private data class FlickerUnit(val percent: Int, val seconds: Double, val phase: FlickerPhase = FlickerPhase.ON,
     val gapBias: Int = 0)
@@ -51,21 +54,13 @@ private fun bridge(percent: Int, finish: Boolean) = on(if (finish) {
     if (percent == 15) 20 else 15
 } else if (percent == 7) 10 else 7,2.0)
 
-/** Middle style-2 moving-valley example; scheduled budget rests are deliberately separate. */
+/** Middle broad-wave example at progress 627s; budget rests are deliberately separate. */
 internal fun sampleFlicker(pattern: Int, seconds: Double): Double {
     require(pattern in flickerUnits.indices && seconds.isFinite() && seconds >= 0.0)
-    val source = flickerUnits[pattern].map { if (it.phase == FlickerPhase.ON) it else on(7,2.0) }
-    val units = source.flatMapIndexed { i, unit ->
-        val next = source[(i+1) % source.size]
-        if (unit.percent == next.percent) listOf(unit,bridge(unit.percent,false)) else listOf(unit)
-    }
-    fun duration(unit: FlickerUnit) = unit.seconds
-    var at = seconds % units.sumOf(::duration)
-    for (unit in units) {
-        if (at < duration(unit)) return unit.percent / 100.0
-        at -= duration(unit)
-    }
-    return units.first().percent / 100.0
+    val at = floor(seconds/2.0)*2.0
+    val range = FavoriteCrescendo.range(627.0)
+    val wave = FavoriteCrescendo.wave(pattern,at,false)
+    return ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*wave)*100).roundToInt()/100.0
 }
 
 /** Independent monotonic clock and PRNG. Random draws happen only at unit/pattern boundaries. */
@@ -108,14 +103,19 @@ internal class FlickerTrack(seed: Long) {
         pattern = next
         cursor = 0
     }
-    private fun transformed(source: FlickerUnit): FlickerUnit {
-        if (source.phase != FlickerPhase.ON) return source
-        return when (style) {
-            0 -> when (source.percent) { 20 -> on(10,3.0); 40 -> on(15,2.0); else -> source }
-            1 -> if (source.percent == 40) on(20,2.0) else source
-            3 -> when (source.percent) { 7,15 -> on(15,2.0); 10 -> on(20,2.0); else -> on(40,1.0) }
-            else -> source
+    private fun middleUnit(source: FlickerUnit, at: Double, progress: Double): FlickerUnit {
+        val range = FavoriteCrescendo.range(progress)
+        val wave = FavoriteCrescendo.wave(pattern,at,false)
+        val percent = ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*wave)*100).roundToInt()
+        return on(percent,if(percent == 100 || source.seconds < 3.0) 2.0 else 3.0)
+    }
+    private fun finishUnit(source: FlickerUnit, at: Double): FlickerUnit {
+        val percent = when (source.percent) {
+            40 -> (80.0+20.0*FavoriteCrescendo.wave(pattern,at,false)).roundToInt()
+            20 -> 40
+            else -> 20
         }
+        return on(percent,source.seconds)
     }
     fun setRestSettings(settings: RestSettings) { requestedRestSettings = settings }
 
@@ -145,12 +145,16 @@ internal class FlickerTrack(seed: Long) {
                 quiet -> if (stage == 2) on(if (previous == FlickerPhase.ON && unit.percent == 15) 20 else 15,3.0)
                     else on(if (previous == FlickerPhase.ON && unit.percent == 7) 10 else 7,2.0)
                 stage == 0 -> on(if (source.percent == 7 || source.phase != FlickerPhase.ON) 7 else 10,2.0)
-                stage == 2 -> source
-                source.phase != FlickerPhase.ON -> on(7,2.0)
-                else -> transformed(source)
+                stage == 2 -> finishUnit(source,at)
+                else -> middleUnit(source,at,progress)
             }
             unit = if (previous == FlickerPhase.ON && candidate.percent == unit.percent) {
-                bridge(candidate.percent,stage == 2)
+                if (stage == 0 || quiet) bridge(candidate.percent,stage == 2) else {
+                    // Preserve the broad wave instead of dropping to a 7% separator.
+                    if (!quiet) cursor++
+                    val peak = if (stage == 2) 100 else (FavoriteCrescendo.range(progress).flickerPeak*100).roundToInt()
+                    candidate.copy(percent=if(candidate.percent >= peak) candidate.percent-1 else candidate.percent+1)
+                }
             } else {
                 if (!quiet) cursor++
                 candidate

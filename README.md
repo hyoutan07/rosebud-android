@@ -1,10 +1,12 @@
 # Rosebud Android
 
-スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.8.0／versionCode11、74テスト・ビルド・Lint成功、端末更新済み**。ID・署名・接続設定・保存済み出力上限を保持します。
+スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.9.0／versionCode12、77テスト・ビルド・Lint成功、端末更新準備済み**。ID・署名・接続設定・保存済み上限/休止割合を保持します。
 
-現在の正本は **[段階別の休みの割合と連続動作](docs/stage-rest-ratio-spec.md)**。本人は0.7.0を好感触としつつ中間/フィニッシュにも停止感が多いと申告。休止の時間予算をはじめ33%・中間8%・フィニッシュ1%へ分け、各0〜50%で変更/保存できるよう改修。完全停止と動く谷を分離し、フィニッシュは15%以上の谷と40%・2秒の山を持つ専用配列へ。新しい40%・2秒と配列の身体感覚は未確認です。中央の個別固定/自動・双方向段階・承認済みダーク配色は継承。
+現在の正本は **[お気に入りを基準にした中間の大きな波](docs/favorite-crescendo-spec.md)**。本人は30〜60秒の保持は受容し、中間の山谷をもっと大きく、時間でフィニッシュへ強くなる演出を依頼。続けて「限界までの遅延」の強弱/数値から離れすぎないよう指定。UIは完成として新機能を足さず、中間/後半の山をお気に入りの30〜70%/80〜100%へ合わせて調整済み。新しい一動作単位での身体感覚は未確認。
 
-0.7.0の操作/配色の正本は [interaction-refinement-spec.md](docs/interaction-refinement-spec.md)、独立生成の土台は [dual-track-spec.md](docs/dual-track-spec.md)、単発確認の経緯は [flicker-trial.md](docs/flicker-trial.md)。
+並行確認：本人はスマホBraveで再生中だが、最新0.8取得セッションは約390秒に渡りRMS/Peak0・read error0。音声取得だけを本人が再開始し、Brave停止/再開で入力が戻るか確認する。無音のまま音声連動の成立を主張しない。
+
+[0.8の休止割合](docs/stage-rest-ratio-spec.md)、[0.7の操作/配色](docs/interaction-refinement-spec.md)、[独立生成の土台](docs/dual-track-spec.md)、[単発確認](docs/flicker-trial.md)。中央選択・往復・承認済みダークUI・休止予算は保持。
 
 第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功。**本人と2台の動作・実音声・静かな区間・一時停止／再開・全停止を短時間確認済み**です。実動作は約3分39秒、USB充電・画面ON・Wake Lockなし。導入の小ささは調整候補、長時間などは未検証です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
 

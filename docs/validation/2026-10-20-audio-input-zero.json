@@ -1,0 +1,18 @@
+{
+  "version": "0.8.0",
+  "user_reports": "smartphone Brave is playing",
+  "observed_capture_session": "1792467497716-aa9987ca",
+  "elapsed_ms": 390752,
+  "silent_ms": 390506,
+  "rms": 0,
+  "peak": 0,
+  "total_rms": 0,
+  "max_peak": 0,
+  "read_errors": 0,
+  "end_reason": "all_ui_stop",
+  "os_read_only_observation": "current dump had no active Brave playback track; former AAudio track stopped/released earlier; audio outputs standby",
+  "cause": "undetermined",
+  "requested_next_step": "user starts playback capture only, then user pauses/resumes smartphone Brave; inspect RMS and current playback/record tracks; do not start hardware",
+  "status": "awaiting_user_reproduction",
+  "raw_audio_saved": false
+}

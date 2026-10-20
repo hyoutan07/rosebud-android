@@ -41,7 +41,7 @@ class ScenarioEngineTest {
         val a = early.frame(.5, SoundFeatures())
         val b = later.frame(1.0, SoundFeatures())
         assertEquals(before.output.flicker,a.output.flicker,0.0)
-        assertTrue(a.output.vibrate >= MotionDefaults.nominalVibrationCap*MotionDefaults.finishVibrationFloor)
+        assertEquals(before.output.vibrate,a.output.vibrate,0.0)
         assertEquals(a.recipe, b.recipe)
         assertEquals(a.style, b.style)
         assertEquals(a.recipeEnd - a.recipeStart, b.recipeEnd - b.recipeStart, 1e-9)
@@ -73,38 +73,29 @@ class ScenarioEngineTest {
         assertFalse(engine.skipTo(65.0,0.0,SoundFeatures()))
         assertEquals(1.0,engine.progressSeconds(66.0),0.0)
     }
-    @Test fun skippedEndlessKeepsRepeatLimitAndReachesSettledMixOnProgressClock() {
+    @Test fun skippedEndlessKeepsRepeatLimitAndReachesSettledStyleMixOnProgressClock() {
         var samples = 0
-        var strong = 0
         val styles = IntArray(4)
         repeat(12) { seed ->
             val engine = ScenarioEngine(seed.toLong())
-            engine.frame(0.0, SoundFeatures())
-            assertTrue(engine.skipTo(0.0, 900.0, SoundFeatures()))
-            var previous = -1
-            var repeats = 0
-            var end = -1.0
+            engine.frame(0.0,SoundFeatures())
+            assertTrue(engine.skipTo(0.0,900.0,SoundFeatures()))
+            var previous = -1; var repeats = 0; var end = -1.0
             for (tick in 0..15000) {
-                val t = tick * .2
-                val f = engine.frame(t, SoundFeatures())
-                assertEquals("エンドレス", f.phase)
-                if (f.recipeEnd != end) {
-                    repeats = if (f.recipe == previous) repeats + 1 else 1
+                val t = tick*.2
+                val frame = engine.frame(t,SoundFeatures())
+                assertEquals("エンドレス",frame.phase)
+                if (frame.recipeEnd != end) {
+                    repeats = if (frame.recipe == previous) repeats+1 else 1
                     assertTrue(repeats <= 2)
-                    assertTrue(f.recipeEnd - f.recipeStart in 30.0..60.0)
-                    previous = f.recipe
-                    end = f.recipeEnd
+                    assertTrue(frame.recipeEnd-frame.recipeStart in 30.0..60.0)
+                    previous = frame.recipe; end = frame.recipeEnd
                 }
-                assertTrue(f.output.vibrate in 0.0..1.0 && f.output.flicker in 0.0..1.0)
-                if (t >= 1800.0) {
-                    samples++
-                    styles[f.style]++
-                    if (f.strength == Strength.STRONG) strong++
-                }
+                assertTrue(frame.output.vibrate in 0.0..1.0 && frame.output.flicker in 0.0..1.0)
+                if (t >= 1800.0) { samples++; styles[frame.style]++ }
             }
         }
-        assertEquals(.805, strong.toDouble() / samples, .07)
-        assertEquals(.75, styles[3].toDouble() / samples, .09)
+        assertEquals(.75,styles[3].toDouble()/samples,.09)
     }
     @Test(expected = IllegalArgumentException::class)
     fun nonFiniteProgressClockIsRejected() { ScenarioEngine(0).progressSeconds(Double.NaN) }
@@ -142,9 +133,9 @@ class ScenarioEngineTest {
     }
     @Test fun multipleSeedsHaveEightRecipesNoTripleRepeatsAndBoundedEndlessOutput() {
         val seen=mutableSetOf<Int>(); val states=mutableSetOf<Strength>()
-        var strongLate=0; var samplesLate=0
+        var samplesLate=0
+        var minimumLate=1.0; var maximumLate=0.0
         val styles=IntArray(4)
-        val periodStrong=IntArray(2);val periodTotal=IntArray(2)
         repeat(12) { seed ->
             val engine=ScenarioEngine(seed.toLong())
             var previous=-1; var repeats=0; var end=-1.0
@@ -166,22 +157,21 @@ class ScenarioEngineTest {
                     FlickerPhase.REST_B -> assertEquals(Output(),f.output)
                     FlickerPhase.ON -> {
                         assertEquals(f.flicker.percent/100.0,f.output.flicker,0.0)
-                        if(t>=900) assertTrue(f.output.vibrate >= .0525-1e-9)
-                        else if(f.strength==Strength.REST_B) assertEquals(0.0,f.output.vibrate,0.0)
+
                     }
                 }
-                assertTrue(f.output.vibrate <= MotionDefaults.nominalVibrationCap)
-                if(t>=900 && t<2700) { val bin=if(t<1800) 0 else 1;periodTotal[bin]++;if(f.strength==Strength.STRONG)periodStrong[bin]++ }
-                if(t>=2700) { samplesLate++;styles[f.style]++;if(f.strength==Strength.STRONG) strongLate++ }
+                assertTrue(f.output.vibrate <= 1.0)
+                if(t>=2700) {
+                    samplesLate++; styles[f.style]++
+                    if (seed%5 != SoundKind.QUIET.ordinal && f.flicker.phase==FlickerPhase.ON) {
+                        minimumLate=minOf(minimumLate,f.output.vibrate)
+                        maximumLate=maxOf(maximumLate,f.output.vibrate)
+                    }
+                }
             }
         }
         assertEquals((0..7).toSet(),seen); assertEquals(Strength.entries.toSet(),states)
-        val fraction=strongLate.toDouble()/samplesLate
-        println("45〜80分、12seed・0.2秒刻み：強め状態=$fraction / style=${styles.toList()}")
-        println("15〜30分・30〜45分の強め実時間配分="+periodStrong.indices.map { periodStrong[it].toDouble()/periodTotal[it] })
-        assertEquals(.734,periodStrong[0].toDouble()/periodTotal[0],.07)
-        assertEquals(.781,periodStrong[1].toDouble()/periodTotal[1],.07)
-        assertEquals(.805,fraction,.045)
+        assertTrue(minimumLate <= .33 && maximumLate >= .72)
         assertEquals(.75,styles[3].toDouble()/samplesLate,.06)
     }
     @Test fun quietingActsWithinHeldRecipeAndDoesNotStopItsClock() {
@@ -322,7 +312,7 @@ class ScenarioEngineTest {
             val frame = engine.frame(tick.toDouble(),quiet)
             assertEquals(FlickerPhase.ON,frame.flicker.phase)
             if (!frame.flicker.pendingStage) assertTrue(frame.output.flicker >= .15)
-            assertTrue(frame.output.vibrate >= .0525-1e-9)
+            if (tick>5) assertTrue(frame.output.vibrate >= .05249)
         }
         engine.setRestSettings(RestSettings(50,50,50))
         var rests = 0

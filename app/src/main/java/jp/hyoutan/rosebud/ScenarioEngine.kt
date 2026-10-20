@@ -130,8 +130,11 @@ internal class ScenarioEngine(seed: Long) {
     private var segments = emptyList<MotionSegment>()
     private var lastTime = 0.0
     private var smoothed = Output()
+    private var lastVibrationOutput: Double? = null
     private var period = 3.0
     private var phase = 0.0
+    private var macroPeriod = 16.0
+    private var macroPhase = 0.0
     private var lastOnset = -1L
     private var progressOffset = 0.0
     private var manualVibrationPattern = -1
@@ -215,32 +218,61 @@ internal class ScenarioEngine(seed: Long) {
         val targetPeriod = MotionDefaults.periodSlow+(MotionDefaults.periodFast-MotionDefaults.periodSlow)*sound.density
         period += (targetPeriod-period)*(1-exp(-dt/MotionDefaults.periodSmoothing))
         phase += dt/period
+        val macroTargetPeriod = FavoriteCrescendo.period(recipe,true,sound.density)
+        macroPeriod += (macroTargetPeriod-macroPeriod)*(1-exp(-dt/MotionDefaults.periodSmoothing))
+        macroPhase += dt/macroPeriod
         // Onsets modestly advance the current pulse, without replacing recipe or deadline.
-        if(sound.onsetAt != lastOnset && sound.onsetAt >= 0) { phase += MotionDefaults.onsetPhaseNudge; lastOnset = sound.onsetAt }
+        if(sound.onsetAt != lastOnset && sound.onsetAt >= 0) {
+            phase += MotionDefaults.onsetPhaseNudge
+            macroPhase += .01
+            lastOnset = sound.onsetAt
+        }
         val state = segments.firstOrNull { seconds-start < it.end }?.strength ?: segments.last().strength
         val progress = progressSeconds(seconds)
         val ceiling = MotionDefaults.initialCeiling+(1-MotionDefaults.initialCeiling)*(progress/MotionDefaults.endlessStart).coerceIn(0.0,1.0)
         val audioGain = if(sound.kind==SoundKind.QUIET) MotionDefaults.quietGain else .5+.5*sound.level
         val vrange = MotionDefaults.vibrationRanges[state]
         val introGain = if (progress < MotionDefaults.introEnd) MotionDefaults.introVibrationGain else 1.0
-        val vibration = if(vrange==null) 0.0 else (vrange.start+(vrange.endInclusive-vrange.start)*(.5+.5*sin(phase*2*PI+.8)))*ceiling*audioGain*introGain
+        val legacyVibration = if(vrange==null) 0.0 else (vrange.start+(vrange.endInclusive-vrange.start)*(.5+.5*sin(phase*2*PI+.8)))*ceiling*audioGain*introGain*MotionDefaults.nominalVibrationCap
+        val vibration = when {
+            progress < MotionDefaults.introEnd -> legacyVibration
+            sound.kind == SoundKind.QUIET -> if (progress >= MotionDefaults.endlessStart)
+                legacyVibration.coerceAtLeast(MotionDefaults.finishVibrationFloor*MotionDefaults.nominalVibrationCap) else legacyVibration
+            else -> {
+                val range = FavoriteCrescendo.range(progress)
+                val wave = FavoriteCrescendo.waveFromPhase(recipe,macroPhase,true)
+                (range.vibrationFloor+(range.vibrationPeak-range.vibrationFloor)*wave)*audioGain
+            }
+        }
         val target = Output(vibration,0.0)
         val blend = 1-exp(-dt/MotionDefaults.blendSeconds)
         smoothed = Output(smoothed.vibrate+(target.vibrate-smoothed.vibrate)*blend,0.0)
         lastTime = seconds
-        // Vibration retains the prior nominal 35% feel. Flicker has its own clock and units.
-        val vibrationOut = (when(state) {
-            Strength.REST_A -> MotionDefaults.restAVibration*ceiling*introGain
+        // Intro keeps its established nominal feel; the broad middle/finish waves use real commands.
+        val vibrationOut = if (progress < MotionDefaults.introEnd) when(state) {
+            Strength.REST_A -> MotionDefaults.restAVibration*ceiling*introGain*MotionDefaults.nominalVibrationCap
             Strength.REST_B -> 0.0
-            else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor*introGain)
-        }).let { if (progress >= MotionDefaults.endlessStart) it.coerceAtLeast(MotionDefaults.finishVibrationFloor) else it } * MotionDefaults.nominalVibrationCap
+            else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor*introGain*MotionDefaults.nominalVibrationCap)
+        } else smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor*MotionDefaults.nominalVibrationCap)
         val f = flicker.frame(seconds, progress, sound)
-        val out = Output(when(f.phase) {
+        val requestedVibration = when(f.phase) {
             FlickerPhase.REST_A -> MotionDefaults.restAVibration*ceiling*MotionDefaults.nominalVibrationCap*introGain
             FlickerPhase.REST_B -> 0.0
             FlickerPhase.ON -> vibrationOut
-        }, f.output)
-        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress),f,manualVibrationPattern)
+        }
+        val out = Output(if (dt == 0.0) lastVibrationOutput ?: requestedVibration else requestedVibration,f.output)
+        lastVibrationOutput = out.vibrate
+        val visibleStrength = when {
+            f.phase == FlickerPhase.REST_A -> Strength.REST_A
+            f.phase == FlickerPhase.REST_B -> Strength.REST_B
+            progress >= MotionDefaults.introEnd && sound.kind != SoundKind.QUIET -> {
+                val range = FavoriteCrescendo.range(progress)
+                val position = (out.vibrate/audioGain-range.vibrationFloor)/(range.vibrationPeak-range.vibrationFloor)
+                when { position < .20 -> Strength.ULTRA; position < .65 -> Strength.WEAK; else -> Strength.STRONG }
+            }
+            else -> state
+        }
+        return EngineFrame(out,recipe,visibleStrength,style,start,end,phaseName(progress),f,manualVibrationPattern)
     }
     companion object {
         val styleNames = listOf("導入","中盤弱め","中盤強め","強め")

@@ -39,8 +39,8 @@ class FlickerTrackTest {
                     } else {
                         assertTrue(frame.output > 0.0)
                         if (progress >= 900.0) {
-                            assertTrue(frame.percent in listOf(15,20,40))
-                            if (frame.percent == 40) assertEquals(2.0,duration,1e-9)
+                            assertTrue(frame.percent in 15..100)
+                            if (frame.percent >= 80) assertEquals(2.0,duration,1e-9)
                         }
                     }
                     total += duration
@@ -75,7 +75,7 @@ class FlickerTrackTest {
             var previousDeadline = 0.0
             while (frame.unitStart < 3000.0) {
                 seen.add(frame.pattern); phases.add(frame.phase)
-                assertTrue(frame.output in 0.0.. .4)
+                assertTrue(frame.output in 0.0..1.0)
                 assertTrue(frame.patternEnd-frame.patternStart in 30.0..60.0)
                 assertTrue(frame.unitEnd > frame.unitStart)
                 if (frame.patternStart != previousStart) {
@@ -145,37 +145,38 @@ class FlickerTrackTest {
         track.resumeFromPause(.7)
         assertEquals(resumed, track.frame(.7,.7,sound))
     }
-    @Test fun middleKeepsShortPeakAndFinishUsesLongPeakAndMovingValley() {
-        var foundMiddle = false
-        var foundFinish = false
-        repeat(1000) { seed ->
-            for (progress in listOf(720.0,2700.0)) {
-                val track = FlickerTrack(seed.toLong())
-                track.setRestSettings(RestSettings(0,0,0))
-                var frame = track.frame(0.0,progress,sound)
-                if (frame.pattern == 5 && frame.style in listOf(2,3)) {
-                    assertEquals(40,frame.percent)
-                    assertEquals(if(progress<900.0) 1.0 else 2.0,frame.unitEnd-frame.unitStart,0.0)
-                    val at = frame.unitEnd
-                    frame = track.frame(at,progress+at,sound)
-                    assertEquals(if(progress<900.0) 15 else 20,frame.percent)
-                    assertEquals(if(progress<900.0) 2.0 else 3.0,frame.unitEnd-frame.unitStart,0.0)
-                    if (progress<900.0) foundMiddle = true else foundFinish = true
+    @Test fun middleSamplesBroadWaveOncePerCompleteTwoOrThreeSecondOn() {
+        for (pattern in 0..7) {
+            val track = FlickerTrack(pattern.toLong())
+            track.setRestSettings(RestSettings(0,0,0))
+            track.frame(0.0,627.0,sound)
+            track.selectPattern(0.0,pattern,sound)
+            var frame = track.frame(3.0,630.0,sound)
+            val values = mutableListOf<Int>()
+            while (frame.unitStart < 70.0) {
+                assertTrue(frame.percent in 10..75)
+                assertTrue(frame.unitEnd-frame.unitStart in 2.0..3.0)
+                values.add(frame.percent)
+                val inside = (frame.unitStart+.2).coerceAtLeast(3.0)
+                if (inside < frame.unitEnd) {
+                    val held = track.frame(inside,627.0+inside,sound.copy(level=.01,density=1.0))
+                    assertEquals(frame.percent,held.percent)
+                    assertEquals(frame.unitEnd,held.unitEnd,0.0)
                 }
+                frame = track.frame(frame.unitEnd,627.0+frame.unitEnd,sound)
             }
+            assertTrue(values.max()-values.min() >= 50)
         }
-        assertTrue(foundMiddle && foundFinish)
     }
-    @Test fun samplesShowEightIndependentUnscaledStepExamples() {
-        assertEquals(8, flickerPatterns.size)
-        assertEquals(.07,sampleFlicker(0,0.0),0.0)
-        assertEquals(.10,sampleFlicker(0,2.1),0.0)
-        assertEquals(.07,sampleFlicker(0,4.0),0.0)
-        assertEquals(.4,sampleFlicker(5,0.0),0.0)
-        assertEquals(.15,sampleFlicker(5,1.0),0.0)
+    @Test fun samplesShowEightIndependentUnscaledBroadStepExamples() {
+        assertEquals(8,flickerPatterns.size)
+        assertEquals(.10,sampleFlicker(0,0.0),0.0)
+        assertEquals(.40,sampleFlicker(0,4.0),0.0)
+        assertEquals(.70,sampleFlicker(0,8.0),0.0)
+        assertEquals(sampleFlicker(0,4.0),sampleFlicker(0,5.9),0.0)
         val track = FlickerTrack(17)
         val before = track.frame(0.0,0.0,sound)
-        for (pattern in 0..7) repeat(100) { sampleFlicker(pattern,it*.1) }
+        for (pattern in 0..7) repeat(100) { assertTrue(sampleFlicker(pattern,it*.1) in .10.. .70) }
         assertEquals(before,track.frame(0.0,0.0,sound))
     }
     @Test fun equalAdjacentCommandsUseMovingValleysAndFortyPercentNeverJoinsIntoLongerOn() {
@@ -188,17 +189,15 @@ class FlickerTrackTest {
                 val next = track.frame(at,2700.0+at,sound)
                 if (frame.phase == FlickerPhase.ON && next.phase == FlickerPhase.ON)
                     assertNotEquals(frame.percent, next.percent)
-                if (frame.percent == 40) assertEquals(2.0,frame.unitEnd-frame.unitStart,1e-9)
+                if (frame.percent >= 80) assertEquals(2.0,frame.unitEnd-frame.unitStart,1e-9)
                 if (frame.phase == FlickerPhase.ON && next.phase == FlickerPhase.REST_A &&
                     next.unitEnd-next.unitStart <= 1.2+1e-9) repeatedGaps++
                 frame = next
             }
         }
         assertTrue(repeatedGaps > 0)
-        // Examples use a nonzero valley, independent of the scheduled rest budget.
-        assertEquals(.10,sampleFlicker(0,8.0),0.0)
-        assertEquals(.10,sampleFlicker(0,8.8),0.0)
-        assertEquals(.07,sampleFlicker(0,9.8),0.0)
+        // Middle examples also retain the broad moving valley.
+        assertEquals(.70,sampleFlicker(0,8.0),0.0)
     }
     @Test fun invalidClocksAreRejectedWithoutChangingTrack() {
         val track = FlickerTrack(5)

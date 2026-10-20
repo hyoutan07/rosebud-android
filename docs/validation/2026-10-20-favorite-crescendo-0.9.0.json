@@ -1,0 +1,49 @@
+{
+  "version": "0.9.0",
+  "version_code": 12,
+  "state": "automated_passed_awaiting_install_and_audio_reproduction",
+  "tests": {
+    "total": 77,
+    "failures": 0,
+    "errors": 0,
+    "audio_stats": 6,
+    "classic": 6,
+    "crescendo": 3,
+    "flicker": 16,
+    "trial": 2,
+    "controller": 27,
+    "scenario": 17
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "apk_sha256": "3ad784dddf698630b1000f79a9b1cf9cf6d3ee7d7f1a790a8ad8be1bf294ac27",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "middle_early_output_percent": {
+    "vibrate": [
+      15.3,
+      37.7
+    ],
+    "flicker": [
+      10,
+      52
+    ]
+  },
+  "middle_late_output_percent": {
+    "vibrate": [
+      33.4,
+      96.6
+    ],
+    "flicker": [
+      20,
+      96
+    ]
+  },
+  "measurement_condition": "all 8 pinned, sound nonquiet/level1, rest0, early305..365s and late825..885s",
+  "preinstall_service_absent": true,
+  "preinstall_projection_null": true,
+  "phone_install": false,
+  "physical_motion_test": false,
+  "audio_issue": "0.8 zero PCM case remains unverified; user capture-only preparation requested"
+}
