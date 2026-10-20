@@ -2,10 +2,10 @@
 <resources>
     <style name="Theme.Rosebud" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#8A3A64</item>
+        <item name="android:colorAccent">#4C7568</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowBackground">#FFF8FB</item>
+        <item name="android:windowBackground">#FAF9F6</item>
     </style>
-    <dimen name="content_padding">24dp</dimen>
+    <dimen name="content_padding">18dp</dimen>
 </resources>

@@ -15,6 +15,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.WindowInsets
+import android.view.View
+import android.widget.LinearLayout
 import android.widget.ArrayAdapter
 import android.widget.SeekBar
 import android.widget.Button
@@ -58,6 +60,7 @@ class MainActivity : Activity() {
         content.requestApplyInsets()
         findViewById<TextView>(R.id.app_version).text = getString(R.string.app_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
         setupControl()
+        setupScreens()
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
         findViewById<Button>(R.id.stop).setOnClickListener {
             startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP).putExtra("reason", "ui_stop"))
@@ -76,7 +79,7 @@ class MainActivity : Activity() {
     private fun command(action: String, fill: (Intent) -> Unit = {}) {
         val intent = Intent(this, CaptureService::class.java).setAction(action)
         fill(intent)
-        if (action == CaptureService.ACTION_CONNECT) startForegroundService(intent) else startService(intent)
+        if (action == CaptureService.ACTION_CONNECT || action == CaptureService.ACTION_MOTION_START) startForegroundService(intent) else startService(intent)
     }
     private fun settingsIntent(intent: Intent) {
         intent.putExtra("follow", findViewById<CheckBox>(R.id.audio_follow).isChecked)
@@ -123,8 +126,17 @@ class MainActivity : Activity() {
                 command(CaptureService.ACTION_SELECT) { it.putExtra("device", d.index) }
             }
         }
-        findViewById<Button>(R.id.motion_start).setOnClickListener { command(CaptureService.ACTION_MOTION_START) }
-        findViewById<Button>(R.id.motion_stop).setOnClickListener { command(CaptureService.ACTION_MOTION_STOP) }
+        findViewById<Button>(R.id.motion_start).setOnClickListener {
+            when {
+                control.active -> command(CaptureService.ACTION_PAUSE)
+                control.paused -> command(CaptureService.ACTION_RESUME)
+                else -> command(CaptureService.ACTION_MOTION_START) {
+                    settingsIntent(it)
+                    it.putExtra("preview", findViewById<CheckBox>(R.id.preview).isChecked)
+                    it.putExtra("classic", findViewById<Spinner>(R.id.scenario).selectedItemPosition == 1)
+                }
+            }
+        }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
     }
     private fun renderControl() {
@@ -142,19 +154,83 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.connect).isEnabled = c.connection == "未接続" && !c.stopping && !repo.snapshot.busy
         findViewById<EditText>(R.id.server_url).isEnabled = c.connection == "未接続"
         findViewById<Button>(R.id.scan).isEnabled = connected
-        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.stopping && deviceItems.isNotEmpty()
-        deviceSpinner.isEnabled = !c.active && !c.stopping
-        findViewById<Button>(R.id.motion_start).isEnabled = connected && c.selected.isNotEmpty() && !c.active && !c.stopping && (!c.follow || c.audioReady)
-        findViewById<Button>(R.id.motion_stop).isEnabled = connected && c.selected.isNotEmpty() && !c.stopping
-        findViewById<Button>(R.id.all_stop).isEnabled = c.connection != "未接続" || repo.snapshot.busy
+        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.stopping && deviceItems.isNotEmpty()
+        deviceSpinner.isEnabled = !c.active && !c.paused && !c.stopping
+        val previewCheck = findViewById<CheckBox>(R.id.preview)
+        val scenarioPicker = findViewById<Spinner>(R.id.scenario)
+        val startButton = findViewById<Button>(R.id.motion_start)
+        val locked = c.active || c.paused || c.stopping
+        if(locked) {
+            previewCheck.isChecked = c.preview
+            if(scenarioPicker.selectedItemPosition != (if(c.classic) 1 else 0)) scenarioPicker.setSelection(if(c.classic) 1 else 0)
+        }
+        val preview = previewCheck.isChecked
+        previewCheck.isEnabled = !locked
+        scenarioPicker.isEnabled = !locked
+        val audioReady = !findViewById<CheckBox>(R.id.audio_follow).isChecked || c.audioReady
+        startButton.isEnabled = !c.stopping && (c.active || ((preview || (connected && c.selected.isNotEmpty())) && audioReady)) && repo.snapshot.phase != "stopping"
+        setText(R.id.motion_start, when { c.stopping -> "停止を確認中"; c.active -> "一時停止"; c.paused -> "再開する"; else -> "開始する" })
+        val notice = c.error.ifEmpty { if(c.stopping || c.stopStatus.contains("未確認")) c.stopStatus else "" }
+        setText(R.id.session_notice, notice)
+        findViewById<View>(R.id.session_notice).visibility = if(notice.isEmpty()) View.GONE else View.VISIBLE
+        findViewById<Button>(R.id.all_stop).isEnabled = (application as ProbeApplication).serviceActive || repo.snapshot.busy
+        val seconds = c.elapsedMs / 1000
+        setText(R.id.elapsed, "%02d:%02d".format(Locale.ROOT, seconds/60, seconds%60))
+        setText(R.id.phase, when { c.stopping -> "停止を確認中"; c.paused -> "一時停止"; else -> c.stage })
+        val classic = scenarioPicker.selectedItemPosition == 1
+        setText(R.id.timeline, if(classic) "0分 ━━ 6分 ━━ 12分 ━━ 19分 → 周回" else "0分 ━━ 5分 ━━ 12分 ━━ 15分 → ∞")
+        setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
+        setText(R.id.session_chips, "${c.selected.size}台を選択 · ${if(c.audioReady) "音声準備済み" else "音声準備待ち"} · ${if(preview) "プレビュー・送信なし" else "実機"}")
+        setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.title ?: if(classic) "これまでの19分" else "音に合わせて自動で選びます")
+        setText(R.id.strength, "いまの動き · ${c.strength}")
+        setText(R.id.recipe_hint, if(c.recipe>=0) "自動選択 · あと${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
+        setText(R.id.pattern_active, "自動選択：${recipes.getOrNull(c.recipe)?.title ?: "開始前"}")
+        if(c.active) findViewById<MotionWaveView>(R.id.session_wave).add(Output(c.raw.vibrate*c.multiplier,c.raw.flicker*c.multiplier))
         setText(R.id.control_values, getString(R.string.control_detail,
-            c.stage, c.elapsedMs / 1000.0, if (c.follow) "ON" else "OFF", c.envelope, c.multiplier,
+            "${c.stage} / ${c.style} / ${c.strength} / ${c.sound}（密度 %.2f・規則性 %.2f）".format(Locale.ROOT,c.density,c.regularity), c.elapsedMs / 1000.0, if (c.follow) "ON" else "OFF", c.envelope, c.multiplier,
             c.raw.vibrate, c.raw.flicker, c.sent.vibrate, c.sent.flicker, c.acknowledged.vibrate, c.acknowledged.flicker,
             if (c.plannedRest) "あり" else "なし", c.stopStatus, c.sends) +
             c.outputs.entries.joinToString(separator = "", prefix = "\n各機器の送信 / 応答") { (index, value) ->
                 "\n$index: V %.3f / F %.3f → V %.3f / F %.3f（%s）".format(Locale.ROOT,
                     value.sent.vibrate, value.sent.flicker, value.acknowledged.vibrate, value.acknowledged.flicker, value.stop)
             })
+    }
+
+    private fun setupScreens() {
+        findViewById<Spinner>(R.id.scenario).adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("音とつくる15分", "これまでの19分"))
+        val tabs = listOf(R.id.tab_session to R.id.screen_session, R.id.tab_patterns to R.id.screen_patterns, R.id.tab_settings to R.id.screen_settings)
+        tabs.forEach { (button, panel) -> findViewById<Button>(button).setOnClickListener {
+            tabs.forEach { (b,p) -> findViewById<View>(p).visibility=if(p==panel) View.VISIBLE else View.GONE
+                findViewById<Button>(b).alpha=if(b==button) 1f else .55f }
+            findViewById<android.widget.ScrollView>(R.id.screen_scroll).post { findViewById<android.widget.ScrollView>(R.id.screen_scroll).scrollTo(0,0) }
+        } }
+        listOf(R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics).forEach { (b,p) ->
+            findViewById<Button>(b).setOnClickListener { val v=findViewById<View>(p); v.visibility=if(v.visibility==View.VISIBLE) View.GONE else View.VISIBLE }
+        }
+        fun showSample(i: Int) {
+            val recipe=recipes[i]
+            setText(R.id.sample_title, recipe.title + " · 見本")
+            setText(R.id.sample_description, recipe.description)
+            setText(R.id.sample_sequence, recipe.sequence)
+            findViewById<MotionWaveView>(R.id.sample_wave).sample(i)
+        }
+        val cards=findViewById<LinearLayout>(R.id.recipe_cards)
+        var row = LinearLayout(this)
+        fun dp(v: Int) = (v*resources.displayMetrics.density).toInt()
+        recipes.forEachIndexed { i,r ->
+            if(i%2==0) {
+                row = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+                cards.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            }
+            val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(10),dp(10),dp(10),dp(10)); setBackgroundResource(R.drawable.panel) }
+            val label=TextView(this).apply { text=r.title; textSize=13f; setTextColor(android.graphics.Color.parseColor("#313D39")) }
+            card.addView(label)
+            card.addView(MotionWaveView(this).apply { sample(i) },LinearLayout.LayoutParams(-1,(42*resources.displayMetrics.density).toInt()))
+            card.isClickable=true; card.isFocusable=true; card.contentDescription=r.title+"の見本を表示"
+            card.setOnClickListener { showSample(i) }
+            row.addView(card, LinearLayout.LayoutParams(0,-2,1f).apply { if(i%2==0) marginEnd=dp(8) })
+        }
+        showSample(0)
     }
 
     private fun begin() {

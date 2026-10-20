@@ -87,6 +87,57 @@ class MotionControllerTest {
         server.shutdown()
     }
 
+    @Test fun previewUsesNewEngineWithoutScalarCommandsAndResumeKeepsRecipePosition() {
+        setup(); control.select(7); await { state.get().selected.isNotEmpty() }
+        control.session(true,false);control.start(87)
+        await { state.get().active && state.get().recipe>=0 }
+        advance(1200)
+        val before=state.get()
+        control.pause();await { state.get().paused }
+        val held=state.get().elapsedMs
+        advance(5000)
+        assertEquals(held,state.get().elapsedMs)
+        control.resume();await { state.get().active }
+        advance(300)
+        assertEquals(before.recipe,state.get().recipe)
+        assertEquals(before.recipeEndMs,state.get().recipeEndMs)
+        assertTrue(state.get().elapsedMs in held..held+500)
+        assertFalse(requests.any { it.first=="ScalarCmd" || it.first=="StopDeviceCmd" })
+        control.shutdown("preview_stop");await { ended }
+        control.resume();advance(1000);assertFalse(state.get().active)
+    }
+    @Test fun pauseRequiresBothStopResponsesAndLateScalarCannotReviveIt() {
+        dual=true;scalarAck=false;setup()
+        control.select(-1);await { state.get().selected.size==2 }
+        control.session(false,false);control.start(21)
+        await { requests.count { it.first=="ScalarCmd" }==2 }
+        holdStops.add(8)
+        advance(1000);control.pause();await { state.get().stopping }
+        assertFalse(state.get().paused)
+        control.resume();control.start(999);advance(200)
+        assertFalse(state.get().active)
+        val late=requests.first { it.first=="ScalarCmd" }.second
+        ok(late)
+        advance(100)
+        assertEquals(Output(),state.get().raw)
+        val stop=requests.last { it.first=="StopDeviceCmd" && it.second.getInt("DeviceIndex")==8 }.second
+        ok(stop);await { state.get().paused }
+        val held=state.get().elapsedMs
+        assertEquals(Output(),state.get().acknowledged)
+        requests.filter { it.first=="ScalarCmd" }.forEach { ok(it.second) }
+        advance(5000)
+        assertEquals(held,state.get().elapsedMs)
+        val recipe=state.get().recipe;val deadline=state.get().recipeEndMs
+        scalarAck=true
+        control.resume();await { state.get().active }
+        advance(200)
+        await { requests.count { it.first=="ScalarCmd" }>=4 }
+        assertEquals(recipe,state.get().recipe)
+        assertEquals(deadline,state.get().recipeEndMs)
+        assertTrue(state.get().elapsedMs in held..held+300)
+        assertEquals(2,state.get().selected.size)
+    }
+
     @Test fun connectAndSelectDoNotMoveAndCommandsContainOnlyTwoValidatedFeatures() {
         setup()
         assertFalse(requests.any { it.first == "ScalarCmd" })
