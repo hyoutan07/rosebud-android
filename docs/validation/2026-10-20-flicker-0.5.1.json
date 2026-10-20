@@ -1,0 +1,62 @@
+{
+  "date_jst": "2026-10-20",
+  "version_name": "0.5.1",
+  "version_code": 8,
+  "implementation_commit": "76bd114",
+  "apk": "app/build/releases/rosebud-0.5.1-debug.apk",
+  "apk_sha256": "2e471eb301869b7d9d492f883d14412aaab55b2e9775e2946db5039e5c85229b",
+  "tests": [
+    {
+      "name": "jp.hyoutan.rosebud.MotionControllerTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:55:45.978Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.AudioStatsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:55:45.823Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.FlickerTrialTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:55:45.968Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.BoilingFrogTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:55:45.836Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.ScenarioEngineTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:55:53.391Z"
+    }
+  ],
+  "test_total": 48,
+  "duration_range_ms": [
+    100,
+    10000
+  ],
+  "build": "success",
+  "lint": "0 errors, 6 existing guidance warnings",
+  "installed": true,
+  "user_stopped_before_update": true,
+  "saved_settings": {
+    "vibrate_cap": 35,
+    "flicker_cap": 100,
+    "follow": true,
+    "url": "ws://192.168.11.10:12345"
+  },
+  "new_physical_test": "not performed by agent; user will try selected conditions",
+  "normal_flicker_gate": "not yet implemented pending physical motion duration"
+}

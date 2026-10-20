@@ -74,7 +74,7 @@
     "flicker_cap": 34,
     "follow": true
   },
-  "physical_verification": "first single trial sent once and stop acknowledged; no visible motion reported; calibration ongoing",
+  "physical_verification": "user performed independent trials; reports good slow motion at 7% / 2 seconds; calibration ongoing",
   "pending": [
     "native trial panel display confirmation",
     "physical output and minimum complete-motion duration",
@@ -93,6 +93,17 @@
       "user_started": true,
       "user_observation": "試すボタンを押したが何も動かなかった",
       "interpretation": "動作成立未確認。出力不足か時間不足かは未判定。"
+    },
+    {
+      "utc": "2026-10-20T01:53:37.317011Z",
+      "device_index": 2,
+      "requested_percent": 7,
+      "quantized_scalar": 0.06666666666666667,
+      "requested_duration_ms": 2000,
+      "stop_requested_after_ms": 2001,
+      "user_started": true,
+      "user_observation": "7%・2秒でゆっくり動いてよさそう",
+      "interpretation": "好感触の条件。物理最小値と一動作完了時間は未確定。"
     }
   ]
 }

@@ -1,8 +1,8 @@
 # Rosebud Android
 
-スマホの再生音と時間の流れから動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.5.0／versionCode 7**、ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を使用します。振動・Flickerの2系統、選択した2台へ同じ生成フレームを送ります。
+スマホの再生音と時間の流れから動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.5.1／versionCode 8**、ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を使用します。振動・Flickerの2系統、選択した2台へ同じ生成フレームを送ります。
 
-**追加した単発確認・段階スキップの現在地は [docs/flicker-trial.md](docs/flicker-trial.md)。47テスト・ビルド・Lint成功、単発の実機確認待ちです。Flickerの出力・長さは未設定で、本人が1回ずつ開始します。通常Flickerを「成立する一動作＋間」へ変更するのは実機確認後です。**
+**追加した単発確認・段階スキップの現在地は [docs/flicker-trial.md](docs/flicker-trial.md)。48テスト・ビルド・Lint成功。本人が7%・2秒でゆっくり動く感触を確認し、追加要望で単発の入力上限を10秒へ広げました。Flickerの出力・長さは未設定で、本人が1回ずつ開始します。通常Flickerを「成立する一動作＋間」へ変更するのは実機確認後です。**
 
 第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功。**本人と2台の動作・実音声・静かな区間・一時停止／再開・全停止を短時間確認済み**です。実動作は約3分39秒、USB充電・画面ON・Wake Lockなし。導入の小ささは調整候補、長時間などは未検証です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
 
