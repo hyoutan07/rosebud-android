@@ -20,7 +20,7 @@ class FlickerTrackTest {
         }
         assertEquals(first, track.frame(19*.1, 19*.1, sound.copy(level=.01)))
     }
-    @Test fun quietAlternatesCompleteSevenPercentUnitsAndLongRestsEvenAcrossPatternChanges() {
+    @Test fun middleQuietAlternatesCompleteSevenPercentUnitsAndLongRestsEvenAcrossPatternChanges() {
         val track = FlickerTrack(12)
         val quiet = SoundFeatures(kind=SoundKind.QUIET, level=0.0)
         var at = 0.0
@@ -28,7 +28,7 @@ class FlickerTrackTest {
         var changes = 0
         var patternStart = -1.0
         while (at < 300.0) {
-            val frame = track.frame(at, at, quiet)
+            val frame = track.frame(at, 300.0+at, quiet)
             if (frame.patternStart != patternStart) { changes++; patternStart = frame.patternStart }
             if (previous == FlickerPhase.ON) assertEquals(FlickerPhase.REST_A, frame.phase)
             else assertEquals(FlickerPhase.ON, frame.phase)
@@ -204,5 +204,84 @@ class FlickerTrackTest {
             try { track.frame(1.0,bad,sound); fail("invalid progress") } catch (_: IllegalArgumentException) { }
         }
         assertEquals(frame,track.frame(1.0,1.0,sound))
+    }
+    @Test fun allIntroPatternsUseTwoSecondWeakOnAndExactlyOneSecondAfterEveryOn() {
+        for (pattern in 0..7) for (audio in listOf(sound,sound.copy(kind=SoundKind.QUIET))) {
+            val track = FlickerTrack(pattern.toLong())
+            var frame = track.frame(0.0,0.0,audio)
+            assertTrue(track.selectPattern(0.0,pattern,audio))
+            while (frame.unitStart < 180.0) {
+                assertEquals(2.0,if(frame.phase==FlickerPhase.ON) frame.unitEnd-frame.unitStart else 2.0,1e-9)
+                if (frame.phase==FlickerPhase.ON) assertTrue(frame.percent in listOf(7,10))
+                else {
+                    assertEquals(FlickerPhase.REST_A,frame.phase)
+                    assertEquals(1.0,frame.unitEnd-frame.unitStart,1e-9)
+                }
+                val at = frame.unitEnd
+                val next = track.frame(at,at,audio)
+                assertNotEquals(frame.phase,next.phase)
+                assertEquals(pattern,next.pattern)
+                frame = next
+            }
+        }
+    }
+    @Test fun finishRemainsContinuousExceptOneSecondEveryThirdPatternUpdateEvenWhenPinned() {
+        for (pattern in 0..7) for (audio in listOf(sound,sound.copy(kind=SoundKind.QUIET))) {
+            val track = FlickerTrack(pattern.toLong())
+            var frame = track.frame(0.0,900.0,audio)
+            track.selectPattern(0.0,pattern,audio)
+            var restSeconds = 0.0
+            var updates = 1
+            var rests = 0
+            while (frame.unitStart < 1800.0) {
+                if (frame.phase != FlickerPhase.ON) {
+                    assertEquals(FlickerPhase.REST_A,frame.phase)
+                    assertEquals(1.0,frame.unitEnd-frame.unitStart,1e-9)
+                    restSeconds += frame.unitEnd-frame.unitStart
+                    rests++
+                } else if (audio.kind==SoundKind.QUIET) {
+                    assertTrue(frame.percent in listOf(7,10))
+                    assertEquals(2.0,frame.unitEnd-frame.unitStart,1e-9)
+                }
+                val at = frame.unitEnd
+                val next = track.frame(at,900.0+at,audio)
+                if (frame.patternStart != next.patternStart) updates++
+                if (frame.phase==FlickerPhase.ON && next.phase==FlickerPhase.ON)
+                    assertNotEquals(frame.percent,next.percent)
+                frame = next
+            }
+            assertEquals(updates/3,rests)
+            assertTrue(restSeconds/1800.0 < .015)
+            assertTrue(rests>5)
+        }
+    }
+    @Test fun patternSelectionWaitsForOnCompletesInRestAndPinnedStageUsesNewStyle() {
+        val track = FlickerTrack(44)
+        assertFalse(track.selectPattern(0.0,2,sound))
+        val initial = track.frame(0.0,0.0,sound)
+        track.frame(.5,.5,sound)
+        assertTrue(track.selectPattern(.5,5,sound))
+        val pending = track.frame(.5,.5,sound)
+        assertTrue(pending.pendingPattern)
+        assertEquals(initial.unitEnd,pending.unitEnd,0.0)
+        assertEquals(initial.percent,pending.percent)
+        val at = pending.unitEnd
+        val rest = track.frame(at,at,sound)
+        assertEquals(5,rest.pattern)
+        assertEquals(FlickerPhase.REST_A,rest.phase)
+        assertFalse(rest.pendingPattern)
+        assertTrue(track.selectPattern(at,7,sound))
+        track.requestStageSkip(at)
+        val middle = track.frame(at,300.0,sound)
+        assertEquals(7,middle.pattern)
+        assertEquals(7,middle.manualPattern)
+        assertTrue(middle.style in 1..2)
+        assertFalse(middle.pendingPattern)
+        assertFalse(middle.pendingStage)
+        assertFalse(track.selectPattern(at,7,sound))
+        assertFalse(track.selectPattern(at,8,sound))
+        assertTrue(track.selectPattern(at,-1,sound))
+        val auto = track.frame(at,300.0,sound)
+        assertEquals(-1,auto.manualPattern)
     }
 }

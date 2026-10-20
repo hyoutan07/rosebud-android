@@ -63,9 +63,14 @@ class ScenarioEngineTest {
         assertEquals(middle, engine.frame(65.0, SoundFeatures()))
         assertTrue(engine.skipTo(65.0, 900.0, SoundFeatures()))
         val finish = engine.frame(65.0, SoundFeatures())
-        assertFalse(engine.skipTo(65.0, 300.0, SoundFeatures()))
         assertFalse(engine.skipTo(65.0, 900.0, SoundFeatures()))
         assertEquals(finish, engine.frame(65.0, SoundFeatures()))
+        assertTrue(engine.skipTo(65.0, 300.0, SoundFeatures()))
+        assertEquals(300.0,engine.progressSeconds(65.0),0.0)
+        assertTrue(engine.skipTo(65.0,0.0,SoundFeatures()))
+        assertEquals(0.0,engine.progressSeconds(65.0),0.0)
+        assertFalse(engine.skipTo(65.0,0.0,SoundFeatures()))
+        assertEquals(1.0,engine.progressSeconds(66.0),0.0)
     }
     @Test fun skippedEndlessKeepsRepeatLimitAndReachesSettledMixOnProgressClock() {
         var samples = 0
@@ -248,6 +253,62 @@ class ScenarioEngineTest {
         assertEquals(SoundKind.QUIET,features.snapshot.kind)
         features.add(.05,100)
         assertEquals(SoundKind.UNCLEAR,features.snapshot.kind)
+    }
+    @Test fun pinnedTracksSurviveBidirectionalStagesAndReturnIndependentlyToAutomatic() {
+        val engine = ScenarioEngine(99)
+        val sound = SoundFeatures(kind=SoundKind.SMOOTH)
+        assertFalse(engine.selectVibrationPattern(0.0,3,sound))
+        assertFalse(engine.selectFlickerPattern(0.0,5,sound))
+        engine.frame(0.0,sound)
+        assertTrue(engine.selectVibrationPattern(.5,3,sound))
+        assertTrue(engine.selectFlickerPattern(.5,5,sound))
+        val pending = engine.frame(.5,sound)
+        assertEquals(3,pending.manualVibrationPattern)
+        assertEquals(3,pending.recipe)
+        assertEquals(5,pending.flicker.manualPattern)
+        assertTrue(pending.flicker.pendingPattern)
+        assertFalse(engine.selectVibrationPattern(.5,3,sound))
+        assertFalse(engine.selectFlickerPattern(.5,5,sound))
+        assertTrue(engine.skipTo(.5,900.0,sound))
+        var frame = engine.frame(pending.flicker.unitEnd,sound)
+        assertEquals(5,frame.flicker.pattern)
+        assertFalse(frame.flicker.pendingPattern)
+        assertTrue(frame.flicker.style in 1..3)
+        for (at in listOf(10.0,80.0,160.0)) {
+            frame = engine.frame(at,sound)
+            assertEquals(3,frame.recipe)
+            assertEquals(5,frame.flicker.pattern)
+        }
+        assertTrue(engine.skipTo(160.0,300.0,sound))
+        assertTrue(engine.skipTo(160.0,0.0,sound))
+        frame = engine.frame(165.0,sound)
+        assertEquals("導入",frame.phase)
+        assertEquals(3,frame.recipe)
+        assertEquals(5,frame.flicker.pattern)
+        assertEquals(0,frame.flicker.style)
+        assertTrue(engine.selectVibrationPattern(165.0,-1,sound))
+        assertEquals(-1,engine.frame(165.0,sound).manualVibrationPattern)
+        assertEquals(5,engine.frame(165.0,sound).flicker.manualPattern)
+        assertTrue(engine.selectFlickerPattern(165.0,-1,sound))
+        frame = engine.frame(170.0,sound)
+        assertEquals(-1,frame.flicker.manualPattern)
+        assertFalse(frame.flicker.pendingPattern)
+        for (bad in listOf(-2,8)) {
+            assertFalse(engine.selectVibrationPattern(170.0,bad,sound))
+            assertFalse(engine.selectFlickerPattern(170.0,bad,sound))
+        }
+        assertFalse(engine.selectVibrationPattern(Double.NaN,0,sound))
+        assertFalse(engine.selectFlickerPattern(169.0,0,sound))
+    }
+    @Test fun manualVibrationSelectionKeepsCurrentSmoothingAndIntroUsesLowerNominalFloor() {
+        val engine = ScenarioEngine(23)
+        val first = engine.frame(0.0,SoundFeatures())
+        assertEquals(MotionDefaults.positiveFloor*MotionDefaults.nominalVibrationCap*.7,first.output.vibrate,1e-12)
+        val before = engine.frame(.5,SoundFeatures())
+        assertTrue(engine.selectVibrationPattern(.5,7,SoundFeatures()))
+        val selected = engine.frame(.5,SoundFeatures())
+        assertEquals(before.output,selected.output)
+        assertEquals(7,selected.recipe)
     }
     @Test(expected=IllegalArgumentException::class) fun nonFiniteTimeIsRejected() { ScenarioEngine(0).frame(Double.NaN,SoundFeatures()) }
 }

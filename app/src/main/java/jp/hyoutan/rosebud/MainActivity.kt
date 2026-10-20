@@ -2,6 +2,7 @@ package jp.hyoutan.rosebud
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -137,6 +138,9 @@ class MainActivity : Activity() {
                 }
             }
         }
+        findViewById<Button>(R.id.skip_intro).setOnClickListener { command(CaptureService.ACTION_SKIP) { it.putExtra("target_seconds",0.0) } }
+        findViewById<Button>(R.id.choose_vibration).setOnClickListener { choosePattern("vibration") }
+        findViewById<Button>(R.id.choose_flicker).setOnClickListener { choosePattern("flicker") }
         findViewById<Button>(R.id.skip_middle).setOnClickListener { command(CaptureService.ACTION_SKIP) { it.putExtra("target_seconds",300.0) } }
         findViewById<Button>(R.id.skip_finish).setOnClickListener { command(CaptureService.ACTION_SKIP) { it.putExtra("target_seconds",900.0) } }
         findViewById<Button>(R.id.trial_start).setOnClickListener {
@@ -148,6 +152,19 @@ class MainActivity : Activity() {
             }
         }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
+    }
+    private fun canChoosePattern() = (control.active || control.paused) && !control.classic && !control.trialActive &&
+        !control.stopping && control.error.isEmpty() && (application as ProbeApplication).serviceActive
+    private fun choosePattern(track: String) {
+        if(!canChoosePattern()) return
+        val vibration = track == "vibration"
+        val patterns = if(vibration) recipes else flickerPatterns
+        val selected = if(vibration) control.manualVibrationPattern else control.manualFlickerPattern
+        AlertDialog.Builder(this).setTitle(if(vibration) "振動のパターン" else "Flickerのパターン")
+            .setSingleChoiceItems((listOf("自動で選ぶ")+patterns.map { it.title }).toTypedArray(), selected+1) { dialog, which ->
+                if(canChoosePattern()) command(CaptureService.ACTION_PATTERN) { it.putExtra("track",track);it.putExtra("pattern",which-1) }
+                dialog.dismiss()
+            }.setNegativeButton("閉じる",null).show()
     }
     private fun renderControl() {
         val c = control
@@ -191,9 +208,13 @@ class MainActivity : Activity() {
         val classic = scenarioPicker.selectedItemPosition == 1
         val canSkip = !classic && !c.trialActive && !c.stopping && (c.active || c.paused) && c.error.isEmpty()
         findViewById<View>(R.id.stage_actions).visibility = if(classic) View.GONE else View.VISIBLE
-        findViewById<Button>(R.id.skip_middle).isEnabled = canSkip && c.progressMs < 300000
-        findViewById<Button>(R.id.skip_finish).isEnabled = canSkip && c.progressMs < 900000
-        setText(R.id.progress_detail, if(c.progressMs>c.elapsedMs) "進行位置 %02d:%02d · 経過は実際の運転時間です".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ → 中間 → フィニッシュ · 自動で進みます")
+        val currentStage = if(c.progressMs<300000) 0 else if(c.progressMs<900000) 1 else 2
+        listOf(R.id.skip_intro,R.id.skip_middle,R.id.skip_finish).forEachIndexed { index,id ->
+            findViewById<Button>(id).isEnabled = canSkip && currentStage != index
+            findViewById<Button>(id).backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor(if(index==currentStage && (c.active || c.paused)) "#9D174D" else "#1F2937"))
+            findViewById<Button>(id).alpha = if(index==currentStage && (c.active || c.paused)) 1f else if(canSkip) .85f else .45f
+        }
+        setText(R.id.progress_detail, if(c.active || c.paused) "進行位置 %02d:%02d · いつでも行き来できます".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ ⇄ 中間 ⇄ フィニッシュ · 自動でも進みます")
         val trialBusy = c.trialActive || c.stopping
         val percentView = findViewById<EditText>(R.id.trial_percent)
         val secondsView = findViewById<EditText>(R.id.trial_seconds)
@@ -217,11 +238,13 @@ class MainActivity : Activity() {
         findViewById<SeekBar>(R.id.vibrate_cap).isEnabled = !trialBusy
         findViewById<SeekBar>(R.id.flicker_cap).isEnabled = !trialBusy
         setText(R.id.timeline, if(classic) "0分 ━━ 6分 ━━ 12分 ━━ 19分 → 周回" else "0分 ━━ 5分 ━━ 12分 ━━ 15分 → ∞")
+        findViewById<View>(R.id.scenario_note).visibility=if(classic) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.timeline).visibility=if(classic) View.VISIBLE else View.GONE
         setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
         setText(R.id.session_chips, "${c.selected.size}台を選択 · ${if(c.audioReady) "音声準備済み" else "音声準備待ち"} · ${if(preview) "プレビュー・送信なし" else "実機"}")
         setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.let { "振動 · ${it.title}" } ?: if(classic) "これまでの19分" else "音に合わせて自動で選びます")
         setText(R.id.strength, "振動 · ${c.strength}")
-        setText(R.id.recipe_hint, if(c.recipe>=0) "振動の切替まで約${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
+        setText(R.id.recipe_hint, if(c.recipe>=0) "${if(c.manualVibrationPattern<0) "自動 · 次の変化まで約" else "選択を固定 · 次の変化まで約"}${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
         findViewById<View>(R.id.flicker_motion).visibility = if(classic) View.GONE else View.VISIBLE
         val flickerTitle = flickerPatterns.getOrNull(c.flickerPattern)?.title ?: "開始前"
         val flickerDetail = when {
@@ -231,7 +254,12 @@ class MainActivity : Activity() {
             c.flickerPhase == "動作中" -> "%d%% · 残り %.1f秒".format(Locale.ROOT,c.flickerPercent,(c.flickerUnitEndMs-c.elapsedMs).coerceAtLeast(0)/1000.0)
             else -> "%s · あと %.1f秒".format(Locale.ROOT,c.flickerPhase,(c.flickerUnitEndMs-c.elapsedMs).coerceAtLeast(0)/1000.0)
         }
-        setText(R.id.flicker_motion,"Flicker · $flickerTitle\n$flickerDetail" + if(c.flickerPendingStage) "\nこの一動作のあと、新しい段階へ" else "")
+        setText(R.id.flicker_motion,"Flicker · $flickerTitle\n$flickerDetail" + when { c.flickerPendingPattern -> "\nこの一動作のあと、選んだパターンへ"; c.flickerPendingStage -> "\nこの一動作のあと、新しい段階へ"; else -> "" })
+        listOf(R.id.choose_vibration,R.id.choose_flicker,R.id.pattern_mode).forEach { findViewById<View>(it).visibility=if(classic) View.GONE else View.VISIBLE }
+        listOf(R.id.choose_vibration,R.id.choose_flicker).forEach { findViewById<Button>(it).isEnabled=canChoosePattern() }
+        setText(R.id.choose_vibration, if(c.manualVibrationPattern<0) "振動のパターン · 自動 ▾" else "振動 · ${recipes[c.manualVibrationPattern].title} ▾")
+        setText(R.id.choose_flicker, if(c.manualFlickerPattern<0) "Flickerのパターン · 自動 ▾" else "Flicker · ${flickerPatterns[c.manualFlickerPattern].title} ▾")
+        setText(R.id.pattern_mode, if(c.manualVibrationPattern>=0 || c.manualFlickerPattern>=0) "選択を固定 · 自動で選ぶに戻すまで続きます" else "自動 · 音と段階に合わせます")
         setText(R.id.pattern_active, "振動：${recipes.getOrNull(c.recipe)?.title ?: "開始前"}\nFlicker：$flickerTitle")
         if(c.active) findViewById<MotionWaveView>(R.id.session_wave).add(if(classic)
             Output(c.raw.vibrate*c.multiplier*c.vibrateCap/100.0,c.raw.flicker*c.multiplier*c.flickerCap/100.0) else
@@ -273,7 +301,7 @@ class MainActivity : Activity() {
                 cards.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             }
             val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(10),dp(10),dp(10),dp(10)); setBackgroundResource(R.drawable.panel) }
-            val label=TextView(this).apply { text=r.title; textSize=13f; setTextColor(android.graphics.Color.parseColor("#313D39")) }
+            val label=TextView(this).apply { text=r.title; textSize=13f; setTextColor(android.graphics.Color.parseColor("#F9FAFB")) }
             card.addView(label)
             card.addView(MotionWaveView(this).apply { sample(i) },LinearLayout.LayoutParams(-1,(42*resources.displayMetrics.density).toInt()))
             card.isClickable=true; card.isFocusable=true; card.contentDescription=r.title+"の見本を表示"

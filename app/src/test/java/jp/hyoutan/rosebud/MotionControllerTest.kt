@@ -203,6 +203,49 @@ class MotionControllerTest {
         assertTrue(state.get().stopStatus.contains("未確認") || state.get().stopStatus.contains("タイムアウト"))
         assertEquals(1,requests.count { it.first=="ScalarCmd" })
     }
+    @Test fun manualPatternsAndBidirectionalStagesPreservePauseAndRequireExplicitResume() {
+        setup();control.session(true,false);control.start(87)
+        await { state.get().active && state.get().flickerPattern>=0 }
+        advance(500)
+        val unitEnd=state.get().flickerUnitEndMs
+        val percent=state.get().flickerPercent
+        control.selectPattern("vibration",3);await { state.get().manualVibrationPattern==3 }
+        assertEquals(3,state.get().recipe)
+        control.selectPattern("flicker",5);await { state.get().manualFlickerPattern==5 }
+        assertTrue(state.get().flickerPendingPattern)
+        assertEquals(unitEnd,state.get().flickerUnitEndMs)
+        assertEquals(percent,state.get().flickerPercent)
+        control.pause();await { state.get().paused }
+        val held=state.get().elapsedMs
+        control.skipTo(900.0);await { state.get().progressMs==900000L }
+        control.skipTo(0.0);await { state.get().progressMs==0L }
+        assertTrue(state.get().paused)
+        assertEquals(held,state.get().elapsedMs)
+        assertEquals(3,state.get().manualVibrationPattern)
+        assertEquals(5,state.get().manualFlickerPattern)
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+        control.resume();await { state.get().active };advance(2500)
+        await { !state.get().flickerPendingPattern && state.get().flickerPattern==5 }
+        control.selectPattern("vibration",-1);await { state.get().manualVibrationPattern == -1 }
+        control.selectPattern("flicker",-1);await { state.get().manualFlickerPattern == -1 }
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+    }
+    @Test fun invalidOrIdlePatternChoicesDoNotStartOrChangeMotion() {
+        setup();control.selectPattern("flicker",5);advance(100)
+        assertFalse(state.get().active)
+        assertEquals(-1,state.get().manualFlickerPattern)
+        control.session(true,false);control.start(42);await { state.get().active && state.get().recipe>=0 }
+        val before=state.get().recipe
+        for(index in listOf(-2,8,100)) control.selectPattern("vibration",index)
+        control.selectPattern("unknown",0);advance(200)
+        assertEquals(before,state.get().recipe)
+        assertEquals(-1,state.get().manualVibrationPattern)
+        control.shutdown("end");await { ended }
+        control.selectPattern("flicker",4);control.skipTo(0.0);advance(100)
+        assertFalse(state.get().active)
+        assertEquals(Output(),state.get().raw)
+    }
+
     @Test fun stageSkipKeepsElapsedTimeAndPausedStateUntilExplicitResume() {
         setup();control.session(true,false);control.start(87)
         await { state.get().active && state.get().recipe>=0 }

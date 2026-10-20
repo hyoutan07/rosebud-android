@@ -31,6 +31,7 @@ internal object MotionDefaults {
     const val quietGain = .22
     const val onsetPhaseNudge = .12
     const val nominalVibrationCap = .35
+    const val introVibrationGain = .7
     const val initialCeiling = .35
     const val positiveFloor = .003
     const val restAVibration = .025
@@ -112,7 +113,8 @@ internal val recipes = listOf(
     Recipe("途中でほどける波","波の途中で力を抜いて、また別の波。","波 → 極弱 → 長さを変えて波",Shape.UNRAVEL),
     Recipe("不規則なまとまり","数回の動きと長短の間。","2〜4回の断続 → 極弱 / レスト",Shape.CLUSTER))
 internal data class EngineFrame(val output: Output, val recipe: Int, val strength: Strength, val style: Int,
-    val recipeStart: Double, val recipeEnd: Double, val phase: String, val flicker: FlickerFrame)
+    val recipeStart: Double, val recipeEnd: Double, val phase: String, val flicker: FlickerFrame,
+    val manualVibrationPattern: Int = -1)
 internal data class MotionSegment(val end: Double, val strength: Strength)
 
 /** Randomness occurs only at boundaries; elapsed time is supplied by the monotonic session clock. */
@@ -131,6 +133,7 @@ internal class ScenarioEngine(seed: Long) {
     private var phase = 0.0
     private var lastOnset = -1L
     private var progressOffset = 0.0
+    private var manualVibrationPattern = -1
     /** Progress may jump forward; recipe holds and waveform timing always use actual elapsed time. */
     fun progressSeconds(elapsedSeconds: Double): Double {
         require(elapsedSeconds.isFinite() && elapsedSeconds >= 0.0)
@@ -140,8 +143,8 @@ internal class ScenarioEngine(seed: Long) {
     fun skipTo(elapsedSeconds: Double, targetProgressSeconds: Double, sound: SoundFeatures): Boolean {
         if (recipe < 0 || !elapsedSeconds.isFinite() || elapsedSeconds < maxOf(lastTime, start) ||
             !targetProgressSeconds.isFinite() ||
-            targetProgressSeconds !in listOf(MotionDefaults.introEnd, MotionDefaults.endlessStart) ||
-            targetProgressSeconds <= progressSeconds(elapsedSeconds)) return false
+            targetProgressSeconds !in listOf(0.0, MotionDefaults.introEnd, MotionDefaults.endlessStart) ||
+            stageBucket(targetProgressSeconds) == stageBucket(progressSeconds(elapsedSeconds))) return false
         flicker.frame(elapsedSeconds, progressSeconds(elapsedSeconds), sound)
         flicker.requestStageSkip(elapsedSeconds)
         progressOffset = targetProgressSeconds - elapsedSeconds
@@ -150,6 +153,20 @@ internal class ScenarioEngine(seed: Long) {
         return true
     }
     fun resumeFromPause(elapsedSeconds: Double) = flicker.resumeFromPause(elapsedSeconds)
+    fun selectVibrationPattern(actual: Double, index: Int, sound: SoundFeatures): Boolean {
+        if (recipe < 0 || !actual.isFinite() || actual < maxOf(lastTime,start) ||
+            index !in -1..recipes.lastIndex || index == manualVibrationPattern) return false
+        frame(actual,sound)
+        manualVibrationPattern = index
+        choose(actual,sound)
+        return true
+    }
+    fun selectFlickerPattern(actual: Double, index: Int, sound: SoundFeatures): Boolean {
+        if (recipe < 0 || !actual.isFinite() || actual < maxOf(lastTime,start) ||
+            index !in -1..flickerPatterns.lastIndex) return false
+        frame(actual,sound)
+        return flicker.selectPattern(actual,index,sound)
+    }
 
     private fun draw(weights: DoubleArray): Int {
         var value = random.next()*weights.sum()
@@ -162,7 +179,7 @@ internal class ScenarioEngine(seed: Long) {
         style = draw(styleWeights(progressSeconds(at)))
         val weights = MotionDefaults.audioWeights.getValue(sound.kind).mapIndexed { i,w -> w*MotionDefaults.recipeStyleWeights[style][i] }.toDoubleArray()
         if(recipe >= 0) weights[recipe] *= if(repeats >= 2) 0.0 else MotionDefaults.repeatWeight
-        val next = draw(weights)
+        val next = if (manualVibrationPattern >= 0) manualVibrationPattern else draw(weights)
         repeats = if(next == recipe) repeats+1 else 1
         recipe = next
         val duration = end-start
@@ -203,27 +220,29 @@ internal class ScenarioEngine(seed: Long) {
         val ceiling = MotionDefaults.initialCeiling+(1-MotionDefaults.initialCeiling)*(progress/MotionDefaults.endlessStart).coerceIn(0.0,1.0)
         val audioGain = if(sound.kind==SoundKind.QUIET) MotionDefaults.quietGain else .5+.5*sound.level
         val vrange = MotionDefaults.vibrationRanges[state]
-        val vibration = if(vrange==null) 0.0 else (vrange.start+(vrange.endInclusive-vrange.start)*(.5+.5*sin(phase*2*PI+.8)))*ceiling*audioGain
+        val introGain = if (progress < MotionDefaults.introEnd) MotionDefaults.introVibrationGain else 1.0
+        val vibration = if(vrange==null) 0.0 else (vrange.start+(vrange.endInclusive-vrange.start)*(.5+.5*sin(phase*2*PI+.8)))*ceiling*audioGain*introGain
         val target = Output(vibration,0.0)
         val blend = 1-exp(-dt/MotionDefaults.blendSeconds)
         smoothed = Output(smoothed.vibrate+(target.vibrate-smoothed.vibrate)*blend,0.0)
         lastTime = seconds
         // Vibration retains the prior nominal 35% feel. Flicker has its own clock and units.
         val vibrationOut = when(state) {
-            Strength.REST_A -> MotionDefaults.restAVibration*ceiling
+            Strength.REST_A -> MotionDefaults.restAVibration*ceiling*introGain
             Strength.REST_B -> 0.0
-            else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor)
+            else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor*introGain)
         } * MotionDefaults.nominalVibrationCap
         val f = flicker.frame(seconds, progress, sound)
         val out = Output(when(f.phase) {
-            FlickerPhase.REST_A -> MotionDefaults.restAVibration*ceiling*MotionDefaults.nominalVibrationCap
+            FlickerPhase.REST_A -> MotionDefaults.restAVibration*ceiling*MotionDefaults.nominalVibrationCap*introGain
             FlickerPhase.REST_B -> 0.0
             FlickerPhase.ON -> vibrationOut
         }, f.output)
-        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress),f)
+        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress),f,manualVibrationPattern)
     }
     companion object {
         val styleNames = listOf("導入","中盤弱め","中盤強め","強め")
+        private fun stageBucket(t: Double) = when { t < MotionDefaults.introEnd -> 0; t < MotionDefaults.endlessStart -> 1; else -> 2 }
         fun phaseName(t: Double) = when { t<MotionDefaults.introEnd -> "導入"; t<MotionDefaults.middleEnd -> "中盤"; t<MotionDefaults.endlessStart -> "強めへ"; else -> "エンドレス" }
         fun styleWeights(t: Double): DoubleArray = when {
             t<MotionDefaults.introEnd -> doubleArrayOf(1.0,0.0,0.0,0.0)

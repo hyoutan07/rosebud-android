@@ -42,7 +42,7 @@
   <string name="cap_label">%1$s上限 %2$d%%（新15分では出力の天井）</string>
   <string name="connection_detail">%1$s ／ 対象 %2$s\n%3$s</string>
   <string name="control_detail">%1$s ／ 経過 %2$.1f秒\n追従 %3$s・包絡 %4$.2f・倍率 %5$.2f\n生成 V %6$.3f / F %7$.3f\n送信 V %8$.3f / F %9$.3f\n応答済 V %10$.3f / F %11$.3f\nFlickerの予定した抜き：%12$s\n停止：%13$s ／ 指令 %14$d回</string>
-  <string name="ui_1">rosebud</string>
+  <string name="ui_1">ROSEBUD DIRECTOR</string>
   <string name="ui_2">未接続 · 音声準備待ち · プレビュー</string>
   <string name="ui_3">シナリオ</string>
   <string name="ui_4">ゆっくり導入 → 緩急 → エンドレス</string>
@@ -76,8 +76,8 @@
   <string name="ui_32">■ 全停止</string>
   <string name="ui_33">セッション</string>
   <string name="ui_34">動き</string>
-  <string name="skip_middle">中間へ</string>
-  <string name="skip_finish">フィニッシュへ</string>
+  <string name="skip_middle">中間</string>
+  <string name="skip_finish">フィニッシュ</string>
   <string name="progress_detail">操作しなければ自動で進みます。</string>
   <string name="open_trial">Flickerを1回だけ確かめる</string>
   <string name="trial_title">単発確認 · Flickerだけ</string>
@@ -90,4 +90,8 @@
   <string name="trial_status">未実施。条件を一緒に決めてから試します。</string>
   <string name="trial_stop_hint">途中でも下の「■ 全停止」を押せます。止まったことを確認してから、次の1回へ。</string>
   <string name="flicker_motion">Flicker · 開始前</string>
+  <string name="skip_intro">はじめ</string>
+  <string name="choose_vibration">振動のパターン · 自動 ▾</string>
+  <string name="choose_flicker">Flickerのパターン · 自動 ▾</string>
+  <string name="pattern_mode">自動 · 音と段階に合わせます</string>
 </resources>

@@ -3,7 +3,8 @@ package jp.hyoutan.rosebud
 internal enum class FlickerPhase { ON, REST_A, REST_B }
 internal data class FlickerFrame(val output: Double, val pattern: Int, val patternStart: Double,
     val patternEnd: Double, val style: Int, val percent: Int, val unitStart: Double,
-    val unitEnd: Double, val phase: FlickerPhase, val pendingStage: Boolean)
+    val unitEnd: Double, val phase: FlickerPhase, val pendingStage: Boolean,
+    val manualPattern: Int = -1, val pendingPattern: Boolean = false)
 
 internal val flickerPatterns = listOf(
     Recipe("ゆっくり往復", "小さな一動作から、ゆっくり往復。", "7%・2秒 → 間A → 10%・3秒 → 7%・2秒", Shape.WAVE),
@@ -20,6 +21,9 @@ private data class FlickerUnit(val percent: Int, val seconds: Double, val phase:
 private fun on(percent: Int, seconds: Double) = FlickerUnit(percent, seconds)
 private fun gap(phase: FlickerPhase = FlickerPhase.REST_A, bias: Int = 0) = FlickerUnit(0, 0.0, phase, bias)
 private const val repeatedGapMax = 1.2
+private const val introRestSeconds = 1.0
+private const val finishRestSeconds = 1.0
+private const val finishRestEveryPatterns = 3
 private fun repeatedGapSeconds(position: Double) = MotionDefaults.restAMin +
     (minOf(MotionDefaults.restAMax, repeatedGapMax) - MotionDefaults.restAMin) * position
 // Adjustable initial arrangements; percentages are absolute commands, never audio-scaled.
@@ -72,6 +76,10 @@ internal class FlickerTrack(seed: Long) {
     private var unitEnd = 0.0
     private var lastTime = 0.0
     private var pendingAt: Double? = null
+    private var pendingPatternAt: Double? = null
+    private var manualPattern = -1
+    private var finishPatternCount = 0
+    private var finishRestDue = false
     private var lastResumeAt = Double.NEGATIVE_INFINITY
 
     private fun draw(weights: DoubleArray): Int {
@@ -87,10 +95,14 @@ internal class FlickerTrack(seed: Long) {
             w * MotionDefaults.recipeStyleWeights[style][i]
         }.toDoubleArray()
         if (pattern >= 0) weights[pattern] *= if (repeats >= 2) 0.0 else MotionDefaults.repeatWeight
-        val next = draw(weights)
+        val next = if (manualPattern >= 0) manualPattern else draw(weights)
         repeats = if (next == pattern) repeats + 1 else 1
         pattern = next
         cursor = 0
+        finishRestDue = if (progress >= MotionDefaults.endlessStart) {
+            finishPatternCount++
+            finishPatternCount % finishRestEveryPatterns == 0
+        } else false
     }
     private fun transformed(source: FlickerUnit): FlickerUnit {
         if (source.phase != FlickerPhase.ON) return source
@@ -101,16 +113,38 @@ internal class FlickerTrack(seed: Long) {
             else -> source
         }
     }
-    private fun startUnit(at: Double, sound: SoundFeatures, previous: FlickerPhase?) {
+    private fun startUnit(at: Double, progress: Double, sound: SoundFeatures, previous: FlickerPhase?) {
         var repeatedGap = false
-        val source = if (sound.kind == SoundKind.QUIET) {
+        val intro = progress < MotionDefaults.introEnd
+        val finish = progress >= MotionDefaults.endlessStart
+        val source = if (intro) {
+            // Fold source gaps into the single pause following every complete introductory ON.
+            if (previous == FlickerPhase.ON) FlickerUnit(0,introRestSeconds,FlickerPhase.REST_A)
+            else if (sound.kind == SoundKind.QUIET) on(7,2.0)
+            else {
+                val units = flickerUnits[pattern]
+                while (units[cursor % units.size].phase != FlickerPhase.ON) cursor++
+                val next = units[cursor++ % units.size]
+                on(if (next.percent == 7) 7 else 10,2.0)
+            }
+        } else if (finish && finishRestDue) {
+            finishRestDue = false
+            FlickerUnit(0,finishRestSeconds,FlickerPhase.REST_A)
+        } else if (finish && sound.kind == SoundKind.QUIET) {
+            on(if (previous == FlickerPhase.ON && unit.percent == 7) 10 else 7,2.0)
+        } else if (sound.kind == SoundKind.QUIET) {
             if (previous == FlickerPhase.ON) gap(bias=1) else on(7,2.0)
         } else {
             val units = flickerUnits[pattern]
             val next = transformed(units[cursor % units.size])
-            if (previous == FlickerPhase.ON && next.phase == FlickerPhase.ON && next.percent == unit.percent) {
-                repeatedGap = true
-                gap()
+            if (finish && next.phase != FlickerPhase.ON) {
+                cursor++
+                on(if (previous == FlickerPhase.ON && unit.percent == 7) 15 else 7,2.0)
+            } else if (previous == FlickerPhase.ON && next.phase == FlickerPhase.ON && next.percent == unit.percent) {
+                if (finish) on(if (unit.percent == 7) 15 else 7,2.0) else {
+                    repeatedGap = true
+                    gap()
+                }
             } else {
                 cursor++
                 next
@@ -119,7 +153,7 @@ internal class FlickerTrack(seed: Long) {
         unit = source
         unitStart = at
         val density = if (sound.density.isFinite()) sound.density.coerceIn(0.0,1.0) else 0.0
-        val duration = if (unit.phase == FlickerPhase.ON) unit.seconds else if (repeatedGap) {
+        val duration = if (unit.seconds > 0.0) unit.seconds else if (repeatedGap) {
             repeatedGapSeconds(random.next())
         } else {
             val position = (random.next() * .5 + (1.0 - density) * .5).coerceIn(0.0,1.0)
@@ -134,28 +168,37 @@ internal class FlickerTrack(seed: Long) {
         fun progress(at: Double) = (progressSeconds - actualSeconds + at).coerceAtLeast(0.0)
         if (pattern < 0) {
             choose(0.0, progress(0.0), sound)
-            startUnit(0.0, sound, null)
+            startUnit(0.0, progress(0.0), sound, null)
         }
         // A request during a gap takes effect at its explicit actual timestamp, without waiting for it.
-        val request = pendingAt
+        val request = listOfNotNull(pendingAt,pendingPatternAt).maxOrNull()
         if (request != null && unit.phase != FlickerPhase.ON && request < unitEnd) {
             choose(request, progress(request), sound)
-            startUnit(request, sound, unit.phase)
+            startUnit(request, progress(request), sound, unit.phase)
             pendingAt = null
+            pendingPatternAt = null
         }
         while (actualSeconds >= unitEnd) {
             val at = unitEnd
             val previous = unit.phase
-            val requested = pendingAt?.let { at >= it } == true
+            val requested = pendingAt?.let { at >= it } == true || pendingPatternAt?.let { at >= it } == true
             if (requested || at >= patternEnd) {
                 choose(at, progress(at), sound)
-                if (requested) pendingAt = null
+                if (requested) { pendingAt = null; pendingPatternAt = null }
             }
-            startUnit(at, sound, previous)
+            startUnit(at, progress(at), sound, previous)
         }
         lastTime = actualSeconds
         return FlickerFrame(unit.percent / 100.0, pattern, patternStart, patternEnd, style,
-            unit.percent, unitStart, unitEnd, unit.phase, pendingAt != null)
+            unit.percent, unitStart, unitEnd, unit.phase, pendingAt != null,manualPattern,pendingPatternAt != null)
+    }
+    fun selectPattern(actual: Double, index: Int, @Suppress("UNUSED_PARAMETER") sound: SoundFeatures): Boolean {
+        if (pattern < 0 || !actual.isFinite() || actual < lastTime || index !in -1..flickerPatterns.lastIndex ||
+            index == manualPattern) return false
+        manualPattern = index
+        pendingPatternAt = actual
+        lastTime = actual
+        return true
     }
     fun requestStageSkip(actualSeconds: Double) {
         require(actualSeconds.isFinite() && actualSeconds >= lastTime)

@@ -89,6 +89,7 @@ class CaptureService : Service() {
                 controller.startTrial(intent.getIntExtra("trial_percent",0),intent.getLongExtra("trial_ms",0))
                 return START_NOT_STICKY
             }
+            ACTION_PATTERN -> { controller.selectPattern(intent.getStringExtra("track") ?: "",intent.getIntExtra("pattern",-2)); return START_NOT_STICKY }
             ACTION_SKIP -> { controller.skipTo(intent.getDoubleExtra("target_seconds",Double.NaN)); return START_NOT_STICKY }
             ACTION_PAUSE -> { controller.pause(); return START_NOT_STICKY }
             ACTION_RESUME -> { controller.resume(); return START_NOT_STICKY }
@@ -316,6 +317,7 @@ class CaptureService : Service() {
         const val ACTION_SELECT = "jp.hyoutan.rosebud.SELECT"
         const val ACTION_SETTINGS = "jp.hyoutan.rosebud.SETTINGS"
         const val ACTION_TRIAL = "jp.hyoutan.rosebud.FLICKER_TRIAL"
+        const val ACTION_PATTERN = "jp.hyoutan.rosebud.SELECT_PATTERN"
         const val ACTION_SKIP = "jp.hyoutan.rosebud.SKIP_STAGE"
         const val ACTION_PAUSE = "jp.hyoutan.rosebud.PAUSE"
         const val ACTION_RESUME = "jp.hyoutan.rosebud.RESUME"

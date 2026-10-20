@@ -43,6 +43,7 @@ internal data class ControlSnapshot(
     val trialActive: Boolean = false, val trialPercent: Int = 0, val trialDurationMs: Long = 0,
     val trialRemainingMs: Long = 0, val trialStatus: String = "未実施", val progressMs: Long = 0,
     val paused: Boolean = false, val preview: Boolean = false, val classic: Boolean = true,
+    val manualVibrationPattern: Int = -1, val manualFlickerPattern: Int = -1, val flickerPendingPattern: Boolean = false,
     val flickerPattern: Int = -1, val flickerStyle: String = "", val flickerPhase: String = "開始前",
     val flickerPercent: Int = 0, val flickerUnitEndMs: Long = 0, val flickerPatternEndMs: Long = 0, val flickerPendingStage: Boolean = false,
     val recipe: Int = -1, val strength: String = "開始前", val style: String = "", val recipeEndMs: Long = 0,
@@ -62,6 +63,7 @@ internal data class ControlSnapshot(
         put("trial_active", trialActive); put("trial_percent", trialPercent); put("trial_duration_ms", trialDurationMs)
         put("trial_remaining_ms", trialRemainingMs); put("trial_status", trialStatus); put("progress_ms", progressMs)
         put("paused", paused); put("preview", preview); put("classic", classic); put("recipe", recipe); put("strength", strength); put("style", style)
+        put("manual_vibration_pattern", manualVibrationPattern); put("manual_flicker_pattern", manualFlickerPattern); put("flicker_pending_pattern", flickerPendingPattern)
         put("flicker_pattern", flickerPattern); put("flicker_style", flickerStyle); put("flicker_phase", flickerPhase)
         put("flicker_percent", flickerPercent); put("flicker_unit_end_ms", flickerUnitEndMs); put("flicker_pattern_end_ms", flickerPatternEndMs)
         put("flicker_pending_stage", flickerPendingStage)
@@ -241,7 +243,7 @@ internal class MotionController(
         pauseRequested = false; resumeAt = now()
         began = now(); lastGenerate = began - 100
         lastSend.clear(); targets.forEach { lastSend[it.index] = began - maxOf(100, it.gapMs) }
-        update(state.copy(active = true, paused = false, recipe = -1, flickerPattern = -1, flickerPhase = "開始前", flickerPercent = 0, flickerPendingStage = false, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
+        update(state.copy(active = true, paused = false, recipe = -1, manualVibrationPattern = -1, manualFlickerPattern = -1, flickerPendingPattern = false, flickerPattern = -1, flickerPhase = "開始前", flickerPercent = 0, flickerPendingStage = false, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
             outputs = targets.associate { it.index to DeviceOutput(stop = "動作中") },
             seed = seed, error = "", stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中", maxTickGapMs = 0))
         log("motion_started", mapOf("state" to state.json()))
@@ -254,11 +256,31 @@ internal class MotionController(
         val frame = engine.frame(elapsed,sound)
         update(state.copy(elapsedMs = (elapsed*1000).toLong(), progressMs = (engine.progressSeconds(elapsed)*1000).toLong(),
             stage = frame.phase, recipe = frame.recipe, strength = frame.strength.label,
-            style = ScenarioEngine.styleNames[frame.style], recipeEndMs = (frame.recipeEnd*1000).toLong()).withFlicker(frame.flicker))
+            style = ScenarioEngine.styleNames[frame.style], manualVibrationPattern = frame.manualVibrationPattern, recipeEndMs = (frame.recipeEnd*1000).toLong()).withFlicker(frame.flicker))
         log("stage_skipped",mapOf("target_progress_seconds" to targetSeconds,"state" to state.json()))
     }
 
+    fun selectPattern(track: String, index: Int) = post {
+        if(closing || state.stopping || state.trialActive || state.classic || state.error.isNotEmpty() ||
+            (!state.active && !state.paused) || index !in -1..7) return@post
+        val elapsed = if(state.active) (now()-began)/1000.0 else state.elapsedMs/1000.0
+        val sound = if(state.follow) features.snapshot else SoundFeatures()
+        val accepted = when(track) {
+            "vibration" -> engine.selectVibrationPattern(elapsed,index,sound)
+            "flicker" -> engine.selectFlickerPattern(elapsed,index,sound)
+            else -> false
+        }
+        if(!accepted) return@post
+        val frame = engine.frame(elapsed,sound)
+        update(state.copy(elapsedMs = (elapsed*1000).toLong(), progressMs = (engine.progressSeconds(elapsed)*1000).toLong(),
+            stage = frame.phase, recipe = frame.recipe, strength = frame.strength.label,
+            style = ScenarioEngine.styleNames[frame.style], manualVibrationPattern = frame.manualVibrationPattern,
+            recipeEndMs = (frame.recipeEnd*1000).toLong()).withFlicker(frame.flicker))
+        log("pattern_selected",mapOf("track" to track,"pattern" to index,"state" to state.json()))
+    }
+
     private fun ControlSnapshot.withFlicker(f: FlickerFrame) = copy(
+        manualFlickerPattern = f.manualPattern, flickerPendingPattern = f.pendingPattern,
         flickerPattern = f.pattern, flickerStyle = ScenarioEngine.styleNames[f.style], flickerPhase = when(f.phase) {
             FlickerPhase.ON -> "動作中"; FlickerPhase.REST_A -> "間A · 振動は極弱"; FlickerPhase.REST_B -> "間B · 両方休止"
         }, flickerPercent = f.percent, flickerUnitEndMs = (f.unitEnd*1000).toLong(),
@@ -473,7 +495,7 @@ internal class MotionController(
             val ramp = ((time-resumeAt)/1000.0/MotionDefaults.resumeSeconds).coerceIn(.01,1.0)
             val gain = (if (state.classic && state.follow) envelope.multiplier else 1.0)*ramp
             update(state.copy(elapsedMs = time - began, progressMs = if(state.classic) time-began else (engine.progressSeconds(elapsed)*1000).toLong(), stage = frame.name, raw = frame.output,
-                recipe = generated?.recipe ?: -1, strength = generated?.strength?.label ?: "既存19分",
+                recipe = generated?.recipe ?: -1, manualVibrationPattern = generated?.manualVibrationPattern ?: -1, strength = generated?.strength?.label ?: "既存19分",
                 style = generated?.let { ScenarioEngine.styleNames[it.style] } ?: "比較用",
                 recipeEndMs = generated?.let { (it.recipeEnd*1000).toLong() } ?: 0,
                 sound = sound.kind.label, density = sound.density, regularity = sound.regularity,

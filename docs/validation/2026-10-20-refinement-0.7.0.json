@@ -1,0 +1,35 @@
+{
+  "version": "0.7.0",
+  "version_code": 10,
+  "state": "automated_passed_awaiting_user_stop",
+  "tests": {
+    "total": 70,
+    "failures": 0,
+    "errors": 0,
+    "audio_stats": 6,
+    "classic": 6,
+    "flicker_track": 14,
+    "trial": 2,
+    "controller": 26,
+    "scenario": 16
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 6
+  },
+  "apk_sha256": "f34425fe527381eb591c48422b47068228254ba46eac7a9f944eb9dc24ef619a",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "phone_install": false,
+  "new_physical_motion_test": false,
+  "mock_approved": true,
+  "feedback_0_6": {
+    "middle": "良い感じ",
+    "finish": "完全停止が多い、基本は止まらず",
+    "intro": "より弱く約1秒の間を追加"
+  },
+  "unfinished": [
+    "user stop and install",
+    "read-only native UI confirmation",
+    "user initiated physical feedback"
+  ]
+}

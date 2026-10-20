@@ -23,7 +23,7 @@ class MotionWaveView(context: Context, attrs: AttributeSet? = null) : View(conte
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         paint.strokeWidth=resources.displayMetrics.density
-        paint.color=Color.rgb(232,231,226)
+        paint.color=Color.rgb(37,48,65)
         for(i in 1..2) canvas.drawLine(0f,height*i/3f,width.toFloat(),height*i/3f,paint)
         val data = if(sample >= 0) (0..100).map {
             val y=ScenarioEngine.shape(recipes[sample].shape,it/30.0)
@@ -31,7 +31,7 @@ class MotionWaveView(context: Context, attrs: AttributeSet? = null) : View(conte
         } else points.toList()
         if(data.size<2) return
         for(channel in 0..1) {
-            paint.color=Color.parseColor(if(channel==0) "#4C7568" else "#C68C95")
+            paint.color=Color.parseColor(if(channel==0) "#34D399" else "#F472B6")
             paint.strokeWidth=2.2f*resources.displayMetrics.density; paint.style=Paint.Style.STROKE
             path.reset()
             data.forEachIndexed { i,p ->

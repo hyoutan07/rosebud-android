@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Rosebud" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Rosebud" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">#111827</item>
+        <item name="android:colorPrimaryDark">#030712</item>
+        <item name="android:colorButtonNormal">#1F2937</item>
+        <item name="android:textColorPrimary">#F9FAFB</item>
+        <item name="android:textColorSecondary">#9CA3AF</item>
+        <item name="android:textColorHint">#9CA3AF</item>
+        <item name="android:statusBarColor">#030712</item>
+        <item name="android:navigationBarColor">#030712</item>
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#4C7568</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowBackground">#FAF9F6</item>
+        <item name="android:colorAccent">#EC4899</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">#030712</item>
     </style>
     <dimen name="content_padding">18dp</dimen>
 </resources>
