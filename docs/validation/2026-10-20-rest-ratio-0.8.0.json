@@ -1,0 +1,39 @@
+{
+  "version": "0.8.0",
+  "version_code": 11,
+  "state": "automated_passed_awaiting_install",
+  "tests": {
+    "total": 74,
+    "failures": 0,
+    "errors": 0,
+    "audio_stats": 6,
+    "classic": 6,
+    "flicker_track": 16,
+    "trial": 2,
+    "controller": 27,
+    "scenario": 17
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "apk_sha256": "bde39e5ce6805ead26f9ee90e92b33506e9154a4eb31691e169ced880b2866aa",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "default_rest_percent": {
+    "intro": 33,
+    "middle": 8,
+    "finish": 1
+  },
+  "simulated_budget_cases": 240,
+  "simulated_seconds_per_case": 1800,
+  "max_ratio_error_percentage_points": 0.2,
+  "finish": {
+    "max_percent": 40,
+    "strong_unit_seconds": 2,
+    "minimum_on_percent": 15
+  },
+  "preinstall_service_absent": true,
+  "preinstall_projection_null": true,
+  "phone_install": false,
+  "new_physical_motion_test": false
+}

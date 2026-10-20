@@ -7,25 +7,21 @@ internal data class FlickerFrame(val output: Double, val pattern: Int, val patte
     val manualPattern: Int = -1, val pendingPattern: Boolean = false)
 
 internal val flickerPatterns = listOf(
-    Recipe("ゆっくり往復", "小さな一動作から、ゆっくり往復。", "7%・2秒 → 間A → 10%・3秒 → 7%・2秒", Shape.WAVE),
-    Recipe("触れて、間を置く", "動かしてから、間を大切に。", "10%・2秒 → 間A → 7%・2秒 → 間B", Shape.TOUCH),
-    Recipe("まばらな小波", "長めの間に、小さな山を置く。", "7%・2秒 → 長めの間A → 15%・2秒 → 7%・2秒", Shape.SPARSE),
-    Recipe("ずらした二連", "違う長さの二つの動き。", "15%・2秒 → 短めの間A → 10%・3秒 → 7%・2秒 → 間A", Shape.DOUBLE),
+    Recipe("ゆっくり往復", "小さな一動作から、ゆっくり往復。", "7%・2秒 → 7%・2秒の谷 → 10%・3秒 → 7%・2秒", Shape.WAVE),
+    Recipe("触れて、間を置く", "動きから、小さく動く谷へ。", "10%・2秒 → 7%・2秒の谷 → 7%・2秒 → 7%・2秒の谷", Shape.TOUCH),
+    Recipe("まばらな小波", "動く谷に、小さな山を置く。", "7%・2秒 → 7%・2秒の谷 → 15%・2秒 → 7%・2秒", Shape.SPARSE),
+    Recipe("ずらした二連", "違う長さの二つの動き。", "15%・2秒 → 7%・2秒の谷 → 10%・3秒 → 7%・2秒 → 7%・2秒の谷", Shape.DOUBLE),
     Recipe("階段と戻り", "一動作ずつ上げ、小さく戻る。", "7%・2秒 → 10%・3秒 → 15%・2秒 → 20%・2秒 → 7%・2秒", Shape.RISE),
-    Recipe("短い山と余韻", "短い山のあとに、弱い余韻。", "40%・1秒 → 15%・2秒 → 7%・2秒 → 間A", Shape.HOLD),
-    Recipe("ほどける波", "徐々にほどけ、間から戻る。", "15%・3秒 → 10%・2秒 → 7%・2秒 → 間A → 20%・2秒", Shape.UNRAVEL),
-    Recipe("変わるまとまり", "長短の一動作を混ぜる。", "20%・2秒 → 7%・2秒 → 40%・1秒 → 10%・3秒 → 間B", Shape.CLUSTER))
+    Recipe("短い山と余韻", "短い山のあとに、弱い余韻。", "40%・1秒 → 15%・2秒 → 7%・2秒 → 7%・2秒の谷", Shape.HOLD),
+    Recipe("ほどける波", "徐々にほどけ、動く谷から戻る。", "15%・3秒 → 10%・2秒 → 7%・2秒 → 7%・2秒の谷 → 20%・2秒", Shape.UNRAVEL),
+    Recipe("変わるまとまり", "長短の一動作を混ぜる。", "20%・2秒 → 7%・2秒 → 40%・1秒 → 10%・3秒 → 7%・2秒の谷", Shape.CLUSTER))
 
 private data class FlickerUnit(val percent: Int, val seconds: Double, val phase: FlickerPhase = FlickerPhase.ON,
     val gapBias: Int = 0)
 private fun on(percent: Int, seconds: Double) = FlickerUnit(percent, seconds)
 private fun gap(phase: FlickerPhase = FlickerPhase.REST_A, bias: Int = 0) = FlickerUnit(0, 0.0, phase, bias)
-private const val repeatedGapMax = 1.2
-private const val introRestSeconds = 1.0
-private const val finishRestSeconds = 1.0
-private const val finishRestEveryPatterns = 3
-private fun repeatedGapSeconds(position: Double) = MotionDefaults.restAMin +
-    (minOf(MotionDefaults.restAMax, repeatedGapMax) - MotionDefaults.restAMin) * position
+private const val minimumBudgetRest = .8
+private const val maximumBudgetRest = 3.0
 // Adjustable initial arrangements; percentages are absolute commands, never audio-scaled.
 private val flickerUnits = listOf(
     listOf(on(7,2.0),gap(),on(10,3.0),on(7,2.0)),
@@ -37,23 +33,33 @@ private val flickerUnits = listOf(
     listOf(on(15,3.0),on(10,2.0),on(7,2.0),gap(),on(20,2.0)),
     listOf(on(20,2.0),on(7,2.0),on(40,1.0),on(10,3.0),gap(FlickerPhase.REST_B)))
 
-private fun gapSeconds(unit: FlickerUnit, position: Double): Double {
-    val low = if (unit.phase == FlickerPhase.REST_B) MotionDefaults.restBMin else MotionDefaults.restAMin
-    val high = if (unit.phase == FlickerPhase.REST_B) MotionDefaults.restBMax else MotionDefaults.restAMax
-    val fraction = when (unit.gapBias) { 1 -> .5 + position * .5; -1 -> position * .5; else -> position }
-    return low + (high - low) * fraction.coerceIn(0.0, 1.0)
+private val finishUnits = listOf(
+    listOf(on(20,3.0),on(40,2.0),on(20,3.0),on(15,2.0)),
+    listOf(on(40,2.0),on(20,3.0),on(40,2.0),on(15,2.0)),
+    listOf(on(20,3.0),on(40,2.0),on(15,2.0),on(40,2.0)),
+    listOf(on(40,2.0),on(20,2.0),on(40,2.0),on(20,3.0)),
+    listOf(on(15,2.0),on(20,3.0),on(40,2.0),on(20,3.0)),
+    listOf(on(40,2.0),on(20,3.0),on(40,2.0),on(15,2.0)),
+    listOf(on(20,3.0),on(40,2.0),on(20,3.0),on(40,2.0),on(15,2.0)),
+    listOf(on(40,2.0),on(15,2.0),on(40,2.0),on(20,3.0),on(40,2.0),on(20,3.0)))
+private fun stageBucket(progress: Double) = when {
+    progress < MotionDefaults.introEnd -> 0
+    progress < MotionDefaults.endlessStart -> 1
+    else -> 2
 }
+private fun bridge(percent: Int, finish: Boolean) = on(if (finish) {
+    if (percent == 15) 20 else 15
+} else if (percent == 7) 10 else 7,2.0)
 
-/** Static style-2 example only. Calling this cannot alter a running track or send commands. */
+/** Middle style-2 moving-valley example; scheduled budget rests are deliberately separate. */
 internal fun sampleFlicker(pattern: Int, seconds: Double): Double {
     require(pattern in flickerUnits.indices && seconds.isFinite() && seconds >= 0.0)
-    val source = flickerUnits[pattern]
+    val source = flickerUnits[pattern].map { if (it.phase == FlickerPhase.ON) it else on(7,2.0) }
     val units = source.flatMapIndexed { i, unit ->
         val next = source[(i+1) % source.size]
-        if (unit.phase == FlickerPhase.ON && next.phase == FlickerPhase.ON && unit.percent == next.percent)
-            listOf(unit, FlickerUnit(0,repeatedGapSeconds(.5),FlickerPhase.REST_A)) else listOf(unit)
+        if (unit.percent == next.percent) listOf(unit,bridge(unit.percent,false)) else listOf(unit)
     }
-    fun duration(unit: FlickerUnit) = if (unit.seconds > 0.0) unit.seconds else gapSeconds(unit, .5)
+    fun duration(unit: FlickerUnit) = unit.seconds
     var at = seconds % units.sumOf(::duration)
     for (unit in units) {
         if (at < duration(unit)) return unit.percent / 100.0
@@ -78,8 +84,10 @@ internal class FlickerTrack(seed: Long) {
     private var pendingAt: Double? = null
     private var pendingPatternAt: Double? = null
     private var manualPattern = -1
-    private var finishPatternCount = 0
-    private var finishRestDue = false
+    private var requestedRestSettings = RestSettings()
+    private var activeRestSettings = requestedRestSettings
+    private var budgetStage = -1
+    private var restCredit = 0.0
     private var lastResumeAt = Double.NEGATIVE_INFINITY
 
     private fun draw(weights: DoubleArray): Int {
@@ -99,10 +107,6 @@ internal class FlickerTrack(seed: Long) {
         repeats = if (next == pattern) repeats + 1 else 1
         pattern = next
         cursor = 0
-        finishRestDue = if (progress >= MotionDefaults.endlessStart) {
-            finishPatternCount++
-            finishPatternCount % finishRestEveryPatterns == 0
-        } else false
     }
     private fun transformed(source: FlickerUnit): FlickerUnit {
         if (source.phase != FlickerPhase.ON) return source
@@ -113,54 +117,47 @@ internal class FlickerTrack(seed: Long) {
             else -> source
         }
     }
-    private fun startUnit(at: Double, progress: Double, sound: SoundFeatures, previous: FlickerPhase?) {
-        var repeatedGap = false
-        val intro = progress < MotionDefaults.introEnd
-        val finish = progress >= MotionDefaults.endlessStart
-        val source = if (intro) {
-            // Fold source gaps into the single pause following every complete introductory ON.
-            if (previous == FlickerPhase.ON) FlickerUnit(0,introRestSeconds,FlickerPhase.REST_A)
-            else if (sound.kind == SoundKind.QUIET) on(7,2.0)
-            else {
-                val units = flickerUnits[pattern]
-                while (units[cursor % units.size].phase != FlickerPhase.ON) cursor++
-                val next = units[cursor++ % units.size]
-                on(if (next.percent == 7) 7 else 10,2.0)
-            }
-        } else if (finish && finishRestDue) {
-            finishRestDue = false
-            FlickerUnit(0,finishRestSeconds,FlickerPhase.REST_A)
-        } else if (finish && sound.kind == SoundKind.QUIET) {
-            on(if (previous == FlickerPhase.ON && unit.percent == 7) 10 else 7,2.0)
-        } else if (sound.kind == SoundKind.QUIET) {
-            if (previous == FlickerPhase.ON) gap(bias=1) else on(7,2.0)
+    fun setRestSettings(settings: RestSettings) { requestedRestSettings = settings }
+
+    private fun startUnit(at: Double, progress: Double, sound: SoundFeatures,
+        previous: FlickerPhase?, completedOnSeconds: Double = 0.0) {
+        val stage = stageBucket(progress)
+        val reset = stage != budgetStage || requestedRestSettings != activeRestSettings
+        if (reset) {
+            budgetStage = stage
+            activeRestSettings = requestedRestSettings
+            restCredit = 0.0
+        }
+        val percent = when (stage) { 0 -> activeRestSettings.intro; 1 -> activeRestSettings.middle; else -> activeRestSettings.finish }
+        // A boundary change starts a fresh budget. The preceding ON belongs to the old profile.
+        if (!reset) restCredit += completedOnSeconds * percent / (100.0-percent)
+        if (percent == 0) restCredit = 0.0
+        if (restCredit >= minimumBudgetRest) {
+            val seconds = minOf(restCredit,maximumBudgetRest)
+            restCredit -= seconds
+            val phase = if (stage == 1 && pattern in listOf(1,7)) FlickerPhase.REST_B else FlickerPhase.REST_A
+            unit = FlickerUnit(0,seconds,phase)
         } else {
-            val units = flickerUnits[pattern]
-            val next = transformed(units[cursor % units.size])
-            if (finish && next.phase != FlickerPhase.ON) {
-                cursor++
-                on(if (previous == FlickerPhase.ON && unit.percent == 7) 15 else 7,2.0)
-            } else if (previous == FlickerPhase.ON && next.phase == FlickerPhase.ON && next.percent == unit.percent) {
-                if (finish) on(if (unit.percent == 7) 15 else 7,2.0) else {
-                    repeatedGap = true
-                    gap()
-                }
+            val quiet = sound.kind == SoundKind.QUIET
+            val units = if (stage == 2) finishUnits[pattern] else flickerUnits[pattern]
+            val source = units[cursor % units.size]
+            val candidate = when {
+                quiet -> if (stage == 2) on(if (previous == FlickerPhase.ON && unit.percent == 15) 20 else 15,3.0)
+                    else on(if (previous == FlickerPhase.ON && unit.percent == 7) 10 else 7,2.0)
+                stage == 0 -> on(if (source.percent == 7 || source.phase != FlickerPhase.ON) 7 else 10,2.0)
+                stage == 2 -> source
+                source.phase != FlickerPhase.ON -> on(7,2.0)
+                else -> transformed(source)
+            }
+            unit = if (previous == FlickerPhase.ON && candidate.percent == unit.percent) {
+                bridge(candidate.percent,stage == 2)
             } else {
-                cursor++
-                next
+                if (!quiet) cursor++
+                candidate
             }
         }
-        unit = source
         unitStart = at
-        val density = if (sound.density.isFinite()) sound.density.coerceIn(0.0,1.0) else 0.0
-        val duration = if (unit.seconds > 0.0) unit.seconds else if (repeatedGap) {
-            repeatedGapSeconds(random.next())
-        } else {
-            val position = (random.next() * .5 + (1.0 - density) * .5).coerceIn(0.0,1.0)
-            gapSeconds(unit, position)
-        }
-        unitEnd = at + duration
-        // Complete every unit, including gaps: no clipped sub-100ms intervals at a hold boundary.
+        unitEnd = at + unit.seconds
     }
     fun frame(actualSeconds: Double, progressSeconds: Double, sound: SoundFeatures): FlickerFrame {
         require(actualSeconds.isFinite() && actualSeconds >= lastTime)
@@ -173,6 +170,7 @@ internal class FlickerTrack(seed: Long) {
         // A request during a gap takes effect at its explicit actual timestamp, without waiting for it.
         val request = listOfNotNull(pendingAt,pendingPatternAt).maxOrNull()
         if (request != null && unit.phase != FlickerPhase.ON && request < unitEnd) {
+            restCredit += unitEnd-request // Return the portion of a scheduled rest not actually consumed.
             choose(request, progress(request), sound)
             startUnit(request, progress(request), sound, unit.phase)
             pendingAt = null
@@ -181,12 +179,13 @@ internal class FlickerTrack(seed: Long) {
         while (actualSeconds >= unitEnd) {
             val at = unitEnd
             val previous = unit.phase
+            val completedOnSeconds = if (previous == FlickerPhase.ON) unitEnd-unitStart else 0.0
             val requested = pendingAt?.let { at >= it } == true || pendingPatternAt?.let { at >= it } == true
             if (requested || at >= patternEnd) {
                 choose(at, progress(at), sound)
                 if (requested) { pendingAt = null; pendingPatternAt = null }
             }
-            startUnit(at, progress(at), sound, previous)
+            startUnit(at, progress(at), sound, previous,completedOnSeconds)
         }
         lastTime = actualSeconds
         return FlickerFrame(unit.percent / 100.0, pattern, patternStart, patternEnd, style,

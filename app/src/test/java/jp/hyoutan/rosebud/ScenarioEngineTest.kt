@@ -40,7 +40,8 @@ class ScenarioEngineTest {
         assertTrue(later.skipTo(1.0, 900.0, SoundFeatures()))
         val a = early.frame(.5, SoundFeatures())
         val b = later.frame(1.0, SoundFeatures())
-        assertEquals(before.output, a.output)
+        assertEquals(before.output.flicker,a.output.flicker,0.0)
+        assertTrue(a.output.vibrate >= MotionDefaults.nominalVibrationCap*MotionDefaults.finishVibrationFloor)
         assertEquals(a.recipe, b.recipe)
         assertEquals(a.style, b.style)
         assertEquals(a.recipeEnd - a.recipeStart, b.recipeEnd - b.recipeStart, 1e-9)
@@ -165,7 +166,8 @@ class ScenarioEngineTest {
                     FlickerPhase.REST_B -> assertEquals(Output(),f.output)
                     FlickerPhase.ON -> {
                         assertEquals(f.flicker.percent/100.0,f.output.flicker,0.0)
-                        if(f.strength==Strength.REST_B) assertEquals(0.0,f.output.vibrate,0.0)
+                        if(t>=900) assertTrue(f.output.vibrate >= .0525-1e-9)
+                        else if(f.strength==Strength.REST_B) assertEquals(0.0,f.output.vibrate,0.0)
                     }
                 }
                 assertTrue(f.output.vibrate <= MotionDefaults.nominalVibrationCap)
@@ -309,6 +311,30 @@ class ScenarioEngineTest {
         val selected = engine.frame(.5,SoundFeatures())
         assertEquals(before.output,selected.output)
         assertEquals(7,selected.recipe)
+    }
+    @Test fun finishHasVibrationFloorAndOnlyBudgetRestsLowerItWhileZeroBudgetNeverStopsFlicker() {
+        val engine = ScenarioEngine(19)
+        val quiet = SoundFeatures(kind=SoundKind.QUIET,level=0.0)
+        engine.setRestSettings(RestSettings(0,0,0))
+        engine.frame(0.0,quiet)
+        engine.skipTo(0.0,900.0,quiet)
+        for (tick in 1..1800) {
+            val frame = engine.frame(tick.toDouble(),quiet)
+            assertEquals(FlickerPhase.ON,frame.flicker.phase)
+            if (!frame.flicker.pendingStage) assertTrue(frame.output.flicker >= .15)
+            assertTrue(frame.output.vibrate >= .0525-1e-9)
+        }
+        engine.setRestSettings(RestSettings(50,50,50))
+        var rests = 0
+        for (tick in 1801..1900) {
+            val frame = engine.frame(tick.toDouble(),quiet)
+            if (frame.flicker.phase==FlickerPhase.REST_A) {
+                rests++
+                assertEquals(0.0,frame.output.flicker,0.0)
+                assertTrue(frame.output.vibrate>0.0 && frame.output.vibrate<.0525)
+            }
+        }
+        assertTrue(rests>10)
     }
     @Test(expected=IllegalArgumentException::class) fun nonFiniteTimeIsRejected() { ScenarioEngine(0).frame(Double.NaN,SoundFeatures()) }
 }

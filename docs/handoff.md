@@ -1,6 +1,6 @@
 # Androidの引き継ぎ
 
-更新：2026-10-20 JST。**0.7.0／code10実装・70テスト・ビルド・Lint成功、端末更新済み、本人の新動作の感想待ち**。現在の正本は [interaction-refinement-spec.md](interaction-refinement-spec.md)。本人は0.6.0の中間を良い感じ、フィニッシュの停止過多、導入をより弱くと申告。新しい導入/フィニッシュ、中央の個別パターン選択、双方向3段階、承認済みNext.js配色を反映。端末は0.7.0。同じID/署名で更新し、保存設定XML一致・ダーク画面・余白・中央選択欄を確認。動作を開始せず、Serviceなし・MediaProjection nullのプレビュー待機。
+更新：2026-10-20 JST。**0.8.0／code11実装・74テスト・ビルド・Lint成功、端末更新待ち**。現在の正本は [stage-rest-ratio-spec.md](stage-rest-ratio-spec.md)。本人は0.7.0を「めっちゃいい感じ」としつつ、停止量を段階別に減らし、フィニッシュは一連の強い動きを長めにと依頼。完全停止と動く谷を分離し、段階別33/8/1%の時間予算（各0〜50%変更保存）、finish専用40%2秒/谷15%以上へ改修済み。UIは新しい割合欄だけ追加、既存個別固定/往復/ダーク配色を維持。端末は0.7.0、最後のログでは全停止・2台停止応答OK・error空。更新前にはServiceなしを読み取り再確認する。
 **第2の0.4.0／versionCode 6を実装し、本人との短時間2台動作確認まで完了**。実装・初期値・自動検証・APKの正本は [android-second-task.md](android-second-task.md)、残件は [TODO.md](TODO.md)。第1の0.3.2の実機結果は [android-e2e.md](android-e2e.md) に保持する。
 
 ## 再開

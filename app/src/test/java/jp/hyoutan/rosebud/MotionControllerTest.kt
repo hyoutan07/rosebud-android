@@ -203,6 +203,27 @@ class MotionControllerTest {
         assertTrue(state.get().stopStatus.contains("未確認") || state.get().stopStatus.contains("タイムアウト"))
         assertEquals(1,requests.count { it.first=="ScalarCmd" })
     }
+    @Test fun restSettingsAreCarriedIntoNewEngineAndCanChangeWithoutStartingOrResuming() {
+        setup();control.configureRest(0,6,2)
+        await { state.get().introRestPercent==0 && state.get().middleRestPercent==6 && state.get().finishRestPercent==2 }
+        assertFalse(state.get().active)
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+        control.session(true,false);control.start(87)
+        await { state.get().active && state.get().recipe>=0 }
+        repeat(16) { advance(500);assertTrue(state.get().raw.flicker>0) }
+        control.pause();await { state.get().paused }
+        val held=state.get().elapsedMs
+        control.configureRest(33,8,1);await { state.get().introRestPercent==33 }
+        control.skipTo(900.0);await { state.get().progressMs==900000L }
+        assertTrue(state.get().paused)
+        assertEquals(held,state.get().elapsedMs)
+        assertEquals(Output(),state.get().raw)
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+        control.resume();await { state.get().active };advance(3000)
+        assertTrue(state.get().raw.flicker>=.15)
+        assertTrue(faults.isEmpty())
+    }
+
     @Test fun manualPatternsAndBidirectionalStagesPreservePauseAndRequireExplicitResume() {
         setup();control.session(true,false);control.start(87)
         await { state.get().active && state.get().flickerPattern>=0 }

@@ -40,6 +40,7 @@ internal data class DeviceOutput(val sent: Output = Output(), val acknowledged: 
 }
 
 internal data class ControlSnapshot(
+    val introRestPercent: Int = RestDefaults.intro, val middleRestPercent: Int = RestDefaults.middle, val finishRestPercent: Int = RestDefaults.finish,
     val trialActive: Boolean = false, val trialPercent: Int = 0, val trialDurationMs: Long = 0,
     val trialRemainingMs: Long = 0, val trialStatus: String = "未実施", val progressMs: Long = 0,
     val paused: Boolean = false, val preview: Boolean = false, val classic: Boolean = true,
@@ -60,6 +61,7 @@ internal data class ControlSnapshot(
     fun json() = JSONObject().apply {
         put("connection", connection); put("server", server); put("selected", JSONArray(selected)); put("device_outputs", JSONArray(outputs.map { (index, output) -> output.json(index) }))
         put("devices", JSONArray(devices.map { "${it.index}: ${it.name}; steps=${it.vibrateSteps}/${it.flickerSteps}; gap=${it.gapMs}; ${it.problem}" }))
+        put("intro_rest_percent", introRestPercent); put("middle_rest_percent", middleRestPercent); put("finish_rest_percent", finishRestPercent)
         put("trial_active", trialActive); put("trial_percent", trialPercent); put("trial_duration_ms", trialDurationMs)
         put("trial_remaining_ms", trialRemainingMs); put("trial_status", trialStatus); put("progress_ms", progressMs)
         put("paused", paused); put("preview", preview); put("classic", classic); put("recipe", recipe); put("strength", strength); put("style", style)
@@ -111,6 +113,7 @@ internal class MotionController(
     private var scenario = BoilingFrog(SeededRandom(0)::next)
     private val envelope = AudioEnvelope()
     private var features = AudioFeatures()
+    private var restSettings = RestSettings()
     private var engine = ScenarioEngine(0)
     private var resumeAt = 0L
     private var pauseRequested = false
@@ -136,6 +139,15 @@ internal class MotionController(
         update(state.copy(follow = follow, vibrateCap = vibrateCap.coerceIn(5, 100), flickerCap = flickerCap.coerceIn(5, 100)))
         log("control_settings", mapOf("state" to state.json()))
         if (state.active && follow && !freshAudio()) stopMotionInternal("audio_required")
+    }
+    fun configureRest(intro: Int, middle: Int, finish: Int) = post {
+        if(state.trialActive || state.stopping || closing) return@post
+        val next = RestSettings(intro.coerceIn(0,RestDefaults.maxPercent),middle.coerceIn(0,RestDefaults.maxPercent),finish.coerceIn(0,RestDefaults.maxPercent))
+        if(next == restSettings) return@post
+        restSettings = next
+        engine.setRestSettings(next)
+        update(state.copy(introRestPercent = next.intro, middleRestPercent = next.middle, finishRestPercent = next.finish))
+        log("rest_settings",mapOf("state" to state.json()))
     }
     fun connect(url: String) = post {
         check(socket == null && !closing) { "接続中です。終了してから接続してください" }
@@ -239,7 +251,7 @@ internal class MotionController(
         }
         run++
         scenario = BoilingFrog(SeededRandom(seed)::next)
-        engine = ScenarioEngine(seed)
+        engine = ScenarioEngine(seed).also { it.setRestSettings(restSettings) }
         pauseRequested = false; resumeAt = now()
         began = now(); lastGenerate = began - 100
         lastSend.clear(); targets.forEach { lastSend[it.index] = began - maxOf(100, it.gapMs) }

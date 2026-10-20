@@ -32,6 +32,7 @@ internal object MotionDefaults {
     const val onsetPhaseNudge = .12
     const val nominalVibrationCap = .35
     const val introVibrationGain = .7
+    const val finishVibrationFloor = .15
     const val initialCeiling = .35
     const val positiveFloor = .003
     const val restAVibration = .025
@@ -153,6 +154,7 @@ internal class ScenarioEngine(seed: Long) {
         return true
     }
     fun resumeFromPause(elapsedSeconds: Double) = flicker.resumeFromPause(elapsedSeconds)
+    fun setRestSettings(settings: RestSettings) = flicker.setRestSettings(settings)
     fun selectVibrationPattern(actual: Double, index: Int, sound: SoundFeatures): Boolean {
         if (recipe < 0 || !actual.isFinite() || actual < maxOf(lastTime,start) ||
             index !in -1..recipes.lastIndex || index == manualVibrationPattern) return false
@@ -227,11 +229,11 @@ internal class ScenarioEngine(seed: Long) {
         smoothed = Output(smoothed.vibrate+(target.vibrate-smoothed.vibrate)*blend,0.0)
         lastTime = seconds
         // Vibration retains the prior nominal 35% feel. Flicker has its own clock and units.
-        val vibrationOut = when(state) {
+        val vibrationOut = (when(state) {
             Strength.REST_A -> MotionDefaults.restAVibration*ceiling*introGain
             Strength.REST_B -> 0.0
             else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor*introGain)
-        } * MotionDefaults.nominalVibrationCap
+        }).let { if (progress >= MotionDefaults.endlessStart) it.coerceAtLeast(MotionDefaults.finishVibrationFloor) else it } * MotionDefaults.nominalVibrationCap
         val f = flicker.frame(seconds, progress, sound)
         val out = Output(when(f.phase) {
             FlickerPhase.REST_A -> MotionDefaults.restAVibration*ceiling*MotionDefaults.nominalVibrationCap*introGain

@@ -1,0 +1,41 @@
+{
+  "source_version": "0.7.0",
+  "context": "rotated control log excerpt, not full physical-duration measurement",
+  "user_feedback": {
+    "overall": "めっちゃいい感じ",
+    "middle": "動きの中に止まりがある割合に",
+    "finish": "基本動いて、長い一連の動きと強め、たまの休止",
+    "design": "stage-specific stop and valley proportions"
+  },
+  "active_one_second_snapshots": {
+    "intro": {
+      "samples": 52,
+      "raw_flicker_zero": 17,
+      "sent_flicker_zero": 17
+    },
+    "middle": {
+      "samples": 36,
+      "raw_flicker_zero": 8,
+      "sent_flicker_zero": 8
+    },
+    "finish": {
+      "samples": 13,
+      "raw_flicker_zero": 0,
+      "sent_flicker_zero": 0,
+      "command_percent_samples": {
+        "7": 3,
+        "10": 6,
+        "20": 3,
+        "40": 1
+      }
+    }
+  },
+  "interpretation": "finish valley at 7-10 percent may be perceived as stopping; short log cannot establish physical cause",
+  "last_state": {
+    "active": false,
+    "connection": "未接続",
+    "selected_count": 2,
+    "all_stop_ack": true,
+    "error": ""
+  }
+}

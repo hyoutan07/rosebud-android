@@ -59,6 +59,7 @@ class CaptureService : Service() {
             closed = { main.post { controllerClosed = true; finish() } })
         val settings = getSharedPreferences("control_settings", MODE_PRIVATE)
         controller.configure(settings.getBoolean("follow", false), settings.getInt("vibrate_cap", 30), settings.getInt("flicker_cap", 30))
+        controller.configureRest(settings.getInt("rest_intro",RestDefaults.intro),settings.getInt("rest_middle",RestDefaults.middle),settings.getInt("rest_finish",RestDefaults.finish))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -67,6 +68,7 @@ class CaptureService : Service() {
             ACTION_CONNECT -> {
                 foreground(false)
                 controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
+                controller.configureRest(intent.getIntExtra("rest_intro",RestDefaults.intro),intent.getIntExtra("rest_middle",RestDefaults.middle),intent.getIntExtra("rest_finish",RestDefaults.finish))
                 repo.controlEvent("environment", mapOf("environment" to repo.environment()))
                 controller.connect(intent.getStringExtra("url") ?: "ws://192.168.40.78:12345")
                 return START_NOT_STICKY
@@ -75,12 +77,14 @@ class CaptureService : Service() {
             ACTION_SELECT -> { controller.select(intent.getIntExtra("device", -1)); return START_NOT_STICKY }
             ACTION_SETTINGS -> {
                 controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
+                controller.configureRest(intent.getIntExtra("rest_intro",RestDefaults.intro),intent.getIntExtra("rest_middle",RestDefaults.middle),intent.getIntExtra("rest_finish",RestDefaults.finish))
                 return START_NOT_STICKY
             }
             ACTION_MOTION_START -> {
                 foreground(projection != null)
                 controller.session(intent.getBooleanExtra("preview", true), intent.getBooleanExtra("classic", false))
                 controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
+                controller.configureRest(intent.getIntExtra("rest_intro",RestDefaults.intro),intent.getIntExtra("rest_middle",RestDefaults.middle),intent.getIntExtra("rest_finish",RestDefaults.finish))
                 controller.start(SystemClock.elapsedRealtime()); return START_NOT_STICKY
             }
             ACTION_TRIAL -> {

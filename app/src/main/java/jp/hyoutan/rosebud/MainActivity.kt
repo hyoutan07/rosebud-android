@@ -60,6 +60,7 @@ class MainActivity : Activity() {
         }
         content.requestApplyInsets()
         findViewById<TextView>(R.id.app_version).text = getString(R.string.app_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+        setupRestControls()
         setupControl()
         setupScreens()
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
@@ -86,6 +87,9 @@ class MainActivity : Activity() {
         intent.putExtra("follow", findViewById<CheckBox>(R.id.audio_follow).isChecked)
             .putExtra("vibrate_cap", findViewById<SeekBar>(R.id.vibrate_cap).progress)
             .putExtra("flicker_cap", findViewById<SeekBar>(R.id.flicker_cap).progress)
+            .putExtra("rest_intro",findViewById<SeekBar>(R.id.rest_intro).progress)
+            .putExtra("rest_middle",findViewById<SeekBar>(R.id.rest_middle).progress)
+            .putExtra("rest_finish",findViewById<SeekBar>(R.id.rest_finish).progress)
     }
     private fun saveSettings() {
         val follow = findViewById<CheckBox>(R.id.audio_follow).isChecked
@@ -95,6 +99,32 @@ class MainActivity : Activity() {
         if ((application as ProbeApplication).serviceActive) command(CaptureService.ACTION_SETTINGS, ::settingsIntent)
         findViewById<TextView>(R.id.vibrate_label).text = getString(R.string.cap_label, "振動", v)
         findViewById<TextView>(R.id.flicker_label).text = getString(R.string.cap_label, "Flicker", f)
+    }
+    private fun setupRestControls() {
+        val controls = listOf(Triple(R.id.rest_intro,"rest_intro",RestDefaults.intro),Triple(R.id.rest_middle,"rest_middle",RestDefaults.middle),Triple(R.id.rest_finish,"rest_finish",RestDefaults.finish))
+        controls.forEach { (id,key,default) ->
+            val slider = findViewById<SeekBar>(id)
+            slider.progress = prefs.getInt(key,default).coerceIn(0,RestDefaults.maxPercent)
+            slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) { if(fromUser) renderRestLabels() }
+                override fun onStartTrackingTouch(seekBar: SeekBar) { }
+                override fun onStopTrackingTouch(seekBar: SeekBar) {
+                    val edit=prefs.edit()
+                    controls.forEach { (viewId,prefKey,_) -> edit.putInt(prefKey,findViewById<SeekBar>(viewId).progress) }
+                    edit.apply()
+                    if((application as ProbeApplication).serviceActive) command(CaptureService.ACTION_SETTINGS,::settingsIntent)
+                    renderRestLabels()
+                }
+            })
+        }
+        renderRestLabels()
+    }
+    private fun renderRestLabels() {
+        val controls=listOf(Triple(R.id.rest_intro,R.id.rest_intro_label,"はじめ"),Triple(R.id.rest_middle,R.id.rest_middle_label,"中間"),Triple(R.id.rest_finish,R.id.rest_finish_label,"フィニッシュ"))
+        controls.forEach { (slider,label,title) ->
+            val percent=findViewById<SeekBar>(slider).progress
+            setText(label,"$title · 休み $percent%" + if(percent==0) "（予定休止なし）" else "")
+        }
     }
     private fun setupControl() {
         findViewById<EditText>(R.id.server_url).setText(prefs.getString("url", "ws://192.168.40.78:12345"))
@@ -234,6 +264,9 @@ class MainActivity : Activity() {
             else -> "${c.trialStatus} · 実機モード・対象1台・上限以内の出力と時間を確認してください"
         }
         setText(R.id.trial_status,trialNote)
+        listOf(R.id.rest_intro,R.id.rest_middle,R.id.rest_finish).forEach { findViewById<SeekBar>(it).isEnabled = !trialBusy }
+        findViewById<View>(R.id.toggle_rest).visibility=if(classic) View.GONE else View.VISIBLE
+        if(classic) findViewById<View>(R.id.rest_panel).visibility=View.GONE
         followCheck.isEnabled = !trialBusy
         findViewById<SeekBar>(R.id.vibrate_cap).isEnabled = !trialBusy
         findViewById<SeekBar>(R.id.flicker_cap).isEnabled = !trialBusy
@@ -282,13 +315,13 @@ class MainActivity : Activity() {
                 findViewById<Button>(b).alpha=if(b==button) 1f else .55f }
             findViewById<android.widget.ScrollView>(R.id.screen_scroll).post { findViewById<android.widget.ScrollView>(R.id.screen_scroll).scrollTo(0,0) }
         } }
-        listOf(R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics, R.id.toggle_trial to R.id.trial_panel).forEach { (b,p) ->
+        listOf(R.id.toggle_rest to R.id.rest_panel, R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics, R.id.toggle_trial to R.id.trial_panel).forEach { (b,p) ->
             findViewById<Button>(b).setOnClickListener { val v=findViewById<View>(p); v.visibility=if(v.visibility==View.VISIBLE) View.GONE else View.VISIBLE }
         }
         fun showSample(i: Int) {
             val recipe=flickerPatterns[i]
             setText(R.id.sample_title, "Flicker · " + recipe.title + " · 見本")
-            setText(R.id.sample_description, recipe.description + "\n緑は振動、ピンクはFlicker。段階と音で組み合わせが変わります。")
+            setText(R.id.sample_description, recipe.description + "\n中間の形の見本。休止は段階ごとの割合で入ります。フィニッシュは専用の連続配列です。\n緑は振動、ピンクはFlicker。")
             setText(R.id.sample_sequence, recipe.sequence)
             findViewById<MotionWaveView>(R.id.sample_wave).sample(i)
         }

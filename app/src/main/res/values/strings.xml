@@ -94,4 +94,10 @@
   <string name="choose_vibration">振動のパターン · 自動 ▾</string>
   <string name="choose_flicker">Flickerのパターン · 自動 ▾</string>
   <string name="pattern_mode">自動 · 音と段階に合わせます</string>
+  <string name="toggle_rest">段階ごとの休み（Flicker）</string>
+  <string name="rest_help">動いたまま弱める谷と、完全に休む時間を分けます。休みの割合を0〜50%で調整できます。</string>
+  <string name="rest_intro">はじめのFlicker休止割合</string>
+  <string name="rest_middle">中間のFlicker休止割合</string>
+  <string name="rest_finish">フィニッシュのFlicker休止割合</string>
+  <string name="rest_note">指を離すと保存します。今の一動作を終えてから反映。0%は予定休止なし。短い区間では目安の割合です。</string>
 </resources>
