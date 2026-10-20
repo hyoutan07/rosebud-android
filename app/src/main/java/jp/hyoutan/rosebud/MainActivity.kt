@@ -137,6 +137,16 @@ class MainActivity : Activity() {
                 }
             }
         }
+        findViewById<Button>(R.id.skip_middle).setOnClickListener { command(CaptureService.ACTION_SKIP) { it.putExtra("target_seconds",300.0) } }
+        findViewById<Button>(R.id.skip_finish).setOnClickListener { command(CaptureService.ACTION_SKIP) { it.putExtra("target_seconds",900.0) } }
+        findViewById<Button>(R.id.trial_start).setOnClickListener {
+            val percent = findViewById<EditText>(R.id.trial_percent).text.toString().toIntOrNull() ?: return@setOnClickListener
+            val duration = FlickerTrialLimits.parseDuration(findViewById<EditText>(R.id.trial_seconds).text.toString()) ?: return@setOnClickListener
+            command(CaptureService.ACTION_TRIAL) {
+                it.putExtra("preview",findViewById<CheckBox>(R.id.preview).isChecked)
+                it.putExtra("trial_percent",percent);it.putExtra("trial_ms",duration)
+            }
+        }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
     }
     private fun renderControl() {
@@ -144,7 +154,7 @@ class MainActivity : Activity() {
         val connected = c.connection == "接続済み"
         setText(R.id.connection, getString(R.string.connection_detail, c.connection,
             if (c.selected.isEmpty()) "未選択" else "${c.selected.size}台（${c.selected.joinToString()}）",
-            c.error.ifEmpty { if (c.follow && !c.audioReady) "追従ON：先に「取得を開始」してください" else "" }))
+            c.error.ifEmpty { if (c.follow && !c.audioReady) "通常セッションの音追従には取得が必要です（単発確認は不要）" else "" }))
         val deviceSpinner = findViewById<Spinner>(R.id.devices)
         if (deviceItems != c.devices) {
             deviceItems = c.devices
@@ -154,12 +164,12 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.connect).isEnabled = c.connection == "未接続" && !c.stopping && !repo.snapshot.busy
         findViewById<EditText>(R.id.server_url).isEnabled = c.connection == "未接続"
         findViewById<Button>(R.id.scan).isEnabled = connected
-        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.stopping && deviceItems.isNotEmpty()
-        deviceSpinner.isEnabled = !c.active && !c.paused && !c.stopping
+        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.trialActive && !c.stopping && deviceItems.isNotEmpty()
+        deviceSpinner.isEnabled = !c.active && !c.paused && !c.trialActive && !c.stopping
         val previewCheck = findViewById<CheckBox>(R.id.preview)
         val scenarioPicker = findViewById<Spinner>(R.id.scenario)
         val startButton = findViewById<Button>(R.id.motion_start)
-        val locked = c.active || c.paused || c.stopping
+        val locked = c.active || c.paused || c.trialActive || c.stopping
         if(locked) {
             previewCheck.isChecked = c.preview
             if(scenarioPicker.selectedItemPosition != (if(c.classic) 1 else 0)) scenarioPicker.setSelection(if(c.classic) 1 else 0)
@@ -167,8 +177,9 @@ class MainActivity : Activity() {
         val preview = previewCheck.isChecked
         previewCheck.isEnabled = !locked
         scenarioPicker.isEnabled = !locked
-        val audioReady = !findViewById<CheckBox>(R.id.audio_follow).isChecked || c.audioReady
-        startButton.isEnabled = !c.stopping && (c.active || ((preview || (connected && c.selected.isNotEmpty())) && audioReady)) && repo.snapshot.phase != "stopping"
+        val followCheck = findViewById<CheckBox>(R.id.audio_follow)
+        val audioReady = !followCheck.isChecked || c.audioReady
+        startButton.isEnabled = !c.trialActive && !c.stopping && (c.active || ((preview || (connected && c.selected.isNotEmpty())) && audioReady)) && repo.snapshot.phase != "stopping"
         setText(R.id.motion_start, when { c.stopping -> "停止を確認中"; c.active -> "一時停止"; c.paused -> "再開する"; else -> "開始する" })
         val notice = c.error.ifEmpty { if(c.stopping || c.stopStatus.contains("未確認")) c.stopStatus else "" }
         setText(R.id.session_notice, notice)
@@ -176,8 +187,35 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.all_stop).isEnabled = (application as ProbeApplication).serviceActive || repo.snapshot.busy
         val seconds = c.elapsedMs / 1000
         setText(R.id.elapsed, "%02d:%02d".format(Locale.ROOT, seconds/60, seconds%60))
-        setText(R.id.phase, when { c.stopping -> "停止を確認中"; c.paused -> "一時停止"; else -> c.stage })
+        setText(R.id.phase, when { c.stopping -> "停止を確認中"; c.paused -> "一時停止"; else -> when(c.stage) { "導入" -> "はじめ"; "中盤" -> "中間"; "強めへ" -> "中間 · 強めへ"; "エンドレス" -> "フィニッシュ · エンドレス"; else -> c.stage } })
         val classic = scenarioPicker.selectedItemPosition == 1
+        val canSkip = !classic && !c.trialActive && !c.stopping && (c.active || c.paused) && c.error.isEmpty()
+        findViewById<View>(R.id.stage_actions).visibility = if(classic) View.GONE else View.VISIBLE
+        findViewById<Button>(R.id.skip_middle).isEnabled = canSkip && c.progressMs < 300000
+        findViewById<Button>(R.id.skip_finish).isEnabled = canSkip && c.progressMs < 900000
+        setText(R.id.progress_detail, if(c.progressMs>c.elapsedMs) "進行位置 %02d:%02d · 経過は実際の運転時間です".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ → 中間 → フィニッシュ · 自動で進みます")
+        val trialBusy = c.trialActive || c.stopping
+        val percentView = findViewById<EditText>(R.id.trial_percent)
+        val secondsView = findViewById<EditText>(R.id.trial_seconds)
+        percentView.isEnabled = !locked;secondsView.isEnabled = !locked
+        val percent = percentView.text.toString().toIntOrNull()
+        val duration = FlickerTrialLimits.parseDuration(secondsView.text.toString())
+        val device = c.devices.singleOrNull { it.index in c.selected }
+        val trialOutput = if(percent!=null && device!=null) FlickerTrialLimits.output(percent,c.flickerCap,device.flickerSteps) else null
+        val trialValid = !locked && connected && !preview && c.selected.size==1 && device?.compatible==true && duration!=null && trialOutput!=null
+        findViewById<Button>(R.id.trial_start).isEnabled = trialValid
+        setText(R.id.trial_start, if(percent!=null && duration!=null) "%d%%・%.2f秒で1回試す".format(Locale.ROOT,percent,duration/1000.0) else "この条件で1回試す")
+        val trialNote = when {
+            c.trialActive -> "1回だけ動作中 · 残り %.1f秒".format(Locale.ROOT,c.trialRemainingMs/1000.0)
+            c.stopping -> "停止応答を確認中です"
+            c.error.isNotEmpty() -> c.error
+            trialValid -> "対象 ${device.index} · 実送信 %.2f%% · %s".format(Locale.ROOT,trialOutput*100,c.trialStatus)
+            else -> "${c.trialStatus} · 実機モード・対象1台・上限以内の出力と時間を確認してください"
+        }
+        setText(R.id.trial_status,trialNote)
+        followCheck.isEnabled = !trialBusy
+        findViewById<SeekBar>(R.id.vibrate_cap).isEnabled = !trialBusy
+        findViewById<SeekBar>(R.id.flicker_cap).isEnabled = !trialBusy
         setText(R.id.timeline, if(classic) "0分 ━━ 6分 ━━ 12分 ━━ 19分 → 周回" else "0分 ━━ 5分 ━━ 12分 ━━ 15分 → ∞")
         setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
         setText(R.id.session_chips, "${c.selected.size}台を選択 · ${if(c.audioReady) "音声準備済み" else "音声準備待ち"} · ${if(preview) "プレビュー・送信なし" else "実機"}")
@@ -204,7 +242,7 @@ class MainActivity : Activity() {
                 findViewById<Button>(b).alpha=if(b==button) 1f else .55f }
             findViewById<android.widget.ScrollView>(R.id.screen_scroll).post { findViewById<android.widget.ScrollView>(R.id.screen_scroll).scrollTo(0,0) }
         } }
-        listOf(R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics).forEach { (b,p) ->
+        listOf(R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics, R.id.toggle_trial to R.id.trial_panel).forEach { (b,p) ->
             findViewById<Button>(b).setOnClickListener { val v=findViewById<View>(p); v.visibility=if(v.visibility==View.VISIBLE) View.GONE else View.VISIBLE }
         }
         fun showSample(i: Int) {
@@ -345,7 +383,7 @@ class MainActivity : Activity() {
             s.samples / 96000.0, s.silentMs / 1000.0, s.longestSilenceMs / 1000.0, s.errors,
             s.maxReadGapMs / 1000.0, AudioStats.db(s.totalRms), AudioStats.db(s.maxPeak)))
         setText(R.id.session, getString(R.string.last_session, s.session))
-        findViewById<Button>(R.id.start).isEnabled = !s.busy && !exporting
+        findViewById<Button>(R.id.start).isEnabled = !s.busy && !exporting && !control.trialActive && !control.stopping
         findViewById<Button>(R.id.stop).isEnabled = s.busy && s.phase != "permission" && s.phase != "stopping"
         findViewById<Button>(R.id.share).isEnabled = !exporting && s.phase != "permission"
         findViewById<Button>(R.id.mark).isEnabled = s.busy && s.phase == "running"

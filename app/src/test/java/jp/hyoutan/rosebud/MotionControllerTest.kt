@@ -87,6 +87,94 @@ class MotionControllerTest {
         server.shutdown()
     }
 
+    @Test fun singleTrialSendsFlickerOnceAndStopsWithoutCaptureOrAutoRepeat() {
+        setup();control.select(7);await { state.get().selected==listOf(7) }
+        control.session(false,false);control.startTrial(3,1000)
+        await { state.get().trialActive && requests.any { it.first=="ScalarCmd" } }
+        val scalar=requests.single { it.first=="ScalarCmd" }.second.getJSONArray("Scalars")
+        assertEquals(0.0,scalar.getJSONObject(0).getDouble("Scalar"),0.0)
+        assertEquals(7.0/255,scalar.getJSONObject(1).getDouble("Scalar"),0.0)
+        assertEquals(2,scalar.length());assertFalse(state.get().audioReady)
+        control.startTrial(4,1200);control.start(999);advance(200)
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        holdStops.add(7);advance(850)
+        await { state.get().stopping }
+        control.startTrial(5,1500);advance(200)
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        ok(requests.last { it.first=="StopDeviceCmd" }.second)
+        await { !state.get().stopping && state.get().trialStatus=="単発確認終了・停止応答OK" }
+        advance(4000)
+        assertFalse(state.get().active || state.get().paused || state.get().trialActive)
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        assertEquals(1,requests.count { it.first=="StopDeviceCmd" })
+    }
+    @Test fun trialScheduledStopDoesNotWaitForClockTicksOrScalarAck() {
+        scalarAck=false;setup();control.select(7);await { state.get().selected.size==1 }
+        control.session(false,false);control.startTrial(3,200)
+        await { requests.any { it.first=="ScalarCmd" } }
+        // Fake scenario clock remains fixed. The independent real scheduled stop must still fire.
+        await { state.get().trialStatus=="単発確認終了・停止応答OK" }
+        ok(requests.first { it.first=="ScalarCmd" }.second)
+        assertFalse(state.get().trialActive)
+        assertEquals(Output(),state.get().acknowledged)
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        assertEquals(1,requests.count { it.first=="StopDeviceCmd" })
+    }
+    @Test fun trialRejectsMultipleTargetsPreviewAndOutOfBoundConditions() {
+        dual=true;setup();control.select(-1);await { state.get().selected.size==2 }
+        control.session(false,false);control.startTrial(3,500);advance(100)
+        assertFalse(state.get().trialActive)
+        control.select(7);await { state.get().selected.size==1 }
+        control.session(true,false);control.startTrial(3,500);advance(100)
+        assertFalse(state.get().trialActive)
+        control.session(false,false)
+        for((p,d) in listOf(0 to 500L,31 to 500L,3 to 99L,3 to 2001L)) control.startTrial(p,d)
+        advance(100)
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+        assertFalse(state.get().active)
+    }
+    @Test fun explicitStopWinsOverTrialTimerAndLateScalarAckCannotRevive() {
+        scalarAck=false;setup();control.select(7);await { state.get().selected.size==1 }
+        control.session(false,false);control.startTrial(3,1800)
+        await { state.get().trialActive }
+        control.shutdown("all_ui_stop");await { ended }
+        ok(requests.first { it.first=="ScalarCmd" }.second)
+        advance(5000)
+        assertFalse(state.get().trialActive || state.get().active)
+        assertEquals(Output(),state.get().acknowledged)
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        assertEquals(1,requests.count { it.first=="StopDeviceCmd" })
+    }
+    @Test fun trialStopTimeoutDisarmsAndCannotStartAgain() {
+        stopAck=false;setup();control.select(7);await { state.get().selected.size==1 }
+        control.session(false,false);control.startTrial(3,500)
+        await { state.get().trialActive };advance(600)
+        await { state.get().stopping };advance(4000)
+        await { ended }
+        control.startTrial(4,500);advance(100)
+        assertFalse(state.get().trialActive)
+        assertTrue(state.get().stopStatus.contains("未確認") || state.get().stopStatus.contains("タイムアウト"))
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+    }
+    @Test fun stageSkipKeepsElapsedTimeAndPausedStateUntilExplicitResume() {
+        setup();control.session(true,false);control.start(87)
+        await { state.get().active && state.get().recipe>=0 }
+        advance(1100)
+        control.skipTo(300.0);await { state.get().progressMs>=300000 }
+        assertEquals(1100,state.get().elapsedMs.toInt());assertEquals("中盤",state.get().stage)
+        control.pause();await { state.get().paused }
+        val held=state.get().elapsedMs
+        control.skipTo(900.0);await { state.get().progressMs>=900000 }
+        assertTrue(state.get().paused);assertFalse(state.get().active)
+        advance(5000);assertEquals(held,state.get().elapsedMs)
+        assertFalse(requests.any { it.first=="ScalarCmd" })
+        control.resume();await { state.get().active };advance(200)
+        assertEquals(held+200,state.get().elapsedMs)
+        assertEquals("エンドレス",state.get().stage)
+        control.shutdown("end");await { ended };control.skipTo(900.0);advance(100)
+        assertFalse(state.get().active)
+    }
+
     @Test fun previewUsesNewEngineWithoutScalarCommandsAndResumeKeepsRecipePosition() {
         setup(); control.select(7); await { state.get().selected.isNotEmpty() }
         control.session(true,false);control.start(87)

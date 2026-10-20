@@ -83,6 +83,13 @@ class CaptureService : Service() {
                 controller.configure(intent.getBooleanExtra("follow", false), intent.getIntExtra("vibrate_cap", 30), intent.getIntExtra("flicker_cap", 30))
                 controller.start(SystemClock.elapsedRealtime()); return START_NOT_STICKY
             }
+            ACTION_TRIAL -> {
+                foreground(projection != null)
+                controller.session(intent.getBooleanExtra("preview",true),false)
+                controller.startTrial(intent.getIntExtra("trial_percent",0),intent.getLongExtra("trial_ms",0))
+                return START_NOT_STICKY
+            }
+            ACTION_SKIP -> { controller.skipTo(intent.getDoubleExtra("target_seconds",Double.NaN)); return START_NOT_STICKY }
             ACTION_PAUSE -> { controller.pause(); return START_NOT_STICKY }
             ACTION_RESUME -> { controller.resume(); return START_NOT_STICKY }
             ACTION_MOTION_STOP -> { controller.stopMotion("motion_ui_stop"); return START_NOT_STICKY }
@@ -308,6 +315,8 @@ class CaptureService : Service() {
         const val ACTION_SCAN = "jp.hyoutan.rosebud.SCAN"
         const val ACTION_SELECT = "jp.hyoutan.rosebud.SELECT"
         const val ACTION_SETTINGS = "jp.hyoutan.rosebud.SETTINGS"
+        const val ACTION_TRIAL = "jp.hyoutan.rosebud.FLICKER_TRIAL"
+        const val ACTION_SKIP = "jp.hyoutan.rosebud.SKIP_STAGE"
         const val ACTION_PAUSE = "jp.hyoutan.rosebud.PAUSE"
         const val ACTION_RESUME = "jp.hyoutan.rosebud.RESUME"
         const val ACTION_MOTION_START = "jp.hyoutan.rosebud.MOTION_START"

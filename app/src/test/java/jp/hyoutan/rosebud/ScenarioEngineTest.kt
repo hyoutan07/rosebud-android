@@ -4,6 +4,118 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ScenarioEngineTest {
+    @Test fun manualStageSkipsKeepActualClockAndStartOneFreshHold() {
+        val engine = ScenarioEngine(42)
+        engine.frame(0.0, SoundFeatures())
+        engine.frame(12.0, SoundFeatures())
+        assertTrue(engine.skipTo(12.0, MotionDefaults.introEnd, SoundFeatures(kind = SoundKind.REGULAR)))
+        assertEquals(300.0, engine.progressSeconds(12.0), 0.0)
+        val middle = engine.frame(12.0, SoundFeatures())
+        assertEquals("中盤", middle.phase)
+        assertTrue(middle.style in 1..2)
+        assertEquals(12.0, middle.recipeStart, 0.0)
+        assertTrue(middle.recipeEnd - middle.recipeStart in 30.0..60.0)
+        val held = engine.frame(20.0, SoundFeatures(kind = SoundKind.QUIET))
+        assertEquals(middle.recipe, held.recipe)
+        assertEquals(middle.recipeEnd, held.recipeEnd, 0.0)
+        assertEquals(308.0, engine.progressSeconds(20.0), 0.0)
+        assertTrue(engine.skipTo(20.0, MotionDefaults.endlessStart, SoundFeatures()))
+        val finish = engine.frame(20.0, SoundFeatures())
+        assertEquals("エンドレス", finish.phase)
+        assertEquals(20.0, finish.recipeStart, 0.0)
+        assertTrue(finish.recipeEnd - finish.recipeStart in 30.0..60.0)
+        assertEquals(910.0, engine.progressSeconds(30.0), 0.0)
+        val boundary = engine.frame(finish.recipeEnd, SoundFeatures())
+        assertEquals(finish.recipeEnd, boundary.recipeStart, 0.0)
+        assertTrue(boundary.recipeEnd - boundary.recipeStart in 30.0..60.0)
+    }
+    @Test fun skipDoesNotConsumeUnplayedDrawsOrResetSmoothedOutput() {
+        val early = ScenarioEngine(23)
+        val later = ScenarioEngine(23)
+        early.frame(0.0, SoundFeatures())
+        later.frame(0.0, SoundFeatures())
+        val before = early.frame(.5, SoundFeatures())
+        later.frame(1.0, SoundFeatures())
+        assertTrue(early.skipTo(.5, 900.0, SoundFeatures()))
+        assertTrue(later.skipTo(1.0, 900.0, SoundFeatures()))
+        val a = early.frame(.5, SoundFeatures())
+        val b = later.frame(1.0, SoundFeatures())
+        assertEquals(before.output, a.output)
+        assertEquals(a.recipe, b.recipe)
+        assertEquals(a.style, b.style)
+        assertEquals(a.recipeEnd - a.recipeStart, b.recipeEnd - b.recipeStart, 1e-9)
+    }
+    @Test fun rejectedSkipsLeaveProgressHoldAndRandomnessUnchanged() {
+        val engine = ScenarioEngine(14)
+        val control = ScenarioEngine(14)
+        assertFalse(engine.skipTo(0.0, 300.0, SoundFeatures()))
+        assertEquals(control.frame(0.0, SoundFeatures()), engine.frame(0.0, SoundFeatures()))
+        assertEquals(control.frame(2.0, SoundFeatures()), engine.frame(2.0, SoundFeatures()))
+        for (time in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -1.0, 1.0))
+            assertFalse(engine.skipTo(time, 300.0, SoundFeatures()))
+        for (target in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -1.0, 0.0, 301.0, 720.0))
+            assertFalse(engine.skipTo(2.0, target, SoundFeatures()))
+        assertEquals(2.0, engine.progressSeconds(2.0), 0.0)
+        assertEquals(control.frame(65.0, SoundFeatures()), engine.frame(65.0, SoundFeatures()))
+        assertTrue(engine.skipTo(65.0, 300.0, SoundFeatures()))
+        val middle = engine.frame(65.0, SoundFeatures())
+        assertFalse(engine.skipTo(65.0, 300.0, SoundFeatures()))
+        assertEquals(middle, engine.frame(65.0, SoundFeatures()))
+        assertTrue(engine.skipTo(65.0, 900.0, SoundFeatures()))
+        val finish = engine.frame(65.0, SoundFeatures())
+        assertFalse(engine.skipTo(65.0, 300.0, SoundFeatures()))
+        assertFalse(engine.skipTo(65.0, 900.0, SoundFeatures()))
+        assertEquals(finish, engine.frame(65.0, SoundFeatures()))
+    }
+    @Test fun skippedEndlessKeepsRepeatLimitAndReachesSettledMixOnProgressClock() {
+        var samples = 0
+        var strong = 0
+        val styles = IntArray(4)
+        repeat(12) { seed ->
+            val engine = ScenarioEngine(seed.toLong())
+            engine.frame(0.0, SoundFeatures())
+            assertTrue(engine.skipTo(0.0, 900.0, SoundFeatures()))
+            var previous = -1
+            var repeats = 0
+            var end = -1.0
+            for (tick in 0..15000) {
+                val t = tick * .2
+                val f = engine.frame(t, SoundFeatures())
+                assertEquals("エンドレス", f.phase)
+                if (f.recipeEnd != end) {
+                    repeats = if (f.recipe == previous) repeats + 1 else 1
+                    assertTrue(repeats <= 2)
+                    assertTrue(f.recipeEnd - f.recipeStart in 30.0..60.0)
+                    previous = f.recipe
+                    end = f.recipeEnd
+                }
+                assertTrue(f.output.vibrate in 0.0..1.0 && f.output.flicker in 0.0..1.0)
+                if (t >= 1800.0) {
+                    samples++
+                    styles[f.style]++
+                    if (f.strength == Strength.STRONG) strong++
+                }
+            }
+        }
+        assertEquals(.805, strong.toDouble() / samples, .07)
+        assertEquals(.75, styles[3].toDouble() / samples, .09)
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun nonFiniteProgressClockIsRejected() { ScenarioEngine(0).progressSeconds(Double.NaN) }
+
+    @Test fun skipBeforeNextFrameStillPreventsElapsedClockReversal() {
+        val engine = ScenarioEngine(0)
+        engine.frame(0.0, SoundFeatures())
+        assertTrue(engine.skipTo(10.0, 300.0, SoundFeatures()))
+        assertFalse(engine.skipTo(9.0, 900.0, SoundFeatures()))
+        try {
+            engine.frame(9.0, SoundFeatures())
+            fail("A frame must not precede the accepted skip's actual time")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(300.0, engine.progressSeconds(10.0), 0.0)
+        assertEquals(10.0, engine.frame(10.0, SoundFeatures()).recipeStart, 0.0)
+    }
+
     @Test fun soundAndStageChangesDoNotReplaceHeldRecipeOrExtendDeadline() {
         val engine=ScenarioEngine(42)
         val first=engine.frame(0.0,SoundFeatures())

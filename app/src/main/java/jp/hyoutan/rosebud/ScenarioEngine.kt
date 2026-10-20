@@ -127,6 +127,23 @@ internal class ScenarioEngine(seed: Long) {
     private var period = 3.0
     private var phase = 0.0
     private var lastOnset = -1L
+    private var progressOffset = 0.0
+    /** Progress may jump forward; recipe holds and waveform timing always use actual elapsed time. */
+    fun progressSeconds(elapsedSeconds: Double): Double {
+        require(elapsedSeconds.isFinite() && elapsedSeconds >= 0.0)
+        return elapsedSeconds + progressOffset
+    }
+    /** The controller owns scenario eligibility, pause state and stop/error interlocks. */
+    fun skipTo(elapsedSeconds: Double, targetProgressSeconds: Double, sound: SoundFeatures): Boolean {
+        if (recipe < 0 || !elapsedSeconds.isFinite() || elapsedSeconds < maxOf(lastTime, start) ||
+            !targetProgressSeconds.isFinite() ||
+            targetProgressSeconds !in listOf(MotionDefaults.introEnd, MotionDefaults.endlessStart) ||
+            targetProgressSeconds <= progressSeconds(elapsedSeconds)) return false
+        progressOffset = targetProgressSeconds - elapsedSeconds
+        // A manual stage change is the sole exception to the current hold. Do not draw for skipped time.
+        choose(elapsedSeconds, sound)
+        return true
+    }
     private fun draw(weights: DoubleArray): Int {
         var value = random.next()*weights.sum()
         for(i in weights.indices) { value -= weights[i]; if(value < 0) return i }
@@ -135,7 +152,7 @@ internal class ScenarioEngine(seed: Long) {
     private fun choose(at: Double, sound: SoundFeatures) {
         start = at
         end = at + MotionDefaults.holdMin + random.next()*(MotionDefaults.holdMax-MotionDefaults.holdMin)
-        style = draw(styleWeights(at))
+        style = draw(styleWeights(progressSeconds(at)))
         val weights = MotionDefaults.audioWeights.getValue(sound.kind).mapIndexed { i,w -> w*MotionDefaults.recipeStyleWeights[style][i] }.toDoubleArray()
         if(recipe >= 0) weights[recipe] *= if(repeats >= 2) 0.0 else MotionDefaults.repeatWeight
         val next = draw(weights)
@@ -165,7 +182,7 @@ internal class ScenarioEngine(seed: Long) {
         segments = list
     }
     fun frame(seconds: Double, sound: SoundFeatures): EngineFrame {
-        require(seconds.isFinite() && seconds >= lastTime)
+        require(seconds.isFinite() && seconds >= maxOf(lastTime, start))
         if(recipe < 0) choose(0.0,sound)
         while(seconds >= end) choose(end,sound)
         val dt = (seconds-lastTime).coerceAtLeast(0.0)
@@ -177,7 +194,8 @@ internal class ScenarioEngine(seed: Long) {
         val state = segments.firstOrNull { seconds-start < it.end }?.strength ?: segments.last().strength
         val wave = shape(recipes[recipe].shape, phase)
         val range = MotionDefaults.ranges[state]
-        val ceiling = MotionDefaults.initialCeiling+(1-MotionDefaults.initialCeiling)*(seconds/MotionDefaults.endlessStart).coerceIn(0.0,1.0)
+        val progress = progressSeconds(seconds)
+        val ceiling = MotionDefaults.initialCeiling+(1-MotionDefaults.initialCeiling)*(progress/MotionDefaults.endlessStart).coerceIn(0.0,1.0)
         val audioGain = if(sound.kind==SoundKind.QUIET) MotionDefaults.quietGain else .5+.5*sound.level
         val value = if(range==null) 0.0 else (range.start+(range.endInclusive-range.start)*wave)*ceiling*audioGain
         val vrange = MotionDefaults.vibrationRanges[state]
@@ -192,7 +210,7 @@ internal class ScenarioEngine(seed: Long) {
             Strength.REST_B -> Output()
             else -> Output(smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor),smoothed.flicker.coerceAtLeast(MotionDefaults.positiveFloor))
         }
-        return EngineFrame(out,recipe,state,style,start,end,phaseName(seconds))
+        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress))
     }
     companion object {
         val styleNames = listOf("導入","中盤弱め","中盤強め","強め")

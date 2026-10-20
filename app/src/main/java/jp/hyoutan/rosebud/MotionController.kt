@@ -40,6 +40,8 @@ internal data class DeviceOutput(val sent: Output = Output(), val acknowledged: 
 }
 
 internal data class ControlSnapshot(
+    val trialActive: Boolean = false, val trialPercent: Int = 0, val trialDurationMs: Long = 0,
+    val trialRemainingMs: Long = 0, val trialStatus: String = "未実施", val progressMs: Long = 0,
     val paused: Boolean = false, val preview: Boolean = false, val classic: Boolean = true,
     val recipe: Int = -1, val strength: String = "開始前", val style: String = "", val recipeEndMs: Long = 0,
     val sound: String = "曖昧な音", val density: Double = 0.0, val regularity: Double = 0.0,
@@ -55,6 +57,8 @@ internal data class ControlSnapshot(
     fun json() = JSONObject().apply {
         put("connection", connection); put("server", server); put("selected", JSONArray(selected)); put("device_outputs", JSONArray(outputs.map { (index, output) -> output.json(index) }))
         put("devices", JSONArray(devices.map { "${it.index}: ${it.name}; steps=${it.vibrateSteps}/${it.flickerSteps}; gap=${it.gapMs}; ${it.problem}" }))
+        put("trial_active", trialActive); put("trial_percent", trialPercent); put("trial_duration_ms", trialDurationMs)
+        put("trial_remaining_ms", trialRemainingMs); put("trial_status", trialStatus); put("progress_ms", progressMs)
         put("paused", paused); put("preview", preview); put("classic", classic); put("recipe", recipe); put("strength", strength); put("style", style)
         put("recipe_end_ms", recipeEndMs); put("sound", sound); put("density", density); put("regularity", regularity)
         put("active", active); put("stopping", stopping); put("audio_ready", audioReady); put("follow", follow)
@@ -103,6 +107,9 @@ internal class MotionController(
     private var engine = ScenarioEngine(0)
     private var resumeAt = 0L
     private var pauseRequested = false
+    private var trialEndsAt = 0L
+    private var trialSentAt = 0L
+    private var trialStop: java.util.concurrent.ScheduledFuture<*>? = null
     private data class Pending(val type: String, val expected: String, val at: Long, val device: Int?, val done: (JSONObject) -> Unit)
     private val pending = mutableMapOf<Int, Pending>()
     init { actor.scheduleWithFixedDelay({ guarded { tick() } }, 0, 25, TimeUnit.MILLISECONDS) }
@@ -118,6 +125,7 @@ internal class MotionController(
     private fun log(type: String, fields: Map<String, Any> = emptyMap()) = event(type, fields)
 
     fun configure(follow: Boolean, vibrateCap: Int, flickerCap: Int) = post {
+        if(state.trialActive || state.stopping) return@post
         update(state.copy(follow = follow, vibrateCap = vibrateCap.coerceIn(5, 100), flickerCap = flickerCap.coerceIn(5, 100)))
         log("control_settings", mapOf("state" to state.json()))
         if (state.active && follow && !freshAudio()) stopMotionInternal("audio_required")
@@ -176,7 +184,7 @@ internal class MotionController(
         send("StartScanning", JSONObject()) { log("scan_started") }
     }
     fun select(index: Int) = post {
-        check(!state.active && !state.paused && !state.stopping && !closing) { "停止完了後に対象を変更してください" }
+        check(!state.active && !state.paused && !state.trialActive && !state.stopping && !closing) { "停止完了後に対象を変更してください" }
         val targets = if (index == -1) state.devices.filter { it.compatible } else state.devices.filter { it.index == index }
         check(targets.isNotEmpty()) { "対応機器が見つかりません" }
         check(targets.all { it.compatible }) { "対応しない機能定義です" }
@@ -187,14 +195,15 @@ internal class MotionController(
     fun audio(rms: Double, at: Long) = post { if (state.audioReady && !closing) { envelope.add(rms, at); features.add(rms, at) } }
     private fun freshAudio() = state.audioReady && envelope.lastAt >= 0 && now() - envelope.lastAt <= 2000
     fun session(preview: Boolean, classic: Boolean) = post {
-        if (!state.active && !state.paused && !state.stopping && !closing) update(state.copy(preview = preview, classic = classic))
+        if (!state.active && !state.paused && !state.trialActive && !state.stopping && !closing) update(state.copy(preview = preview, classic = classic))
     }
     fun resume() = post {
-        if (!state.paused || state.stopping || closing || (state.follow && !freshAudio())) return@post
+        if (!state.paused || state.trialActive || state.stopping || closing || (state.follow && !freshAudio())) return@post
         if (!state.preview && (!ready || state.selected.any { i -> state.devices.none { it.index == i } })) return@post
         run++
         began = now()-state.elapsedMs; resumeAt = now(); lastGenerate = now()-100
-        update(state.copy(active = true, paused = false, stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中"))
+        update(state.copy(active = true, paused = false, stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中",
+            outputs = state.outputs.mapValues { (_,v) -> v.copy(stop = if(state.preview) "プレビュー・送信なし" else "動作中") }))
         log("motion_resumed", mapOf("state" to state.json()))
     }
     fun pause() = post {
@@ -204,7 +213,7 @@ internal class MotionController(
         stopMotionInternal("pause")
     }
     fun start(seed: Long) = post {
-        if (closing || (!ready && !state.preview) || state.active || state.paused || state.stopping) { log("motion_start_rejected", mapOf("reason" to "not_ready_or_stopping")); return@post }
+        if (closing || (!ready && !state.preview) || state.active || state.paused || state.trialActive || state.stopping) { log("motion_start_rejected", mapOf("reason" to "not_ready_or_stopping")); return@post }
         val targets = state.devices.filter { it.index in state.selected }
         if ((!state.preview && (targets.isEmpty() || targets.size != state.selected.size || targets.any { !it.compatible })) || (state.follow && !freshAudio())) {
             update(state.copy(error = "対象機器を決定し、追従ONなら音声取得を開始してください")); return@post
@@ -218,11 +227,60 @@ internal class MotionController(
         pauseRequested = false; resumeAt = now()
         began = now(); lastGenerate = began - 100
         lastSend.clear(); targets.forEach { lastSend[it.index] = began - maxOf(100, it.gapMs) }
-        update(state.copy(active = true, paused = false, recipe = -1, elapsedMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
+        update(state.copy(active = true, paused = false, recipe = -1, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
             outputs = targets.associate { it.index to DeviceOutput(stop = "動作中") },
             seed = seed, error = "", stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中", maxTickGapMs = 0))
         log("motion_started", mapOf("state" to state.json()))
     }
+    fun skipTo(targetSeconds: Double) = post {
+        if(closing || state.stopping || state.trialActive || state.classic || (!state.active && !state.paused)) return@post
+        val elapsed = if(state.active) (now()-began)/1000.0 else state.elapsedMs/1000.0
+        val sound = if(state.follow) features.snapshot else SoundFeatures()
+        if(!engine.skipTo(elapsed,targetSeconds,sound)) return@post
+        val frame = engine.frame(elapsed,sound)
+        update(state.copy(elapsedMs = (elapsed*1000).toLong(), progressMs = (engine.progressSeconds(elapsed)*1000).toLong(),
+            stage = frame.phase, recipe = frame.recipe, strength = frame.strength.label,
+            style = ScenarioEngine.styleNames[frame.style], recipeEndMs = (frame.recipeEnd*1000).toLong()))
+        log("stage_skipped",mapOf("target_progress_seconds" to targetSeconds,"state" to state.json()))
+    }
+
+    fun startTrial(percent: Int, durationMs: Long) = post {
+        fun reject(reason: String) {
+            log("flicker_trial_rejected",mapOf("reason" to reason))
+            if(!state.active && !state.paused && !state.trialActive && !state.stopping) update(state.copy(error = reason))
+        }
+        if(closing || state.active || state.paused || state.trialActive || state.stopping) { reject("停止完了後に1回ずつ試してください"); return@post }
+        if(!ready || state.preview || state.selected.size!=1) { reject("実機モードで対象を1台だけ決定してください"); return@post }
+        val device = state.devices.singleOrNull { it.index==state.selected.single() && it.compatible }
+        if(device==null) { reject("選択した機器の接続を確認してください"); return@post }
+        if(durationMs !in FlickerTrialLimits.minMs..FlickerTrialLimits.maxMs) { reject("動かす長さは0.1〜2.0秒で設定してください"); return@post }
+        val value = FlickerTrialLimits.output(percent,state.flickerCap,device.flickerSteps)
+        if(value==null) { reject("出力は上限以内・機器の最小1段以上で設定してください"); return@post }
+        if(pending.values.any { it.type=="ScalarCmd" && it.device==device.index }) { reject("前の送信応答を確認中です"); return@post }
+        run++; val generation = run
+        trialSentAt = now(); trialEndsAt = trialSentAt+durationMs
+        val output = Output(0.0,value)
+        update(state.copy(trialActive = true,trialPercent = percent,trialDurationMs = durationMs,trialRemainingMs = durationMs,
+            trialStatus = "1回だけ動作中", stage = "Flickerの単発確認", strength = "単発確認", raw = Output(0.0,percent/100.0),
+            multiplier = 1.0, sent = output, acknowledged = Output(), error = "", stopStatus = "単発確認中",
+            outputs = mapOf(device.index to DeviceOutput(sent = output,stop = "単発確認中")), sends = state.sends+1))
+        val scalars = JSONArray().put(JSONObject().put("Index",0).put("ActuatorType","Vibrate").put("Scalar",0.0))
+            .put(JSONObject().put("Index",1).put("ActuatorType","Rotate").put("Scalar",value))
+        send("ScalarCmd",JSONObject().put("DeviceIndex",device.index).put("Scalars",scalars),device = device.index) {
+            if(run==generation && state.trialActive && !state.stopping && !closing) {
+                update(state.copy(acknowledged = output, outputs = state.outputs + (device.index to state.outputs.getValue(device.index).copy(acknowledged = output))))
+                log("flicker_trial_acknowledged",mapOf("state" to state.json()))
+            }
+        }
+        trialSentAt = now(); trialEndsAt = trialSentAt+durationMs
+        // Start the interval after queuing the command, not after its acknowledgement.
+        // Scheduled stop is independent of audio input, normal generation ticks and response latency.
+        trialStop = actor.schedule({ guarded {
+            if(run==generation && state.trialActive && !state.stopping) stopMotionInternal("trial_complete")
+        } },durationMs,TimeUnit.MILLISECONDS)
+        log("flicker_trial_started",mapOf("state" to state.json(),"sent_at_ms" to trialSentAt,"end_at_ms" to trialEndsAt))
+    }
+
     fun stopMotion(reason: String) = post { stopMotionInternal(reason) }
     fun shutdown(reason: String) = post {
         if (closing) return@post
@@ -233,8 +291,13 @@ internal class MotionController(
     }
 
     private fun stopMotionInternal(reason: String) {
+        trialStop?.cancel(false); trialStop = null
+        val trialWasActive = state.trialActive
+        if(trialWasActive) log("flicker_trial_stop_requested",mapOf("reason" to reason,"duration_until_request_ms" to (now()-trialSentAt),"requested_duration_ms" to state.trialDurationMs))
         run++ // Invalidate every outstanding ScalarCmd callback before sending stops to every selected device.
-        update(state.copy(active = false, paused = false, raw = Output(), sent = Output(), audioReady = state.audioReady && !closing,
+        update(state.copy(active = false, paused = false, trialActive = false, trialRemainingMs = 0,
+            trialStatus = if(trialWasActive) "停止応答を確認中" else state.trialStatus,
+            raw = Output(), sent = Output(), audioReady = state.audioReady && !closing,
             outputs = state.outputs.mapValues { (_, value) -> value.copy(sent = Output()) }))
         if (state.stopping) return
         if (state.preview) {
@@ -271,7 +334,9 @@ internal class MotionController(
             mapOf("reason" to stopReason, "device_index" to index, "error" to (error ?: "")))
         if (stopWaiting.isNotEmpty()) return
         val failed = stopFailures.isNotEmpty()
-        update(state.copy(stopping = false, paused = pauseRequested && !failed && !closing, acknowledged = if (failed) state.acknowledged else Output(),
+        update(state.copy(stopping = false,
+            trialStatus = if(state.trialStatus=="停止応答を確認中") (if(failed) "停止未確認・次の試運転不可" else "単発確認終了・停止応答OK") else state.trialStatus,
+            paused = pauseRequested && !failed && !closing, acknowledged = if (failed) state.acknowledged else Output(),
             stopStatus = if (failed) "一部の停止未確認（${stopFailures.keys.joinToString()}）" else "停止応答OK（全対象）",
             error = if (failed) "stop_error: $stopFailures" else state.error))
         log(if (failed) "stop_incomplete" else "stop_acknowledged", mapOf("reason" to stopReason, "state" to state.json()))
@@ -284,7 +349,9 @@ internal class MotionController(
         log("control_error", mapOf("error" to message, "state" to state.json()))
         run++
         pauseRequested = false
-        update(state.copy(active = false, paused = false, raw = Output(), sent = Output(), error = message))
+        update(state.copy(active = false, paused = false, trialActive = false, trialRemainingMs = 0,
+            trialStatus = if(state.trialActive) "停止応答を確認中" else state.trialStatus,
+            raw = Output(), sent = Output(), error = message))
         // The Service funnels network faults and capture termination into one shutdown path.
         if (!closing) fatal(message)
         else {
@@ -297,7 +364,7 @@ internal class MotionController(
         if (disposed) return
         disposed = true; ready = false; pending.clear()
         socket?.close(1000, "stopped"); socket = null
-        update(state.copy(connection = "未接続", active = false, paused = false, stopping = false, audioReady = false, raw = Output(), sent = Output()))
+        update(state.copy(connection = "未接続", active = false, paused = false, trialActive = false, trialRemainingMs = 0, stopping = false, audioReady = false, raw = Output(), sent = Output()))
         log("control_closed", mapOf("state" to state.json()))
         actor.shutdown()
         http.dispatcher.executorService.shutdown()
@@ -364,6 +431,11 @@ internal class MotionController(
             lastPing = time
             send("Ping", JSONObject()) { }
         }
+        if(state.trialActive && !state.stopping) {
+            if(time>=trialEndsAt) stopMotionInternal("trial_complete")
+            else if(state.trialRemainingMs/100 != (trialEndsAt-time)/100) update(state.copy(trialRemainingMs = trialEndsAt-time))
+            if(state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
+        }
         if (state.paused && state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
         if (state.active && time - lastGenerate >= 100) {
             if (state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
@@ -375,7 +447,7 @@ internal class MotionController(
             val frame = if(state.classic) scenario.frame(elapsed) else ScenarioFrame(0, generated!!.phase, elapsed, generated.output)
             val ramp = ((time-resumeAt)/1000.0/MotionDefaults.resumeSeconds).coerceIn(.01,1.0)
             val gain = (if (state.classic && state.follow) envelope.multiplier else 1.0)*ramp
-            update(state.copy(elapsedMs = time - began, stage = frame.name, raw = frame.output,
+            update(state.copy(elapsedMs = time - began, progressMs = if(state.classic) time-began else (engine.progressSeconds(elapsed)*1000).toLong(), stage = frame.name, raw = frame.output,
                 recipe = generated?.recipe ?: -1, strength = generated?.strength?.label ?: "既存19分",
                 style = generated?.let { ScenarioEngine.styleNames[it.style] } ?: "比較用",
                 recipeEndMs = generated?.let { (it.recipeEnd*1000).toLong() } ?: 0,
