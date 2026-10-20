@@ -1,7 +1,7 @@
 {
   "version": "0.6.0",
   "version_code": 9,
-  "state": "automated_passed_awaiting_user_stop_and_install",
+  "state": "installed_awaiting_user_initiated_physical_feedback",
   "commands": [
     "./gradlew assembleDebug lint testDebugUnitTest --console=plain",
     "apksigner verify --print-certs"
@@ -24,10 +24,22 @@
   "apk_sha256": "cf8edc16a251648b5c2f7b7a4f90fa969feb2723d03656f29ff6aa0a349d4eb6",
   "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
   "new_combined_physical_run": false,
-  "phone_install": false,
+  "phone_install": true,
   "remaining": [
-    "user all-stop, verify service absent before install",
-    "read-only UI check",
-    "user initiated middle and strong short feedback cases"
-  ]
+    "user connection and explicit motion start",
+    "middle and strong short feedback cases"
+  ],
+  "installed_version": "0.6.0",
+  "installed_code": 9,
+  "preinstall_service_absent": true,
+  "preinstall_media_projection_null": true,
+  "postinstall_service_absent": true,
+  "postinstall_media_projection_null": true,
+  "saved_settings_preserved": {
+    "vibrate_cap": 35,
+    "flicker_cap": 100,
+    "follow": true,
+    "url": "ws://192.168.11.10:12345"
+  },
+  "ui_check": "read-only idle screenshot and UI hierarchy; version, padding and stage controls visible; new lower content requires scroll"
 }

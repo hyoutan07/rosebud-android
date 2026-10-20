@@ -1,6 +1,6 @@
 # Rosebud Android
 
-スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.6.0／versionCode 9、実装・63自動テスト・ビルド・Lint成功**。ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を維持します。
+スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.6.0／versionCode 9、実装・63自動テスト・ビルド・Lint成功**。端末へ更新済み。ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を維持しています。
 
 現在の正本は **[振動・Flickerの独立生成](docs/dual-track-spec.md)**。本人の7%・2秒の好感触、10%・3秒／15%・2秒／20%・2秒／40%・1秒の説明から、8種類のFlicker配列と中間・強めを構成。振動は従来35%上限時の感触を基準に別生成し、Flickerは実%・1〜3秒の一動作＋間で動かします。これらの組合せの実機使用感は未確認。単発確認の経緯は [flicker-trial.md](docs/flicker-trial.md)。
 
