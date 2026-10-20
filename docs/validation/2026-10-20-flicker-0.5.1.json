@@ -58,5 +58,42 @@
     "url": "ws://192.168.11.10:12345"
   },
   "new_physical_test": "not performed by agent; user will try selected conditions",
-  "normal_flicker_gate": "not yet implemented pending physical motion duration"
+  "normal_flicker_gate": "not yet implemented pending physical motion duration",
+  "user_motion_feedback": {
+    "conditions": [
+      {
+        "percent": 7,
+        "seconds": 2,
+        "feedback": "一動作としてとてもよい。最弱の基本単位の候補。"
+      },
+      {
+        "percent": 10,
+        "seconds": 3,
+        "feedback": "提示された試行条件。個別評価未指定。"
+      },
+      {
+        "percent": 15,
+        "seconds": 2,
+        "feedback": "提示された試行条件。個別評価未指定。"
+      },
+      {
+        "percent": 20,
+        "seconds": 2,
+        "feedback": "若干焦らしゾーンくらいの気持ちよさ。"
+      }
+    ],
+    "preferred_weak_seconds": [
+      2,
+      3
+    ],
+    "strong_short_seconds_candidate": 1,
+    "startup": "本人は動き出しが弱く、出力が出るまで時間がかかると感じている。物理計測ではない。",
+    "design_axes": [
+      "output percentage",
+      "on duration",
+      "gap between complete movements"
+    ],
+    "both_caps_100": "user proposal, not applied by agent",
+    "normal_generator_changed": false
+  }
 }
