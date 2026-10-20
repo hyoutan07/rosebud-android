@@ -1,7 +1,7 @@
 {
   "version": "0.8.0",
   "version_code": 11,
-  "state": "automated_passed_awaiting_install",
+  "state": "installed_awaiting_user_physical_feedback",
   "tests": {
     "total": 74,
     "failures": 0,
@@ -34,6 +34,14 @@
   },
   "preinstall_service_absent": true,
   "preinstall_projection_null": true,
-  "phone_install": false,
-  "new_physical_motion_test": false
+  "phone_install": true,
+  "new_physical_motion_test": false,
+  "installed_version": "0.8.0",
+  "installed_code": 11,
+  "postinstall_service_absent": true,
+  "postinstall_projection_null": true,
+  "settings_xml_identical": true,
+  "native_rest_panel_checked": true,
+  "sliders_changed_during_ui_check": false,
+  "implementation_commit": "c4c7652"
 }
