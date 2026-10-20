@@ -1,7 +1,7 @@
 {
   "version": "0.9.1",
   "version_code": 13,
-  "status": "built_tested_awaiting_user_stop_before_install",
+  "status": "installed_awaiting_user_motion_feedback",
   "tests": {
     "total": 81,
     "failures": 0,
@@ -192,8 +192,23 @@
   "capture_code_changed": false,
   "ui_layout_changed": false,
   "physical_motion_test": false,
-  "phone_install": false,
-  "installed_version": "0.9.0",
-  "current_hardware": "idle; audio capture only active",
-  "previous_audio_zero_cause": "undetermined; nonzero input confirmed in latest capture"
+  "phone_install": true,
+  "installed_version": "0.9.1",
+  "current_hardware": "idle; no capture service or media projection",
+  "previous_audio_zero_cause": "undetermined; nonzero input confirmed in latest capture",
+  "installed_code": 13,
+  "implementation_commit": "db50e65",
+  "preinstall_service_absent": true,
+  "preinstall_projection_null": true,
+  "postinstall_service_absent": true,
+  "postinstall_projection_null": true,
+  "settings_xml_identical": true,
+  "saved_settings": {
+    "vibrate_cap": 100,
+    "flicker_cap": 100,
+    "rest_intro": 28,
+    "rest_middle": 8,
+    "rest_finish": 1,
+    "follow": true
+  }
 }
