@@ -1,6 +1,6 @@
 # Androidの引き継ぎ
 
-更新：2026-10-20 JST。**0.9.0/code12実装・77テスト・ビルド・Lint成功、端末更新準備済み**。現在は [favorite-crescendo-spec.md](favorite-crescendo-spec.md)。本人が「限界までの遅延」の数値を基準に中間の山谷を大きく/徐々にfinishへ強くと指定。UIは完成評価、保持30〜60秒は受容。休止割合・個別固定・往復・停止を保持して調整。並行して、スマホBrave再生中なのに約390秒RMS/Peak0だったケースの入力確認中。取得だけ再開始し、機器は開始しない。直近保存caps100/100%、休み28/8/1%を上書きしない。
+更新：2026-10-20 JST。**0.9.0/code12実装・77テスト・ビルド・Lint成功、端末更新済み**。現在は [favorite-crescendo-spec.md](favorite-crescendo-spec.md)。本人が「限界までの遅延」の数値を基準に中間の山谷を大きく/徐々にfinishへ強くと指定。UIは完成評価、保持30〜60秒は受容。休止割合・個別固定・往復・停止を保持して調整。並行して、スマホBrave再生中なのに約390秒RMS/Peak0だったケースの入力確認中。次は0.9で取得だけ本人が再開始し、機器は開始しない。更新前/後ともServiceなし・Projection null、保存設定XML一致。直近保存caps100/100%、休み28/8/1%を上書きしない。
 **第2の0.4.0／versionCode 6を実装し、本人との短時間2台動作確認まで完了**。実装・初期値・自動検証・APKの正本は [android-second-task.md](android-second-task.md)、残件は [TODO.md](TODO.md)。第1の0.3.2の実機結果は [android-e2e.md](android-e2e.md) に保持する。
 
 ## 再開

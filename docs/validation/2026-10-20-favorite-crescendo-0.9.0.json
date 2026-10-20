@@ -1,7 +1,7 @@
 {
   "version": "0.9.0",
   "version_code": 12,
-  "state": "automated_passed_awaiting_install_and_audio_reproduction",
+  "state": "installed_awaiting_capture_only_user_reproduction",
   "tests": {
     "total": 77,
     "failures": 0,
@@ -43,7 +43,14 @@
   "measurement_condition": "all 8 pinned, sound nonquiet/level1, rest0, early305..365s and late825..885s",
   "preinstall_service_absent": true,
   "preinstall_projection_null": true,
-  "phone_install": false,
+  "phone_install": true,
   "physical_motion_test": false,
-  "audio_issue": "0.8 zero PCM case remains unverified; user capture-only preparation requested"
+  "audio_issue": "0.8 zero PCM case remains unverified; user capture-only preparation requested",
+  "installed_version": "0.9.0",
+  "installed_code": 12,
+  "postinstall_service_absent": true,
+  "postinstall_projection_null": true,
+  "settings_xml_identical": true,
+  "implementation_commit": "79e8853",
+  "ui_layout_changed": false
 }
