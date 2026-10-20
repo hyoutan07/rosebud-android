@@ -219,11 +219,23 @@ class MainActivity : Activity() {
         setText(R.id.timeline, if(classic) "0分 ━━ 6分 ━━ 12分 ━━ 19分 → 周回" else "0分 ━━ 5分 ━━ 12分 ━━ 15分 → ∞")
         setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
         setText(R.id.session_chips, "${c.selected.size}台を選択 · ${if(c.audioReady) "音声準備済み" else "音声準備待ち"} · ${if(preview) "プレビュー・送信なし" else "実機"}")
-        setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.title ?: if(classic) "これまでの19分" else "音に合わせて自動で選びます")
-        setText(R.id.strength, "いまの動き · ${c.strength}")
-        setText(R.id.recipe_hint, if(c.recipe>=0) "自動選択 · あと${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
-        setText(R.id.pattern_active, "自動選択：${recipes.getOrNull(c.recipe)?.title ?: "開始前"}")
-        if(c.active) findViewById<MotionWaveView>(R.id.session_wave).add(Output(c.raw.vibrate*c.multiplier,c.raw.flicker*c.multiplier))
+        setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.let { "振動 · ${it.title}" } ?: if(classic) "これまでの19分" else "音に合わせて自動で選びます")
+        setText(R.id.strength, "振動 · ${c.strength}")
+        setText(R.id.recipe_hint, if(c.recipe>=0) "振動の切替まで約${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
+        findViewById<View>(R.id.flicker_motion).visibility = if(classic) View.GONE else View.VISIBLE
+        val flickerTitle = flickerPatterns.getOrNull(c.flickerPattern)?.title ?: "開始前"
+        val flickerDetail = when {
+            c.stopping -> "停止を確認中"
+            c.paused -> "一時停止 · 再開で一動作を初めから"
+            !c.active -> "開始すると、振動と別々に選びます"
+            c.flickerPhase == "動作中" -> "%d%% · 残り %.1f秒".format(Locale.ROOT,c.flickerPercent,(c.flickerUnitEndMs-c.elapsedMs).coerceAtLeast(0)/1000.0)
+            else -> "%s · あと %.1f秒".format(Locale.ROOT,c.flickerPhase,(c.flickerUnitEndMs-c.elapsedMs).coerceAtLeast(0)/1000.0)
+        }
+        setText(R.id.flicker_motion,"Flicker · $flickerTitle\n$flickerDetail" + if(c.flickerPendingStage) "\nこの一動作のあと、新しい段階へ" else "")
+        setText(R.id.pattern_active, "振動：${recipes.getOrNull(c.recipe)?.title ?: "開始前"}\nFlicker：$flickerTitle")
+        if(c.active) findViewById<MotionWaveView>(R.id.session_wave).add(if(classic)
+            Output(c.raw.vibrate*c.multiplier*c.vibrateCap/100.0,c.raw.flicker*c.multiplier*c.flickerCap/100.0) else
+            Output((c.raw.vibrate*c.multiplier).coerceAtMost(c.vibrateCap/100.0),c.raw.flicker.coerceAtMost(c.flickerCap/100.0)))
         setText(R.id.control_values, getString(R.string.control_detail,
             "${c.stage} / ${c.style} / ${c.strength} / ${c.sound}（密度 %.2f・規則性 %.2f）".format(Locale.ROOT,c.density,c.regularity), c.elapsedMs / 1000.0, if (c.follow) "ON" else "OFF", c.envelope, c.multiplier,
             c.raw.vibrate, c.raw.flicker, c.sent.vibrate, c.sent.flicker, c.acknowledged.vibrate, c.acknowledged.flicker,
@@ -246,16 +258,16 @@ class MainActivity : Activity() {
             findViewById<Button>(b).setOnClickListener { val v=findViewById<View>(p); v.visibility=if(v.visibility==View.VISIBLE) View.GONE else View.VISIBLE }
         }
         fun showSample(i: Int) {
-            val recipe=recipes[i]
-            setText(R.id.sample_title, recipe.title + " · 見本")
-            setText(R.id.sample_description, recipe.description)
+            val recipe=flickerPatterns[i]
+            setText(R.id.sample_title, "Flicker · " + recipe.title + " · 見本")
+            setText(R.id.sample_description, recipe.description + "\n緑は振動、ピンクはFlicker。段階と音で組み合わせが変わります。")
             setText(R.id.sample_sequence, recipe.sequence)
             findViewById<MotionWaveView>(R.id.sample_wave).sample(i)
         }
         val cards=findViewById<LinearLayout>(R.id.recipe_cards)
         var row = LinearLayout(this)
         fun dp(v: Int) = (v*resources.displayMetrics.density).toInt()
-        recipes.forEachIndexed { i,r ->
+        flickerPatterns.forEachIndexed { i,r ->
             if(i%2==0) {
                 row = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
                 cards.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })

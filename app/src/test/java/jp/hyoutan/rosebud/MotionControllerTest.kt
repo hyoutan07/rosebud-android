@@ -87,6 +87,38 @@ class MotionControllerTest {
         server.shutdown()
     }
 
+    @Test fun newScenarioUsesActualFlickerPercentOnBothTargetsAndCapClipsWithoutScaling() {
+        dual=true;setup();control.select(-1);await { state.get().selected.size==2 }
+        control.configure(false,35,100);control.session(false,false);control.start(21)
+        await { state.get().outputs.values.all { it.acknowledged.flicker>0 } }
+        val first=state.get()
+        val expected=quantizeAbsolute(first.flickerPercent/100.0,1.0,255)
+        assertEquals(expected,first.outputs.getValue(7).acknowledged.flicker,0.0)
+        assertEquals(expected,first.outputs.getValue(8).acknowledged.flicker,0.0)
+        control.configure(false,35,50);await { state.get().flickerCap==50 };advance(300)
+        assertEquals(expected,state.get().outputs.getValue(7).acknowledged.flicker,0.0)
+        control.configure(false,35,5);await { state.get().flickerCap==5 };advance(300)
+        await { state.get().outputs.values.all { it.acknowledged.flicker==12.0/255 } }
+        control.pause();await { state.get().paused }
+        val held=state.get().elapsedMs
+        control.configure(false,35,100);control.resume();await { state.get().active };advance(200)
+        await { state.get().outputs.values.all { it.acknowledged.flicker==expected } }
+        assertTrue(state.get().flickerUnitEndMs-held>=2000)
+        assertTrue(faults.isEmpty())
+    }
+    @Test fun newScenarioRejectsCapBelowBasicUnitAndAbsoluteQuantizationNeverExceedsCap() {
+        setup();control.session(true,false);control.configure(false,35,5);control.start(1);advance(100)
+        assertFalse(state.get().active)
+        assertTrue(state.get().error.contains("7%"))
+        for(cap in listOf(.05,.07,.3,1.0)) for(value in listOf(0.0,.001,.07,.15,.4,1.0)) {
+            val actual=quantizeAbsolute(value,cap,255)
+            assertTrue(actual<=cap)
+            if(value==0.0) assertEquals(0.0,actual,0.0)
+        }
+        assertEquals(quantizeAbsolute(.15,1.0,255),quantizeAbsolute(.15,.3,255),0.0)
+        assertEquals(0.0,quantizeAbsolute(.07,1.0,5,positiveFloor=false),0.0)
+    }
+
     @Test fun singleTrialSendsFlickerOnceAndStopsWithoutCaptureOrAutoRepeat() {
         setup();control.select(7);await { state.get().selected==listOf(7) }
         control.session(false,false);control.startTrial(3,1000)

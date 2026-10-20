@@ -27,7 +27,7 @@ class MotionWaveView(context: Context, attrs: AttributeSet? = null) : View(conte
         for(i in 1..2) canvas.drawLine(0f,height*i/3f,width.toFloat(),height*i/3f,paint)
         val data = if(sample >= 0) (0..100).map {
             val y=ScenarioEngine.shape(recipes[sample].shape,it/30.0)
-            (.08+y*.65) to (.04+y*.55)
+            (.03+y*.22) to sampleFlicker(sample,it*.2)
         } else points.toList()
         if(data.size<2) return
         for(channel in 0..1) {
@@ -37,7 +37,13 @@ class MotionWaveView(context: Context, attrs: AttributeSet? = null) : View(conte
             data.forEachIndexed { i,p ->
                 val x=i*width.toFloat()/(data.size-1)
                 val y=(height-8-(if(channel==0) p.first else p.second)*(height-16)).toFloat()
-                if(i==0) path.moveTo(x,y) else path.lineTo(x,y)
+                if(i==0) path.moveTo(x,y) else {
+                    if(channel==1) {
+                        val previousY=(height-8-data[i-1].second*(height-16)).toFloat()
+                        path.lineTo(x,previousY)
+                    }
+                    path.lineTo(x,y)
+                }
             }
             canvas.drawPath(path,paint); paint.style=Paint.Style.FILL
         }

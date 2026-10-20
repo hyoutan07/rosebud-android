@@ -74,6 +74,14 @@ internal fun quantize(value: Double, scale: Double, steps: Int): Double {
     return floor(value.coerceIn(0.0, 1.0) * scale * steps).toInt().coerceIn(1, maxStep).toDouble() / steps
 }
 
+/** New mode uses actual command values; the cap clips rather than scales them. */
+internal fun quantizeAbsolute(value: Double, cap: Double, steps: Int, positiveFloor: Boolean = true): Double {
+    require(value.isFinite() && cap.isFinite() && steps > 0)
+    val maxStep = floor(cap.coerceIn(0.0, 1.0)*steps).toInt()
+    if (value <= 0.0 || maxStep == 0) return 0.0
+    return floor(value.coerceIn(0.0, 1.0)*steps).toInt().coerceIn(if(positiveFloor) 1 else 0,maxStep).toDouble()/steps
+}
+
 /** Japanese keyboards may produce full-width URI characters and an ideographic full stop. */
 internal fun normalizeServerUrl(text: String): String {
     val ascii = java.text.Normalizer.normalize(text.trim(), java.text.Normalizer.Form.NFKC).replace('。', '.')

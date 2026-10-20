@@ -39,7 +39,7 @@
   <string name="audio_follow">音声追従 ON（比較はOFF）</string>
   <string name="vibrate_cap">振動の出力上限</string>
   <string name="flicker_cap">Flickerの出力上限</string>
-  <string name="cap_label">%1$s上限 %2$d%%（元の値へ掛ける割合）</string>
+  <string name="cap_label">%1$s上限 %2$d%%（新15分では出力の天井）</string>
   <string name="connection_detail">%1$s ／ 対象 %2$s\n%3$s</string>
   <string name="control_detail">%1$s ／ 経過 %2$.1f秒\n追従 %3$s・包絡 %4$.2f・倍率 %5$.2f\n生成 V %6$.3f / F %7$.3f\n送信 V %8$.3f / F %9$.3f\n応答済 V %10$.3f / F %11$.3f\nFlickerの予定した抜き：%12$s\n停止：%13$s ／ 指令 %14$d回</string>
   <string name="ui_1">rosebud</string>
@@ -56,7 +56,7 @@
   <string name="ui_12">波形と値は生成指令です。物理動作の測定ではありません。</string>
   <string name="ui_13">いまの状態を詳しく</string>
   <string name="ui_14">動きのレパートリー</string>
-  <string name="ui_15">基本は音に合わせて自動で選択。\nひとつの動きを30〜60秒、大切に。</string>
+  <string name="ui_15">振動とFlickerは別々に自動選択。\nFlickerは1〜3秒の一動作と間を組み合わせます。</string>
   <string name="ui_16">自動選択 · 開始前</string>
   <string name="ui_17">小さな揺らぎ</string>
   <string name="ui_18">形の見本</string>
@@ -89,4 +89,5 @@
   <string name="trial_start">この条件で1回試す</string>
   <string name="trial_status">未実施。条件を一緒に決めてから試します。</string>
   <string name="trial_stop_hint">途中でも下の「■ 全停止」を押せます。止まったことを確認してから、次の1回へ。</string>
+  <string name="flicker_motion">Flicker · 開始前</string>
 </resources>

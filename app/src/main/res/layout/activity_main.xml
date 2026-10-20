@@ -23,6 +23,7 @@
           <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_8" android:textSize="12sp" android:textColor="#787470" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/strength" />
           <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_9" android:textSize="22sp" android:textColor="#313D39" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/recipe_name" android:textStyle="bold" />
           <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_10" android:textSize="12sp" android:textColor="#787470" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/recipe_hint" />
+          <TextView android:id="@+id/flicker_motion" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/flicker_motion" android:textSize="16sp" android:textColor="#946570" android:paddingTop="12dp" android:paddingBottom="12dp" />
           <jp.hyoutan.rosebud.MotionWaveView android:id="@+id/session_wave" android:layout_width="match_parent" android:layout_height="95dp" android:contentDescription="@string/ui_11" />
           <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_12" android:textSize="11sp" android:textColor="#787470" android:paddingTop="7dp" android:paddingBottom="7dp" />
         </LinearLayout>

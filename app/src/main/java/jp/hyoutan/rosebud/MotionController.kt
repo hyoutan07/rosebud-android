@@ -43,6 +43,8 @@ internal data class ControlSnapshot(
     val trialActive: Boolean = false, val trialPercent: Int = 0, val trialDurationMs: Long = 0,
     val trialRemainingMs: Long = 0, val trialStatus: String = "未実施", val progressMs: Long = 0,
     val paused: Boolean = false, val preview: Boolean = false, val classic: Boolean = true,
+    val flickerPattern: Int = -1, val flickerStyle: String = "", val flickerPhase: String = "開始前",
+    val flickerPercent: Int = 0, val flickerUnitEndMs: Long = 0, val flickerPatternEndMs: Long = 0, val flickerPendingStage: Boolean = false,
     val recipe: Int = -1, val strength: String = "開始前", val style: String = "", val recipeEndMs: Long = 0,
     val sound: String = "曖昧な音", val density: Double = 0.0, val regularity: Double = 0.0,
     val connection: String = "未接続", val server: String = "", val devices: List<ControlDevice> = emptyList(),
@@ -60,6 +62,9 @@ internal data class ControlSnapshot(
         put("trial_active", trialActive); put("trial_percent", trialPercent); put("trial_duration_ms", trialDurationMs)
         put("trial_remaining_ms", trialRemainingMs); put("trial_status", trialStatus); put("progress_ms", progressMs)
         put("paused", paused); put("preview", preview); put("classic", classic); put("recipe", recipe); put("strength", strength); put("style", style)
+        put("flicker_pattern", flickerPattern); put("flicker_style", flickerStyle); put("flicker_phase", flickerPhase)
+        put("flicker_percent", flickerPercent); put("flicker_unit_end_ms", flickerUnitEndMs); put("flicker_pattern_end_ms", flickerPatternEndMs)
+        put("flicker_pending_stage", flickerPendingStage)
         put("recipe_end_ms", recipeEndMs); put("sound", sound); put("density", density); put("regularity", regularity)
         put("active", active); put("stopping", stopping); put("audio_ready", audioReady); put("follow", follow)
         put("vibrate_cap_percent", vibrateCap); put("flicker_cap_percent", flickerCap)
@@ -201,6 +206,7 @@ internal class MotionController(
         if (!state.paused || state.trialActive || state.stopping || closing || (state.follow && !freshAudio())) return@post
         if (!state.preview && (!ready || state.selected.any { i -> state.devices.none { it.index == i } })) return@post
         run++
+        if (!state.classic) engine.resumeFromPause(state.elapsedMs/1000.0)
         began = now()-state.elapsedMs; resumeAt = now(); lastGenerate = now()-100
         update(state.copy(active = true, paused = false, stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中",
             outputs = state.outputs.mapValues { (_,v) -> v.copy(stop = if(state.preview) "プレビュー・送信なし" else "動作中") }))
@@ -209,7 +215,9 @@ internal class MotionController(
     fun pause() = post {
         if (!state.active || state.stopping || closing) return@post
         pauseRequested = true
-        update(state.copy(elapsedMs = now()-began))
+        val elapsed = (now()-began)/1000.0
+        if (!state.classic) engine.frame(elapsed, if(state.follow) features.snapshot else SoundFeatures())
+        update(state.copy(elapsedMs = (elapsed*1000).toLong()))
         stopMotionInternal("pause")
     }
     fun start(seed: Long) = post {
@@ -221,13 +229,19 @@ internal class MotionController(
         if(!state.preview && targets.any { (state.vibrateCap*it.vibrateSteps/100)==0 || (state.flickerCap*it.flickerSteps/100)==0 }) {
             update(state.copy(error = "上限が機器の最小1段未満です。上限を調整してください")); return@post
         }
+        if (!state.classic && state.flickerCap < 7) {
+            update(state.copy(error = "新しいシナリオはFlicker上限を7%以上にしてください")); return@post
+        }
+        if (!state.classic && !state.preview && targets.any { 7*it.flickerSteps/100 == 0 }) {
+            update(state.copy(error = "対象機器ではFlickerの7%を再現できません")); return@post
+        }
         run++
         scenario = BoilingFrog(SeededRandom(seed)::next)
         engine = ScenarioEngine(seed)
         pauseRequested = false; resumeAt = now()
         began = now(); lastGenerate = began - 100
         lastSend.clear(); targets.forEach { lastSend[it.index] = began - maxOf(100, it.gapMs) }
-        update(state.copy(active = true, paused = false, recipe = -1, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
+        update(state.copy(active = true, paused = false, recipe = -1, flickerPattern = -1, flickerPhase = "開始前", flickerPercent = 0, flickerPendingStage = false, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
             outputs = targets.associate { it.index to DeviceOutput(stop = "動作中") },
             seed = seed, error = "", stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中", maxTickGapMs = 0))
         log("motion_started", mapOf("state" to state.json()))
@@ -240,9 +254,15 @@ internal class MotionController(
         val frame = engine.frame(elapsed,sound)
         update(state.copy(elapsedMs = (elapsed*1000).toLong(), progressMs = (engine.progressSeconds(elapsed)*1000).toLong(),
             stage = frame.phase, recipe = frame.recipe, strength = frame.strength.label,
-            style = ScenarioEngine.styleNames[frame.style], recipeEndMs = (frame.recipeEnd*1000).toLong()))
+            style = ScenarioEngine.styleNames[frame.style], recipeEndMs = (frame.recipeEnd*1000).toLong()).withFlicker(frame.flicker))
         log("stage_skipped",mapOf("target_progress_seconds" to targetSeconds,"state" to state.json()))
     }
+
+    private fun ControlSnapshot.withFlicker(f: FlickerFrame) = copy(
+        flickerPattern = f.pattern, flickerStyle = ScenarioEngine.styleNames[f.style], flickerPhase = when(f.phase) {
+            FlickerPhase.ON -> "動作中"; FlickerPhase.REST_A -> "間A · 振動は極弱"; FlickerPhase.REST_B -> "間B · 両方休止"
+        }, flickerPercent = f.percent, flickerUnitEndMs = (f.unitEnd*1000).toLong(),
+        flickerPatternEndMs = (f.patternEnd*1000).toLong(), flickerPendingStage = f.pendingStage)
 
     fun startTrial(percent: Int, durationMs: Long) = post {
         fun reject(reason: String) {
@@ -326,6 +346,11 @@ internal class MotionController(
     private fun stopResult(index: Int, error: String?) {
         if (!stopWaiting.remove(index)) return
         if (error != null) stopFailures[index] = error
+        else {
+            // A confirmed stop supersedes older scalar requests for this device. Their late
+            // responses cannot revive motion or time out an already completed pause.
+            pending.entries.removeAll { it.value.type == "ScalarCmd" && it.value.device == index }
+        }
         val output = state.outputs.getValue(index)
         update(state.copy(outputs = state.outputs + (index to output.copy(
             acknowledged = if (error == null) Output() else output.acknowledged,
@@ -453,12 +478,17 @@ internal class MotionController(
                 recipeEndMs = generated?.let { (it.recipeEnd*1000).toLong() } ?: 0,
                 sound = sound.kind.label, density = sound.density, regularity = sound.regularity,
                 audioDb = envelope.rmsDb, envelope = envelope.level, multiplier = gain, plannedRest = frame.plannedFlickerRest,
-                maxTickGapMs = maxOf(state.maxTickGapMs, time - lastGenerate)))
+                maxTickGapMs = maxOf(state.maxTickGapMs, time - lastGenerate)).let { snapshot ->
+                    if(generated != null) snapshot.withFlicker(generated.flicker) else snapshot
+                })
             lastGenerate = time
             if (state.preview) update(state.copy(sent = Output(), acknowledged = Output()))
             for (d in if(state.preview) emptyList() else targets) {
-                val output = Output(quantize(frame.output.vibrate * gain, state.vibrateCap / 100.0, d.vibrateSteps),
-                    quantize(frame.output.flicker * gain, state.flickerCap / 100.0, d.flickerSteps))
+                val output = if(state.classic) Output(
+                    quantize(frame.output.vibrate * gain, state.vibrateCap / 100.0, d.vibrateSteps),
+                    quantize(frame.output.flicker * gain, state.flickerCap / 100.0, d.flickerSteps)) else Output(
+                    quantizeAbsolute(frame.output.vibrate * ramp, state.vibrateCap / 100.0, d.vibrateSteps),
+                    quantizeAbsolute(frame.output.flicker, state.flickerCap / 100.0, d.flickerSteps, positiveFloor = false))
                 val deviceState = state.outputs.getValue(d.index)
                 if (time - (lastSend[d.index] ?: 0) >= maxOf(100, d.gapMs) &&
                     pending.values.none { it.type == "ScalarCmd" && it.device == d.index } && output != deviceState.acknowledged) {

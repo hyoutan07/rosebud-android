@@ -30,6 +30,7 @@ internal object MotionDefaults {
     const val periodSmoothing = 2.0
     const val quietGain = .22
     const val onsetPhaseNudge = .12
+    const val nominalVibrationCap = .35
     const val initialCeiling = .35
     const val positiveFloor = .003
     const val restAVibration = .025
@@ -93,6 +94,7 @@ internal class AudioFeatures {
         if (next != candidate) { candidate = next; candidateAt = now }
         // Quieting bypasses classification hysteresis; a brief sound never replaces a held recipe.
         if (next == SoundKind.QUIET || now-candidateAt >= MotionDefaults.classificationHoldMs) kind = next
+        else if (kind == SoundKind.QUIET) kind = SoundKind.UNCLEAR
         previousDb = db; lastAt = now
         snapshot = SoundFeatures(kind, level, (onsets.size/6.0).coerceIn(0.0,1.0), regularity, onsets.lastOrNull() ?: -1, db)
         return snapshot
@@ -110,12 +112,13 @@ internal val recipes = listOf(
     Recipe("途中でほどける波","波の途中で力を抜いて、また別の波。","波 → 極弱 → 長さを変えて波",Shape.UNRAVEL),
     Recipe("不規則なまとまり","数回の動きと長短の間。","2〜4回の断続 → 極弱 / レスト",Shape.CLUSTER))
 internal data class EngineFrame(val output: Output, val recipe: Int, val strength: Strength, val style: Int,
-    val recipeStart: Double, val recipeEnd: Double, val phase: String)
+    val recipeStart: Double, val recipeEnd: Double, val phase: String, val flicker: FlickerFrame)
 internal data class MotionSegment(val end: Double, val strength: Strength)
 
 /** Randomness occurs only at boundaries; elapsed time is supplied by the monotonic session clock. */
 internal class ScenarioEngine(seed: Long) {
     private val random = SeededRandom(seed)
+    private val flicker = FlickerTrack(seed xor 0x6D2B79F5L)
     private var recipe = -1
     private var repeats = 0
     private var start = 0.0
@@ -139,11 +142,15 @@ internal class ScenarioEngine(seed: Long) {
             !targetProgressSeconds.isFinite() ||
             targetProgressSeconds !in listOf(MotionDefaults.introEnd, MotionDefaults.endlessStart) ||
             targetProgressSeconds <= progressSeconds(elapsedSeconds)) return false
+        flicker.frame(elapsedSeconds, progressSeconds(elapsedSeconds), sound)
+        flicker.requestStageSkip(elapsedSeconds)
         progressOffset = targetProgressSeconds - elapsedSeconds
         // A manual stage change is the sole exception to the current hold. Do not draw for skipped time.
         choose(elapsedSeconds, sound)
         return true
     }
+    fun resumeFromPause(elapsedSeconds: Double) = flicker.resumeFromPause(elapsedSeconds)
+
     private fun draw(weights: DoubleArray): Int {
         var value = random.next()*weights.sum()
         for(i in weights.indices) { value -= weights[i]; if(value < 0) return i }
@@ -192,25 +199,28 @@ internal class ScenarioEngine(seed: Long) {
         // Onsets modestly advance the current pulse, without replacing recipe or deadline.
         if(sound.onsetAt != lastOnset && sound.onsetAt >= 0) { phase += MotionDefaults.onsetPhaseNudge; lastOnset = sound.onsetAt }
         val state = segments.firstOrNull { seconds-start < it.end }?.strength ?: segments.last().strength
-        val wave = shape(recipes[recipe].shape, phase)
-        val range = MotionDefaults.ranges[state]
         val progress = progressSeconds(seconds)
         val ceiling = MotionDefaults.initialCeiling+(1-MotionDefaults.initialCeiling)*(progress/MotionDefaults.endlessStart).coerceIn(0.0,1.0)
         val audioGain = if(sound.kind==SoundKind.QUIET) MotionDefaults.quietGain else .5+.5*sound.level
-        val value = if(range==null) 0.0 else (range.start+(range.endInclusive-range.start)*wave)*ceiling*audioGain
         val vrange = MotionDefaults.vibrationRanges[state]
         val vibration = if(vrange==null) 0.0 else (vrange.start+(vrange.endInclusive-vrange.start)*(.5+.5*sin(phase*2*PI+.8)))*ceiling*audioGain
-        val target = Output(vibration,value)
+        val target = Output(vibration,0.0)
         val blend = 1-exp(-dt/MotionDefaults.blendSeconds)
-        smoothed = Output(smoothed.vibrate+(target.vibrate-smoothed.vibrate)*blend,smoothed.flicker+(target.flicker-smoothed.flicker)*blend)
+        smoothed = Output(smoothed.vibrate+(target.vibrate-smoothed.vibrate)*blend,0.0)
         lastTime = seconds
-        // Scheduled rests apply after smoothing. Positive floor survives quantization, including at t=0.
-        val out = when(state) {
-            Strength.REST_A -> Output(MotionDefaults.restAVibration*ceiling,0.0)
-            Strength.REST_B -> Output()
-            else -> Output(smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor),smoothed.flicker.coerceAtLeast(MotionDefaults.positiveFloor))
-        }
-        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress))
+        // Vibration retains the prior nominal 35% feel. Flicker has its own clock and units.
+        val vibrationOut = when(state) {
+            Strength.REST_A -> MotionDefaults.restAVibration*ceiling
+            Strength.REST_B -> 0.0
+            else -> smoothed.vibrate.coerceAtLeast(MotionDefaults.positiveFloor)
+        } * MotionDefaults.nominalVibrationCap
+        val f = flicker.frame(seconds, progress, sound)
+        val out = Output(when(f.phase) {
+            FlickerPhase.REST_A -> MotionDefaults.restAVibration*ceiling*MotionDefaults.nominalVibrationCap
+            FlickerPhase.REST_B -> 0.0
+            FlickerPhase.ON -> vibrationOut
+        }, f.output)
+        return EngineFrame(out,recipe,state,style,start,end,phaseName(progress),f)
     }
     companion object {
         val styleNames = listOf("導入","中盤弱め","中盤強め","強め")
