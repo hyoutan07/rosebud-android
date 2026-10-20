@@ -28,6 +28,8 @@ class MotionControllerTest {
     private var pingMs = 0L
     private var compatible = true
     private var dual = false
+    private var suctionSupported = true
+    private var deviceGap = 150L
     private val holdScalars = java.util.concurrent.CopyOnWriteArraySet<Int>()
     private val rejectStops = java.util.concurrent.CopyOnWriteArraySet<Int>()
     private val holdStops = java.util.concurrent.CopyOnWriteArraySet<Int>()
@@ -60,10 +62,10 @@ class MotionControllerTest {
         await { state.get().connection == "接続済み" }
     }
     private fun device(index: Int = 7) = JSONObject().put("DeviceIndex", index).put("DeviceName", "test Rosebud")
-        .put("DeviceMessageTimingGap", 150).put("DeviceMessages", JSONObject().put("StopDeviceCmd", JSONObject()).put("ScalarCmd", JSONArray()
+        .put("DeviceMessageTimingGap", deviceGap).put("DeviceMessages", JSONObject().put("StopDeviceCmd", JSONObject()).put("ScalarCmd", JSONArray()
             .put(JSONObject().put("ActuatorType", "Vibrate").put("FeatureDescriptor", "Vibration").put("StepCount", 255))
             .put(JSONObject().put("ActuatorType", if (compatible) "Rotate" else "Constrict").put("FeatureDescriptor", "Flicker").put("StepCount", 255))
-            .put(JSONObject().put("ActuatorType", "Constrict").put("FeatureDescriptor", "Suction").put("StepCount", 5))))
+            .put(JSONObject().put("ActuatorType", if(suctionSupported) "Constrict" else "Vibrate").put("FeatureDescriptor", "Suction").put("StepCount", 5))))
     private fun reply(type: String, body: JSONObject) { remote.send(JSONArray().put(JSONObject().put(type, body)).toString()) }
     private fun ok(body: JSONObject) = reply("Ok", JSONObject().put("Id", body.getInt("Id")))
     private fun await(condition: () -> Boolean) {
@@ -85,6 +87,101 @@ class MotionControllerTest {
             await { ended }
         }
         server.shutdown()
+    }
+
+    private fun suctionRequests() = requests.filter { it.first=="ScalarCmd" && it.second.getJSONArray("Scalars").getJSONObject(0).getInt("Index")==2 }
+    private fun selectSuction(all: Boolean = false) {
+        control.select(if(all) -1 else 7); await { state.get().selected.size==(if(all) 2 else 1) }
+        control.session(false,false)
+    }
+    @Test fun suctionIsIndependentNormalizedAndSentOnlyToExplicitlySelectedTarget() {
+        dual=true;setup();selectSuction();control.configure(true,5,5)
+        for(level in 0..5) {
+            control.operateSuction(level=level);advance(150)
+            await { state.get().outputs.getValue(7).suctionAck==level && suctionRequests().size>=level+1 }
+            val command=suctionRequests().last().second
+            assertEquals(7,command.getInt("DeviceIndex"))
+            val scalar=command.getJSONArray("Scalars");assertEquals(1,scalar.length())
+            assertEquals("Constrict",scalar.getJSONObject(0).getString("ActuatorType"))
+            assertEquals(level/5.0,scalar.getJSONObject(0).getDouble("Scalar"),0.0)
+        }
+        assertFalse(state.get().active);assertFalse(state.get().audioReady);assertTrue(faults.isEmpty())
+    }
+    @Test fun suctionFiftyMsDeadlineAndRepeatedZerosUseSeparateClockFromVibration() {
+        deviceGap=0;setup();selectSuction();control.configureSuction(1000,50,5);control.operateSuction(automatic=true)
+        await { suctionRequests().size==1 };advance(49);assertEquals(1,suctionRequests().size)
+        advance(1);await { suctionRequests().size==2 };assertEquals(0.0,suctionRequests().last().second.getJSONArray("Scalars").getJSONObject(0).getDouble("Scalar"),0.0)
+        advance(149);assertEquals(2,suctionRequests().size);advance(1);await { suctionRequests().size==3 }
+        advance(150);await { suctionRequests().size==4 };advance(300);await { suctionRequests().size==5 }
+        advance(400);await { state.get().suctionLevel==5 };assertEquals(1.0,suctionRequests().last().second.getJSONArray("Scalars").getJSONObject(0).getDouble("Scalar"),0.0)
+    }
+    @Test fun suctionHonorsDeviceGapEvenForFiftyMsAndZeroWins() {
+        setup();selectSuction();control.configureSuction(1000,50,5);control.operateSuction(automatic=true)
+        await { suctionRequests().size==1 };advance(50);assertEquals(1,suctionRequests().size)
+        advance(100);await { suctionRequests().size==2 };assertEquals(0,state.get().suctionLevel)
+        assertEquals(0.0,suctionRequests().last().second.getJSONArray("Scalars").getJSONObject(0).getDouble("Scalar"),0.0)
+    }
+    @Test fun suctionSlowPeerDoesNotQueuePulseHistoryAndOtherPeerStillGetsZero() {
+        dual=true;setup();selectSuction(true);holdScalars.add(7);control.operateSuction(automatic=true)
+        await { suctionRequests().size==2 };val old=suctionRequests().first { it.second.getInt("DeviceIndex")==7 }.second
+        advance(300);await { state.get().outputs.getValue(8).suctionAck==0 }
+        advance(150);assertEquals(1,suctionRequests().count { it.second.getInt("DeviceIndex")==7 })
+        holdScalars.clear();ok(old);advance(150)
+        await { state.get().outputs.getValue(7).suctionAck==0 && suctionRequests().count { it.second.getInt("DeviceIndex")==7 }==2 }
+        assertTrue(faults.isEmpty())
+    }
+    @Test fun suctionOffReonAndManualKeepAutoButIgnoreOldAcknowledgement() {
+        deviceGap=0;setup();selectSuction();control.configureSuction(1000,1000,5)
+        holdScalars.add(7);control.operateSuction(automatic=true);await { suctionRequests().size==1 }
+        val old=suctionRequests().last().second
+        control.operateSuction(automatic=false);control.operateSuction(automatic=true);control.operateSuction(level=2)
+        advance(200);assertTrue(state.get().suctionAuto);assertEquals(2,state.get().suctionLevel)
+        holdScalars.clear();ok(old);advance(25);await { state.get().outputs.getValue(7).suctionAck==2 }
+        advance(100);assertEquals(2,state.get().suctionLevel)
+        control.operateSuction(automatic=false);await { !state.get().suctionAuto };advance(150);await { !state.get().suctionAuto && state.get().outputs.getValue(7).suctionAck==0 }
+        val count=suctionRequests().size;advance(2000);assertEquals(count,suctionRequests().size)
+    }
+    @Test fun suctionPauseStopsAllAndResumeDoesNotRearmSuction() {
+        setup();selectSuction();control.start(1);await { state.get().active };advance(150)
+        control.operateSuction(automatic=true);advance(150);await { state.get().suctionAuto }
+        control.pause();await { state.get().paused };assertFalse(state.get().suctionAuto);assertEquals(0,state.get().suctionLevel)
+        control.resume();advance(500);await { state.get().active };assertFalse(state.get().suctionAuto)
+        val count=suctionRequests().size;advance(1000);assertEquals(count,suctionRequests().size)
+    }
+    @Test fun suctionStopWaitsForBothAndLateHighCannotReviveOrRestart() {
+        dual=true;setup();selectSuction(true);holdScalars.add(7);holdStops.add(8)
+        control.operateSuction(automatic=true);await { suctionRequests().size==2 };val old=suctionRequests().first { it.second.getInt("DeviceIndex")==7 }.second
+        control.stopMotion("test");await { state.get().stopping };control.operateSuction(automatic=true);advance(400)
+        assertFalse(state.get().suctionAuto);assertEquals(2,suctionRequests().size)
+        ok(old);ok(requests.last { it.first=="StopDeviceCmd" && it.second.getInt("DeviceIndex")==8 }.second)
+        await { !state.get().stopping };advance(1000)
+        assertEquals(2,suctionRequests().size);assertTrue(state.get().outputs.values.all { it.suctionAck==0 })
+    }
+    @Test fun suctionDelayedHighMustAcknowledgeZeroBeforeAnotherPulse() {
+        deviceGap=0;setup();selectSuction();control.configureSuction(1000,50,5)
+        holdScalars.add(7);control.operateSuction(automatic=true);await { suctionRequests().size==1 }
+        val old=suctionRequests().first().second
+        advance(50);advance(1000);assertEquals(5,state.get().suctionLevel)
+        holdScalars.clear();ok(old);advance(25)
+        await { suctionRequests().size>=3 }
+        assertEquals(0.0,suctionRequests()[1].second.getJSONArray("Scalars").getJSONObject(0).getDouble("Scalar"),0.0)
+        assertEquals(1.0,suctionRequests()[2].second.getJSONArray("Scalars").getJSONObject(0).getDouble("Scalar"),0.0)
+    }
+    @Test fun suctionUnsupportedDeviceNeverReceivesIndexTwo() {
+        suctionSupported=false;setup();selectSuction();control.operateSuction(level=5);advance(300)
+        assertTrue(suctionRequests().isEmpty());assertTrue(state.get().error.contains("吸引対応"));assertFalse(state.get().suctionAuto)
+    }
+    @Test fun suctionPreviewIsSilentIncludingRetriesAndStop() {
+        setup();control.session(true,false);control.configureSuction(1000,50,5);control.operateSuction(automatic=true)
+        advance(50);advance(150);advance(300);advance(1000)
+        assertTrue(requests.none { it.first=="ScalarCmd" || it.first=="StopDeviceCmd" })
+        control.stopMotion("preview");advance(1000);assertFalse(state.get().suctionAuto)
+    }
+    @Test fun suctionTimeoutDisarmsAndNeverReconnects() {
+        setup();selectSuction();scalarAck=false;control.operateSuction(automatic=true)
+        await { suctionRequests().size==1 };advance(1600);await { ended }
+        assertFalse(state.get().suctionAuto);assertEquals(0,state.get().suctionLevel)
+        assertTrue(faults.any { it.contains("response_timeout") });assertEquals(1,suctionRequests().size)
     }
 
     @Test fun newScenarioUsesActualFlickerPercentOnBothTargetsAndCapClipsWithoutScaling() {

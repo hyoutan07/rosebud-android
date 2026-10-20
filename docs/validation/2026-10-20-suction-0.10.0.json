@@ -1,0 +1,41 @@
+{
+  "date_jst": "2026-10-20",
+  "version_name": "0.10.0",
+  "version_code": 14,
+  "base_commit": "817d5d5",
+  "tests": {
+    "tests": 100,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "apk_sha256": "4b4c815a5416dacdfb4914017571d0609965f128ecadbd53fd457660e9c2fb83",
+  "signature_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "phone_update": {
+    "model": "CPH2199",
+    "install_replace": "Success",
+    "cold_launch": "ok",
+    "prefs_byte_identical": true,
+    "prefs_sha256": "5cc16bed34229ad3fafe863c22f69c6bed27746c1de547fb09a79572c93540b3",
+    "prior_user_all_stop_acknowledged_devices": [
+      2,
+      3
+    ],
+    "prior_stop_ack_utc": "2026-10-20T13:26:19.150189Z",
+    "post_service_count": 0,
+    "post_media_projection": null,
+    "suction_auto": false,
+    "suction_level": 0,
+    "preview": true
+  },
+  "hardware_suction_run": "not_started_requires_explicit_user_start",
+  "unverified": [
+    "physical_suction_duration_and_strength",
+    "physical_network_loss_stop",
+    "screen_off_battery_long_run"
+  ]
+}

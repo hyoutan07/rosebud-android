@@ -10,7 +10,8 @@ import org.json.JSONObject
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-internal data class ControlDevice(val index: Int, val name: String, val gapMs: Long, val vibrateSteps: Int, val flickerSteps: Int, val problem: String) {
+internal data class ControlDevice(val index: Int, val name: String, val gapMs: Long, val vibrateSteps: Int, val flickerSteps: Int, val problem: String, val suctionSteps: Int = 0) {
+    val suctionCompatible get() = compatible && suctionSteps == 5
     val compatible get() = problem.isEmpty()
     companion object {
         fun parse(j: JSONObject): ControlDevice {
@@ -29,17 +30,20 @@ internal data class ControlDevice(val index: Int, val name: String, val gapMs: L
                 else -> ""
             }
             return ControlDevice(j.getInt("DeviceIndex"), j.optString("DeviceDisplayName").ifBlank { j.getString("DeviceName") },
-                j.optLong("DeviceMessageTimingGap", 0).coerceAtLeast(0), vs, fs, problem)
+                j.optLong("DeviceMessageTimingGap", 0).coerceAtLeast(0), vs, fs, problem,
+                if (scalars?.optJSONObject(2)?.optString("ActuatorType") == "Constrict") scalars.optJSONObject(2).optInt("StepCount", 0) else 0)
         }
     }
 }
 
-internal data class DeviceOutput(val sent: Output = Output(), val acknowledged: Output = Output(), val stop: String = "未要求") {
+internal data class DeviceOutput(val sent: Output = Output(), val acknowledged: Output = Output(), val stop: String = "未要求", val suctionSent: Int = 0, val suctionAck: Int = 0) {
     fun json(index: Int) = JSONObject().put("device_index", index).put("sent_vibrate", sent.vibrate).put("sent_flicker", sent.flicker)
-        .put("ack_vibrate", acknowledged.vibrate).put("ack_flicker", acknowledged.flicker).put("stop", stop)
+        .put("suction_sent", suctionSent).put("suction_ack", suctionAck).put("ack_vibrate", acknowledged.vibrate).put("ack_flicker", acknowledged.flicker).put("stop", stop)
 }
 
 internal data class ControlSnapshot(
+    val suctionPending: Boolean = false, val suctionAuto: Boolean = false, val suctionLevel: Int = 0, val suctionIntervalMs: Long = 9000,
+    val suctionDurationMs: Long = 300, val suctionTarget: Int = 5,
     val introRestPercent: Int = RestDefaults.intro, val middleRestPercent: Int = RestDefaults.middle, val finishRestPercent: Int = RestDefaults.finish,
     val trialActive: Boolean = false, val trialPercent: Int = 0, val trialDurationMs: Long = 0,
     val trialRemainingMs: Long = 0, val trialStatus: String = "未実施", val progressMs: Long = 0,
@@ -59,6 +63,8 @@ internal data class ControlSnapshot(
     val stopStatus: String = "未要求", val error: String = "", val maxPingMs: Long = 0,
 ) {
     fun json() = JSONObject().apply {
+        put("suction_auto", suctionAuto); put("suction_level", suctionLevel); put("suction_interval_ms", suctionIntervalMs)
+        put("suction_duration_ms", suctionDurationMs); put("suction_target", suctionTarget)
         put("connection", connection); put("server", server); put("selected", JSONArray(selected)); put("device_outputs", JSONArray(outputs.map { (index, output) -> output.json(index) }))
         put("devices", JSONArray(devices.map { "${it.index}: ${it.name}; steps=${it.vibrateSteps}/${it.flickerSteps}; gap=${it.gapMs}; ${it.problem}" }))
         put("intro_rest_percent", introRestPercent); put("middle_rest_percent", middleRestPercent); put("finish_rest_percent", finishRestPercent)
@@ -99,6 +105,11 @@ internal class MotionController(
     private var closing = false
     private var disposed = false
     private var nextId = 1
+    private val suction = SuctionTrack()
+    private var suctionEpoch = 0L
+    private val suctionSentRevision = mutableMapOf<Int, Long>()
+    private val suctionAckRevision = mutableMapOf<Int, Long>()
+    private val suctionNeedsZero = mutableSetOf<Int>()
     private var run = 0L
     private var began = 0L
     private var lastGenerate = -100L
@@ -203,10 +214,12 @@ internal class MotionController(
         send("StartScanning", JSONObject()) { log("scan_started") }
     }
     fun select(index: Int) = post {
+        if (suction.busy || state.suctionPending) return@post
         check(!state.active && !state.paused && !state.trialActive && !state.stopping && !closing) { "停止完了後に対象を変更してください" }
         val targets = if (index == -1) state.devices.filter { it.compatible } else state.devices.filter { it.index == index }
         check(targets.isNotEmpty()) { "対応機器が見つかりません" }
         check(targets.all { it.compatible }) { "対応しない機能定義です" }
+        suction.reset(); suctionEpoch++; suctionSentRevision.clear()
         update(state.copy(selected = targets.map { it.index }, outputs = targets.associate { it.index to DeviceOutput() }, error = ""))
         log("devices_selected", mapOf("state" to state.json()))
     }
@@ -214,7 +227,7 @@ internal class MotionController(
     fun audio(rms: Double, at: Long) = post { if (state.audioReady && !closing) { envelope.add(rms, at); features.add(rms, at) } }
     private fun freshAudio() = state.audioReady && envelope.lastAt >= 0 && now() - envelope.lastAt <= 2000
     fun session(preview: Boolean, classic: Boolean) = post {
-        if (!state.active && !state.paused && !state.trialActive && !state.stopping && !closing) update(state.copy(preview = preview, classic = classic))
+        if (!suction.busy && !state.suctionPending && !state.active && !state.paused && !state.trialActive && !state.stopping && !closing) update(state.copy(preview = preview, classic = classic))
     }
     fun resume() = post {
         if (!state.paused || state.trialActive || state.stopping || closing || (state.follow && !freshAudio())) return@post
@@ -227,7 +240,8 @@ internal class MotionController(
         log("motion_resumed", mapOf("state" to state.json()))
     }
     fun pause() = post {
-        if (!state.active || state.stopping || closing) return@post
+        if ((!state.active && !suction.busy) || state.stopping || closing) return@post
+        if (!state.active) { stopMotionInternal("pause_suction"); return@post }
         pauseRequested = true
         val elapsed = (now()-began)/1000.0
         if (!state.classic) engine.frame(elapsed, if(state.follow) features.snapshot else SoundFeatures())
@@ -254,9 +268,9 @@ internal class MotionController(
         engine = ScenarioEngine(seed).also { it.setRestSettings(restSettings) }
         pauseRequested = false; resumeAt = now()
         began = now(); lastGenerate = began - 100
-        lastSend.clear(); targets.forEach { lastSend[it.index] = began - maxOf(100, it.gapMs) }
+        targets.forEach { lastSend.putIfAbsent(it.index, began - maxOf(100, it.gapMs)) }
         update(state.copy(active = true, paused = false, recipe = -1, manualVibrationPattern = -1, manualFlickerPattern = -1, flickerPendingPattern = false, flickerPattern = -1, flickerPhase = "開始前", flickerPercent = 0, flickerPendingStage = false, elapsedMs = 0, progressMs = 0, raw = Output(), sent = Output(), acknowledged = Output(),
-            outputs = targets.associate { it.index to DeviceOutput(stop = "動作中") },
+            outputs = targets.associate { it.index to (state.outputs[it.index] ?: DeviceOutput()).copy(stop = "動作中") },
             seed = seed, error = "", stopStatus = if(state.preview) "プレビュー・送信なし" else "動作中", maxTickGapMs = 0))
         log("motion_started", mapOf("state" to state.json()))
     }
@@ -303,7 +317,7 @@ internal class MotionController(
             log("flicker_trial_rejected",mapOf("reason" to reason))
             if(!state.active && !state.paused && !state.trialActive && !state.stopping) update(state.copy(error = reason))
         }
-        if(closing || state.active || state.paused || state.trialActive || state.stopping) { reject("停止完了後に1回ずつ試してください"); return@post }
+        if(closing || suction.busy || state.active || state.paused || state.trialActive || state.stopping) { reject("停止完了後に1回ずつ試してください"); return@post }
         if(!ready || state.preview || state.selected.size!=1) { reject("実機モードで対象を1台だけ決定してください"); return@post }
         val device = state.devices.singleOrNull { it.index==state.selected.single() && it.compatible }
         if(device==null) { reject("選択した機器の接続を確認してください"); return@post }
@@ -335,6 +349,59 @@ internal class MotionController(
         log("flicker_trial_started",mapOf("state" to state.json(),"sent_at_ms" to trialSentAt,"end_at_ms" to trialEndsAt))
     }
 
+    fun configureSuction(intervalMs: Long, durationMs: Long, target: Int) = post {
+        if (closing || state.stopping) return@post
+        suction.configure(intervalMs, durationMs, target)
+        publishSuction()
+    }
+    private fun publishSuction() {
+        if (suction.engaged && suction.level == 0 && !state.preview) {
+            state.outputs.filterValues { it.suctionSent > 0 }.keys.forEach { suctionNeedsZero.add(it) }
+        }
+        val waiting = suction.engaged && !state.preview && (suction.zeroRepeatPending || state.selected.any { suctionAckRevision[it] != suction.revision })
+        val next = state.copy(suctionPending = waiting, suctionAuto = suction.automatic, suctionLevel = suction.level,
+            suctionIntervalMs = suction.intervalMs, suctionDurationMs = suction.durationMs, suctionTarget = suction.target)
+        if (next != state) update(next)
+    }
+    fun operateSuction(level: Int? = null, automatic: Boolean? = null) = post {
+        if (closing || state.stopping || state.paused || state.trialActive || state.error.isNotEmpty()) return@post
+        val targets = state.devices.filter { it.index in state.selected }
+        if (!state.preview && (!ready || targets.isEmpty() || targets.size != state.selected.size || targets.any { !it.suctionCompatible })) {
+            update(state.copy(error = "吸引対応（Index 2 / Constrict / 5段）の対象を決定してください")); return@post
+        }
+        if (automatic != null) { suctionEpoch++; suction.toggle(automatic, now()) }
+        if (level != null) suction.manual(level)
+        publishSuction()
+        log("suction_operation", mapOf("state" to state.json()))
+        sendSuction(now())
+    }
+    private fun sendSuction(time: Long) {
+        if (!suction.engaged || state.preview || !ready || state.stopping || closing) return
+        for (d in state.devices.filter { it.index in state.selected && it.suctionCompatible }) {
+            if ((suctionSentRevision[d.index] == suction.revision && d.index !in suctionNeedsZero) ||
+                time - (lastSend[d.index] ?: Long.MIN_VALUE / 2) < d.gapMs ||
+                pending.values.any { it.type == "ScalarCmd" && it.device == d.index }) continue
+            val revision = suction.revision; val epoch = suctionEpoch
+            val level = if (d.index in suctionNeedsZero) 0 else suction.level
+            val matchesDesired = level == suction.level
+            val scalars = JSONArray().put(JSONObject().put("Index", 2).put("ActuatorType", "Constrict").put("Scalar", level / 5.0))
+            send("ScalarCmd", JSONObject().put("DeviceIndex", d.index).put("Scalars", scalars), device = d.index) {
+                if (epoch == suctionEpoch && !closing && !state.stopping) {
+                    val output = state.outputs[d.index] ?: return@send
+                    if (level == 0) suctionNeedsZero.remove(d.index)
+                    if (matchesDesired) suctionAckRevision[d.index] = revision
+                    update(state.copy(outputs = state.outputs + (d.index to output.copy(suctionAck = level))))
+                    publishSuction()
+                }
+            }
+            if (matchesDesired) suctionSentRevision[d.index] = revision
+            lastSend[d.index] = time
+            val output = state.outputs.getValue(d.index)
+            update(state.copy(sends = state.sends + 1, outputs = state.outputs + (d.index to output.copy(suctionSent = level))))
+            log("suction_sent", mapOf("device_index" to d.index, "level" to level, "at_ms" to time))
+        }
+    }
+
     fun stopMotion(reason: String) = post { stopMotionInternal(reason) }
     fun shutdown(reason: String) = post {
         if (closing) return@post
@@ -345,6 +412,7 @@ internal class MotionController(
     }
 
     private fun stopMotionInternal(reason: String) {
+        suction.reset(); suctionEpoch++; suctionSentRevision.clear(); suctionNeedsZero.clear(); publishSuction()
         trialStop?.cancel(false); trialStop = null
         val trialWasActive = state.trialActive
         if(trialWasActive) log("flicker_trial_stop_requested",mapOf("reason" to reason,"duration_until_request_ms" to (now()-trialSentAt),"requested_duration_ms" to state.trialDurationMs))
@@ -352,7 +420,7 @@ internal class MotionController(
         update(state.copy(active = false, paused = false, trialActive = false, trialRemainingMs = 0,
             trialStatus = if(trialWasActive) "停止応答を確認中" else state.trialStatus,
             raw = Output(), sent = Output(), audioReady = state.audioReady && !closing,
-            outputs = state.outputs.mapValues { (_, value) -> value.copy(sent = Output()) }))
+            outputs = state.outputs.mapValues { (_, value) -> value.copy(sent = Output(), suctionSent = 0) }))
         if (state.stopping) return
         if (state.preview) {
             update(state.copy(paused = pauseRequested && !closing, stopStatus = "プレビュー・送信なし"))
@@ -387,6 +455,7 @@ internal class MotionController(
         }
         val output = state.outputs.getValue(index)
         update(state.copy(outputs = state.outputs + (index to output.copy(
+            suctionAck = if (error == null) 0 else output.suctionAck,
             acknowledged = if (error == null) Output() else output.acknowledged,
             stop = if (error == null) "停止応答OK" else "停止未確認: $error"))))
         log(if (error == null) "stop_device_acknowledged" else "stop_device_error",
@@ -406,6 +475,7 @@ internal class MotionController(
     private fun fail(message: String) {
         if (disposed) return
         log("control_error", mapOf("error" to message, "state" to state.json()))
+        suction.reset(); suctionEpoch++; publishSuction()
         run++
         pauseRequested = false
         update(state.copy(active = false, paused = false, trialActive = false, trialRemainingMs = 0,
@@ -496,6 +566,11 @@ internal class MotionController(
             if(state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
         }
         if (state.paused && state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
+        if (!state.stopping && !state.paused && !state.trialActive) {
+            suction.tick(time)
+            publishSuction()
+            sendSuction(time)
+        }
         if (state.active && time - lastGenerate >= 100) {
             if (state.audioReady && !freshAudio()) { fail("audio_samples_stale"); return }
             val targets = state.devices.filter { it.index in state.selected }

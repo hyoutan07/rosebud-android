@@ -73,6 +73,18 @@ class CaptureService : Service() {
                 controller.connect(intent.getStringExtra("url") ?: "ws://192.168.40.78:12345")
                 return START_NOT_STICKY
             }
+            ACTION_SUCTION_SETTINGS -> {
+                foreground(projection != null)
+                controller.configureSuction(intent.getLongExtra("interval_ms",9000),intent.getLongExtra("duration_ms",300),intent.getIntExtra("target",5))
+                return START_NOT_STICKY
+            }
+            ACTION_SUCTION -> {
+                foreground(projection != null)
+                controller.session(intent.getBooleanExtra("preview",true),intent.getBooleanExtra("classic",false))
+                controller.operateSuction(level = if(intent.hasExtra("level")) intent.getIntExtra("level",0) else null,
+                    automatic = if(intent.hasExtra("automatic")) intent.getBooleanExtra("automatic",false) else null)
+                return START_NOT_STICKY
+            }
             ACTION_SCAN -> { controller.scan(); return START_NOT_STICKY }
             ACTION_SELECT -> { controller.select(intent.getIntExtra("device", -1)); return START_NOT_STICKY }
             ACTION_SETTINGS -> {
@@ -317,6 +329,8 @@ class CaptureService : Service() {
 
     companion object {
         const val ACTION_CONNECT = "jp.hyoutan.rosebud.CONNECT"
+        const val ACTION_SUCTION = "jp.hyoutan.rosebud.SUCTION"
+        const val ACTION_SUCTION_SETTINGS = "jp.hyoutan.rosebud.SUCTION_SETTINGS"
         const val ACTION_SCAN = "jp.hyoutan.rosebud.SCAN"
         const val ACTION_SELECT = "jp.hyoutan.rosebud.SELECT"
         const val ACTION_SETTINGS = "jp.hyoutan.rosebud.SETTINGS"

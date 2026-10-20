@@ -63,6 +63,7 @@ class MainActivity : Activity() {
         setupRestControls()
         setupControl()
         setupScreens()
+        setupSuction()
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
         findViewById<Button>(R.id.stop).setOnClickListener {
             startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP).putExtra("reason", "ui_stop"))
@@ -81,7 +82,7 @@ class MainActivity : Activity() {
     private fun command(action: String, fill: (Intent) -> Unit = {}) {
         val intent = Intent(this, CaptureService::class.java).setAction(action)
         fill(intent)
-        if (action == CaptureService.ACTION_CONNECT || action == CaptureService.ACTION_MOTION_START) startForegroundService(intent) else startService(intent)
+        if (action == CaptureService.ACTION_CONNECT || action == CaptureService.ACTION_MOTION_START || action == CaptureService.ACTION_SUCTION || action == CaptureService.ACTION_SUCTION_SETTINGS) startForegroundService(intent) else startService(intent)
     }
     private fun settingsIntent(intent: Intent) {
         intent.putExtra("follow", findViewById<CheckBox>(R.id.audio_follow).isChecked)
@@ -183,6 +184,42 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
     }
+    private fun suctionCommand(fill: (Intent) -> Unit) {
+        command(CaptureService.ACTION_SUCTION) {
+            it.putExtra("preview",findViewById<CheckBox>(R.id.preview).isChecked)
+            it.putExtra("classic",findViewById<Spinner>(R.id.scenario).selectedItemPosition==1)
+            fill(it)
+        }
+    }
+    private fun setupSuction() {
+        // Defaults mirror the Web. Runtime output and auto ON are never restored.
+        findViewById<Button>(R.id.suction_auto).setOnClickListener {
+            suctionCommand { it.putExtra("automatic",!control.suctionAuto) }
+        }
+        val steps = listOf(Triple(R.id.suction_interval_minus,"interval",-1000L),Triple(R.id.suction_interval_plus,"interval",1000L),
+            Triple(R.id.suction_duration_minus,"duration",-50L),Triple(R.id.suction_duration_plus,"duration",50L))
+        steps.forEach { (id,kind,delta) -> findViewById<Button>(id).setOnClickListener {
+            val c=control
+            command(CaptureService.ACTION_SUCTION_SETTINGS) { intent ->
+                intent.putExtra("interval_ms",if(kind=="interval") (c.suctionIntervalMs+delta).coerceAtLeast(1000) else c.suctionIntervalMs)
+                intent.putExtra("duration_ms",if(kind=="duration") (c.suctionDurationMs+delta).coerceAtLeast(50) else c.suctionDurationMs)
+                intent.putExtra("target",c.suctionTarget)
+            }
+        } }
+        listOf(R.id.suction_target,R.id.suction_manual).forEach { id ->
+            findViewById<SeekBar>(id).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                    if(!fromUser) return
+                    if(id==R.id.suction_manual) suctionCommand { it.putExtra("level",progress) }
+                    else command(CaptureService.ACTION_SUCTION_SETTINGS) {
+                        it.putExtra("interval_ms",control.suctionIntervalMs).putExtra("duration_ms",control.suctionDurationMs).putExtra("target",progress)
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar) { }
+                override fun onStopTrackingTouch(seekBar: SeekBar) { }
+            })
+        }
+    }
     private fun canChoosePattern() = (control.active || control.paused) && !control.classic && !control.trialActive &&
         !control.stopping && control.error.isEmpty() && (application as ProbeApplication).serviceActive
     private fun choosePattern(track: String) {
@@ -206,17 +243,18 @@ class MainActivity : Activity() {
         if (deviceItems != c.devices) {
             deviceItems = c.devices
             deviceSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
-                (listOf("対応する機器すべて（${deviceItems.count { it.compatible }}台）") + deviceItems.map { "${it.index}: ${it.name}${if (it.compatible) "（Vibrate / Flicker）" else "（非対応：${it.problem}）"}" }))
+                (listOf("対応する機器すべて（${deviceItems.count { it.compatible }}台）") + deviceItems.map { "${it.index}: ${it.name}${if (it.compatible) "（V/F${if(it.suctionCompatible) " / 吸引" else "・吸引非対応"}）" else "（非対応：${it.problem}）"}" }))
         }
         findViewById<Button>(R.id.connect).isEnabled = c.connection == "未接続" && !c.stopping && !repo.snapshot.busy
         findViewById<EditText>(R.id.server_url).isEnabled = c.connection == "未接続"
         findViewById<Button>(R.id.scan).isEnabled = connected
-        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.trialActive && !c.stopping && deviceItems.isNotEmpty()
-        deviceSpinner.isEnabled = !c.active && !c.paused && !c.trialActive && !c.stopping
+        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending && deviceItems.isNotEmpty()
+        deviceSpinner.isEnabled = !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending
         val previewCheck = findViewById<CheckBox>(R.id.preview)
         val scenarioPicker = findViewById<Spinner>(R.id.scenario)
         val startButton = findViewById<Button>(R.id.motion_start)
-        val locked = c.active || c.paused || c.trialActive || c.stopping
+        val suctionBusy = c.suctionAuto || c.suctionLevel>0 || c.suctionPending
+        val locked = c.active || c.paused || c.trialActive || c.stopping || suctionBusy
         if(locked) {
             previewCheck.isChecked = c.preview
             if(scenarioPicker.selectedItemPosition != (if(c.classic) 1 else 0)) scenarioPicker.setSelection(if(c.classic) 1 else 0)
@@ -245,6 +283,24 @@ class MainActivity : Activity() {
             findViewById<Button>(id).alpha = if(index==currentStage && (c.active || c.paused)) 1f else if(canSkip) .85f else .45f
         }
         setText(R.id.progress_detail, if(c.active || c.paused) "進行位置 %02d:%02d · いつでも行き来できます".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ ⇄ 中間 ⇄ フィニッシュ · 自動でも進みます")
+        val suctionReady = !c.stopping && !c.paused && !c.trialActive && c.error.isEmpty() &&
+            (preview || (connected && c.selected.isNotEmpty() && c.devices.filter { it.index in c.selected }.all { it.suctionCompatible }))
+        findViewById<Button>(R.id.suction_auto).isEnabled = suctionReady
+        setText(R.id.suction_auto,if(c.suctionAuto) "自動 ON · 押して停止" else "自動 OFF · 押して開始")
+        setText(R.id.suction_interval_label,"間隔 ${c.suctionIntervalMs/1000}秒")
+        setText(R.id.suction_duration_label,"継続 %.2f秒".format(Locale.ROOT,c.suctionDurationMs/1000.0))
+        setText(R.id.suction_target_label,"自動の目標 ${c.suctionTarget} / 5")
+        setText(R.id.suction_current,"手動 · 現在の指令 ${c.suctionLevel} / 5")
+        listOf(R.id.suction_interval_minus,R.id.suction_interval_plus,R.id.suction_duration_minus,R.id.suction_duration_plus,R.id.suction_target).forEach {
+            findViewById<View>(it).isEnabled = !c.stopping
+        }
+        findViewById<SeekBar>(R.id.suction_target).progress = c.suctionTarget
+        findViewById<SeekBar>(R.id.suction_manual).let { if(!it.isPressed) it.progress = c.suctionLevel; it.isEnabled = suctionReady }
+        setText(R.id.suction_status, when {
+            preview -> "プレビュー・送信なし · 音声とV/Fの開始は不要です"
+            !suctionReady -> "吸引対応の対象を決定してください。停止待ち・一時停止中は操作できません"
+            else -> "音声とV/Fから独立 · 手動でも自動ONを維持 · 全停止で吸引も停止" + c.outputs.entries.joinToString("") { (i,o) -> "\n$i: 送信 ${o.suctionSent} / 応答 ${o.suctionAck}" }
+        })
         val trialBusy = c.trialActive || c.stopping
         val percentView = findViewById<EditText>(R.id.trial_percent)
         val secondsView = findViewById<EditText>(R.id.trial_seconds)

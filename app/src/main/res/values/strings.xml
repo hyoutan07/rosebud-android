@@ -100,4 +100,10 @@
   <string name="rest_middle">中間のFlicker休止割合</string>
   <string name="rest_finish">フィニッシュのFlicker休止割合</string>
   <string name="rest_note">指を離すと保存します。今の一動作を終えてから反映。0%は予定休止なし。短い区間では目安の割合です。</string>
+    <string name="suction_title">吸引 · 独立操作</string>
+    <string name="suction_auto_off">自動 OFF</string>
+    <string name="suction_minus">−</string><string name="suction_plus">＋</string>
+    <string name="suction_interval_minus">吸引の間隔を1秒短く</string><string name="suction_interval_plus">吸引の間隔を1秒長く</string>
+    <string name="suction_duration_minus">吸引の継続を0.05秒短く</string><string name="suction_duration_plus">吸引の継続を0.05秒長く</string>
+    <string name="suction_target">吸引の自動目標 0〜5</string><string name="suction_manual">吸引の手動操作 0〜5</string>
 </resources>
