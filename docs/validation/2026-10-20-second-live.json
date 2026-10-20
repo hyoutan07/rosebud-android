@@ -1,0 +1,256 @@
+{
+  "date_jst": "2026-10-20",
+  "app_version": "0.4.0",
+  "version_code": 6,
+  "implementation_commit": "03230a9",
+  "seed": 46495454,
+  "connection": "ws://192.168.11.10:12345",
+  "device_indices": [
+    2,
+    3
+  ],
+  "caps_percent": [
+    35,
+    34
+  ],
+  "follow": true,
+  "preview": false,
+  "conditions": {
+    "model": "CPH2199",
+    "android": "12",
+    "brave": "1.97.59 (429705904)",
+    "screen": "ON in sampled environment; no screen-off test",
+    "usb_power": true,
+    "battery_percent": 100,
+    "power_save": true,
+    "wake_lock_requested": false,
+    "listening_route": "not reconfirmed by user this session; wired output type 3 enumerated",
+    "replay_page": "not recorded"
+  },
+  "send_check": {
+    "sends_logged": {
+      "2": 396,
+      "3": 393
+    },
+    "scalar_sends_snapshot": 789,
+    "formula_mismatches": 0,
+    "same_tick_pairs": 390,
+    "same_tick_pair_mismatches": 0,
+    "max_ack_ms": 234,
+    "max_tick_gap_ms": 137,
+    "error_events": [],
+    "final_state": {
+      "elapsed_ms": 218776,
+      "active": false,
+      "paused": false,
+      "connection": "未接続",
+      "audio_ready": false,
+      "error": "",
+      "stop_status": "停止応答OK（全対象）",
+      "seed": 46495454
+    }
+  },
+  "silence": {
+    "audio_silence_ms": 11925,
+    "begin_elapsed_realtime_ms": 46616460,
+    "end_utc": "2026-10-20T01:25:07.009475Z",
+    "control_windows": 11,
+    "nonrest_windows": 10,
+    "nonrest_raw_flicker_positive": true,
+    "nonrest_sent_flicker_positive": true,
+    "clock_elapsed_ms_values": [
+      121942,
+      122924,
+      123975,
+      124915,
+      125966,
+      126919,
+      127963,
+      128997,
+      130036,
+      130973,
+      132023
+    ],
+    "states": [
+      "弱め",
+      "弱め",
+      "弱め",
+      "レストB",
+      "極弱",
+      "極弱",
+      "極弱",
+      "極弱",
+      "極弱",
+      "極弱",
+      "弱め"
+    ]
+  },
+  "audio": {
+    "session": "1792459320424-8aecdb67",
+    "phase": "ended",
+    "reason": "all_ui_stop",
+    "elapsed_ms": 349167,
+    "samples": 33480704,
+    "read_errors": 0,
+    "max_read_gap_ms": 203,
+    "silent_ms": 163349,
+    "longest_silence_ms": 11925
+  },
+  "events": [
+    {
+      "utc": "2026-10-20T01:22:54.080176Z",
+      "event": "motion_started",
+      "state": {
+        "active": true,
+        "paused": false,
+        "elapsed_ms": 0,
+        "recipe": -1,
+        "recipe_end_ms": 0,
+        "stop_status": "動作中",
+        "error": "",
+        "seed": 46495454
+      }
+    },
+    {
+      "utc": "2026-10-20T01:25:55.376448Z",
+      "event": "stop_sent",
+      "reason": "pause",
+      "device_index": 2,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:25:55.377601Z",
+      "event": "stop_sent",
+      "reason": "pause",
+      "device_index": 3,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:25:55.462491Z",
+      "event": "stop_device_acknowledged",
+      "reason": "pause",
+      "device_index": 2,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:25:55.466760Z",
+      "event": "stop_device_acknowledged",
+      "reason": "pause",
+      "device_index": 3,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:25:55.469517Z",
+      "event": "stop_acknowledged",
+      "reason": "pause",
+      "state": {
+        "active": false,
+        "paused": true,
+        "elapsed_ms": 181296,
+        "recipe": 3,
+        "recipe_end_ms": 199319,
+        "stop_status": "停止応答OK（全対象）",
+        "error": "",
+        "seed": 46495454
+      }
+    },
+    {
+      "utc": "2026-10-20T01:27:13.021052Z",
+      "event": "motion_resumed",
+      "state": {
+        "active": true,
+        "paused": false,
+        "elapsed_ms": 181296,
+        "recipe": 3,
+        "recipe_end_ms": 199319,
+        "stop_status": "動作中",
+        "error": "",
+        "seed": 46495454
+      }
+    },
+    {
+      "utc": "2026-10-20T01:27:50.549112Z",
+      "event": "stop_requested",
+      "reason": "all_ui_stop",
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:27:50.552634Z",
+      "event": "stop_sent",
+      "reason": "all_ui_stop",
+      "device_index": 2,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:27:50.553697Z",
+      "event": "stop_sent",
+      "reason": "all_ui_stop",
+      "device_index": 3,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:27:50.558865Z",
+      "event": "stop_device_acknowledged",
+      "reason": "all_ui_stop",
+      "device_index": 2,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:27:50.563672Z",
+      "event": "stop_device_acknowledged",
+      "reason": "all_ui_stop",
+      "device_index": 3,
+      "state": {}
+    },
+    {
+      "utc": "2026-10-20T01:27:50.564426Z",
+      "event": "stop_acknowledged",
+      "reason": "all_ui_stop",
+      "state": {
+        "active": false,
+        "paused": false,
+        "elapsed_ms": 218776,
+        "recipe": 5,
+        "recipe_end_ms": 234208,
+        "stop_status": "停止応答OK（全対象）",
+        "error": "",
+        "seed": 46495454
+      }
+    },
+    {
+      "utc": "2026-10-20T01:27:50.566665Z",
+      "event": "control_closed",
+      "state": {
+        "active": false,
+        "paused": false,
+        "elapsed_ms": 218776,
+        "recipe": 5,
+        "recipe_end_ms": 234208,
+        "stop_status": "停止応答OK（全対象）",
+        "error": "",
+        "seed": 46495454
+      }
+    }
+  ],
+  "user_confirmations": [
+    "余白はいい感じ",
+    "2台とも動いた",
+    "Brave再生停止・再開を実施",
+    "一時停止で2台停止",
+    "再開でちゃんと動いた",
+    "全停止で停止"
+  ],
+  "subjective_adjustment": "initial small movement seemed too weak; later both movements confirmed, physical minimum not calibrated",
+  "final_checks": {
+    "service": "absent",
+    "media_projection": "null",
+    "positive_sends_after_final_stop": 0
+  },
+  "unverified": [
+    "Wi-Fi/server loss physical stop",
+    "screen-off two-device control",
+    "noncharging/long-duration",
+    "subjective fit in middle/strong/endless phases",
+    "physical minimum per device"
+  ]
+}

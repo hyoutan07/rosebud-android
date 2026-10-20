@@ -96,5 +96,7 @@
     "physical minimum positive output",
     "subjective sound fit"
   ],
-  "scope": "Android only; parent docs left to main thread; old 19-minute comparison retained"
+  "scope": "Android only; parent docs left to main thread; old 19-minute comparison retained",
+  "verification_stage": "build/installation snapshot before physical test; current live results are in 2026-10-20-second-live.json",
+  "live_followup": "2026-10-20-second-live.json"
 }

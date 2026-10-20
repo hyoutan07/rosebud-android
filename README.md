@@ -2,7 +2,7 @@
 
 スマホの再生音と時間の流れから動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.4.0／versionCode 6**、ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を使用します。振動・Flickerの2系統、選択した2台へ同じ生成フレームを送ります。
 
-第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功し、端末へ更新しました。**本人との新しい2台動作・実音声・一時停止／再開試験は未実施**です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
+第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功。**本人と2台の動作・実音声・静かな区間・一時停止／再開・全停止を短時間確認済み**です。実動作は約3分39秒、USB充電・画面ON・Wake Lockなし。導入の小ささは調整候補、長時間などは未検証です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
 
 ## 画面と操作
 
