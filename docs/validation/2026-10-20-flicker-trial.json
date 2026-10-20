@@ -1,0 +1,84 @@
+{
+  "date_jst": "2026-10-20",
+  "version_name": "0.5.0",
+  "version_code": 7,
+  "implementation_commit": "2e4d344",
+  "apk": "app/build/releases/rosebud-0.5.0-debug.apk",
+  "apk_sha256": "dc47b461f1f18ad1763f5307ecd5d97764775b176bf652f216f1d886f18a1a3d",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "build": "assembleDebug success",
+  "lint": {
+    "errors": 0,
+    "warnings": 6,
+    "categories": {
+      "version_updates": 3,
+      "colored_action_button_style": 2,
+      "static_view_count": 1
+    }
+  },
+  "tests": [
+    {
+      "name": "jp.hyoutan.rosebud.MotionControllerTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:43:57.260Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.AudioStatsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:43:57.099Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.FlickerTrialTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:43:57.253Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.BoilingFrogTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:43:57.114Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.ScenarioEngineTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:44:04.678Z"
+    }
+  ],
+  "test_total": 47,
+  "trial": {
+    "output_initially": "unset",
+    "duration_initially": "unset",
+    "duration_input_ms": [
+      100,
+      2000
+    ],
+    "target_count_required": 1,
+    "channels": "Vibrate=0, Rotate/Flicker=requested, no third channel",
+    "automatic_repeat": false,
+    "requires_audio_capture": false,
+    "quantization": "floor, reject below one step; never round request upward"
+  },
+  "installed": true,
+  "saved_settings_preserved": {
+    "url": "ws://192.168.11.10:12345",
+    "vibrate_cap": 35,
+    "flicker_cap": 34,
+    "follow": true
+  },
+  "physical_verification": "not performed; waiting for user conditions and explicit trial start",
+  "pending": [
+    "native trial panel display confirmation",
+    "physical output and minimum complete-motion duration",
+    "normal Flicker motion-unit and gap generator after calibration",
+    "manual skip physical feel and completed-motion transition"
+  ]
+}

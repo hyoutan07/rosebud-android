@@ -1,6 +1,8 @@
 # Androidの引き継ぎ
 
-更新：2026-10-20 JST。**第2の0.4.0／versionCode 6を実装し、本人との短時間2台動作確認まで完了**。実装・初期値・自動検証・APKの正本は [android-second-task.md](android-second-task.md)、残件は [TODO.md](TODO.md)。第1の0.3.2の実機結果は [android-e2e.md](android-e2e.md) に保持する。
+更新：2026-10-20 JST。**現在は追加機能0.5.0／versionCode7の単発確認待ち**。[現在の正本](flicker-trial.md)。物理的に成立する出力・時間は未測定。通常Flickerの生成変更は確認後に行う。以下の第2確認結果は0.4.0の記録として保持。
+
+**第2の0.4.0／versionCode 6を実装し、本人との短時間2台動作確認まで完了**。実装・初期値・自動検証・APKの正本は [android-second-task.md](android-second-task.md)、残件は [TODO.md](TODO.md)。第1の0.3.2の実機結果は [android-e2e.md](android-e2e.md) に保持する。
 
 ## 再開
 
