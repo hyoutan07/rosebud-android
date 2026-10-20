@@ -84,7 +84,7 @@
   <string name="trial_help">実機モードで対象を1台だけ決定してください。音声取得は不要です。出力・時間は未設定で始まり、自動反復しません。</string>
   <string name="trial_percent_label">出力（%・現在の動作上限以内）</string>
   <string name="trial_unset_percent">出力は未設定</string>
-  <string name="trial_duration_label">動かす長さ（秒・0.1〜2.0）</string>
+  <string name="trial_duration_label">動かす長さ（秒・0.1〜10.0）</string>
   <string name="trial_unset_seconds">時間は未設定</string>
   <string name="trial_start">この条件で1回試す</string>
   <string name="trial_status">未実施。条件を一緒に決めてから試します。</string>

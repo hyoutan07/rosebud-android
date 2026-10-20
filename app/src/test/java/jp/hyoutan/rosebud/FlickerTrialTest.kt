@@ -5,10 +5,11 @@ import org.junit.Test
 
 class FlickerTrialTest {
     @Test fun unsetAndInvalidDurationNeverBecomeASelectedDefault() {
-        for(text in listOf("", "0", "0.099", "2.001", "NaN", "Infinity", "1e100", "-1")) assertNull(text,FlickerTrialLimits.parseDuration(text))
+        for(text in listOf("", "0", "0.099", "10.001", "NaN", "Infinity", "1e100", "-1")) assertNull(text,FlickerTrialLimits.parseDuration(text))
         assertEquals(100L,FlickerTrialLimits.parseDuration("0.1"))
         assertEquals(500L,FlickerTrialLimits.parseDuration("０。５"))
         assertEquals(2000L,FlickerTrialLimits.parseDuration("2.0"))
+        assertEquals(10000L,FlickerTrialLimits.parseDuration("10.0"))
     }
     @Test fun trialNeverRoundsUpOrExceedsTheChosenValueOrCap() {
         assertNull(FlickerTrialLimits.output(0,34,255))

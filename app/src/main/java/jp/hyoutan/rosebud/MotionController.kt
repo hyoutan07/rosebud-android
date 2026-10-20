@@ -253,7 +253,7 @@ internal class MotionController(
         if(!ready || state.preview || state.selected.size!=1) { reject("実機モードで対象を1台だけ決定してください"); return@post }
         val device = state.devices.singleOrNull { it.index==state.selected.single() && it.compatible }
         if(device==null) { reject("選択した機器の接続を確認してください"); return@post }
-        if(durationMs !in FlickerTrialLimits.minMs..FlickerTrialLimits.maxMs) { reject("動かす長さは0.1〜2.0秒で設定してください"); return@post }
+        if(durationMs !in FlickerTrialLimits.minMs..FlickerTrialLimits.maxMs) { reject("動かす長さは0.1〜10.0秒で設定してください"); return@post }
         val value = FlickerTrialLimits.output(percent,state.flickerCap,device.flickerSteps)
         if(value==null) { reject("出力は上限以内・機器の最小1段以上で設定してください"); return@post }
         if(pending.values.any { it.type=="ScalarCmd" && it.device==device.index }) { reject("前の送信応答を確認中です"); return@post }

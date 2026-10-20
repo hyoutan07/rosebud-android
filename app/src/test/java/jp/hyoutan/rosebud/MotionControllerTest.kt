@@ -120,6 +120,21 @@ class MotionControllerTest {
         assertEquals(1,requests.count { it.first=="ScalarCmd" })
         assertEquals(1,requests.count { it.first=="StopDeviceCmd" })
     }
+    @Test fun extendedTrialKeepsOneCommandAndStopsAtTheChosenTenSecondDeadline() {
+        setup();control.select(7);await { state.get().selected.size==1 }
+        control.session(false,false);control.startTrial(7,10000)
+        await { state.get().trialActive && state.get().acknowledged.flicker>0 }
+        advance(2500)
+        assertTrue(state.get().trialActive)
+        assertFalse(requests.any { it.first=="StopDeviceCmd" })
+        advance(7400)
+        assertTrue(state.get().trialActive)
+        advance(200)
+        await { state.get().trialStatus=="単発確認終了・停止応答OK" }
+        assertEquals(1,requests.count { it.first=="ScalarCmd" })
+        assertEquals(1,requests.count { it.first=="StopDeviceCmd" })
+        assertFalse(state.get().active || state.get().trialActive)
+    }
     @Test fun trialRejectsMultipleTargetsPreviewAndOutOfBoundConditions() {
         dual=true;setup();control.select(-1);await { state.get().selected.size==2 }
         control.session(false,false);control.startTrial(3,500);advance(100)
@@ -128,7 +143,7 @@ class MotionControllerTest {
         control.session(true,false);control.startTrial(3,500);advance(100)
         assertFalse(state.get().trialActive)
         control.session(false,false)
-        for((p,d) in listOf(0 to 500L,31 to 500L,3 to 99L,3 to 2001L)) control.startTrial(p,d)
+        for((p,d) in listOf(0 to 500L,31 to 500L,3 to 99L,3 to 10001L)) control.startTrial(p,d)
         advance(100)
         assertFalse(requests.any { it.first=="ScalarCmd" })
         assertFalse(state.get().active)

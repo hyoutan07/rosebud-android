@@ -7,7 +7,7 @@ import kotlin.math.floor
 /** Bounds for a short manual experiment, not measured device motion parameters. No defaults are selected. */
 internal object FlickerTrialLimits {
     const val minMs = 100L
-    const val maxMs = 2000L
+    const val maxMs = 10000L
     fun parseDuration(text: String): Long? = runCatching {
         val normalized = Normalizer.normalize(text.trim(), Normalizer.Form.NFKC).replace('。', '.')
         BigDecimal(normalized).multiply(BigDecimal(1000)).longValueExact().takeIf { it in minMs..maxMs }
