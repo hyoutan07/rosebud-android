@@ -1,0 +1,100 @@
+{
+  "date_jst": "2026-10-20",
+  "version_name": "0.4.0",
+  "version_code": 6,
+  "implementation_commit": "03230a9",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "apk_sha256": "d47eba4510edafd142e0c6ca1092c040e364aec4f6d3b92b217fb37e6ed17288",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "tests": [
+    {
+      "name": "jp.hyoutan.rosebud.MotionControllerTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:10:20.478Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.AudioStatsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:10:20.245Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.BoilingFrogTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:10:20.264Z"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.ScenarioEngineTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-20T01:10:25.607Z"
+    }
+  ],
+  "test_total": 33,
+  "build": "assembleDebug success",
+  "lint": {
+    "errors": 0,
+    "warnings": 5,
+    "categories": {
+      "version_updates": 3,
+      "intentional_colored_action_button_style": 2
+    }
+  },
+  "simulation": {
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "duration_seconds_per_seed": 4800,
+    "step_seconds": 0.2,
+    "frames_total": 288012,
+    "strong_state_time_share_15_to_30_minutes": 0.7201111111111111,
+    "strong_state_time_share_30_to_45_minutes": 0.7911296296296296,
+    "strong_state_time_share_45_to_80_minutes": 0.8057327873535853,
+    "style_time_samples_45_to_80_minutes": [
+      0,
+      5081,
+      27784,
+      93147
+    ]
+  },
+  "device": {
+    "model": "CPH2199",
+    "android": "12",
+    "update_installed": true,
+    "signature_preserved": true,
+    "saved_settings": {
+      "url": "ws://192.168.11.10:12345",
+      "follow": true,
+      "vibrate_cap": 35,
+      "flicker_cap": 34
+    },
+    "new_physical_motion_test": "not performed; waiting for explicit user start",
+    "new_audio_capture_test": "not performed",
+    "ui": "three screens inspected; fixed 18dp root padding following user feedback",
+    "power": "USB connected; no new physical motion session"
+  },
+  "unverified": [
+    "Wi-Fi/server-loss physical stop",
+    "two-device screen-off/noncharging/long-duration",
+    "physical minimum positive output",
+    "subjective sound fit"
+  ],
+  "scope": "Android only; parent docs left to main thread; old 19-minute comparison retained"
+}

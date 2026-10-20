@@ -1,28 +1,33 @@
 # Rosebud Android
 
-スマホの内部音声を取得し、Androidで `boiling_frog` を生成してMacのIntifaceへ直接送る個人用アプリです。**0.3.2／versionCode 5**、ID `jp.hyoutan.rosebud`、既存0.2.0と同じデバッグ署名。今回の対象は振動とFlickerの2系統で、第3系統の正の出力は送りません。
+スマホの再生音と時間の流れから動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.4.0／versionCode 6**、ID `jp.hyoutan.rosebud`、既存と同じ署名・保存設定を使用します。振動・Flickerの2系統、選択した2台へ同じ生成フレームを送ります。
 
-第1タスクの実装・初期値・確認結果は [docs/android-e2e.md](docs/android-e2e.md)、次の担当者向けは [docs/handoff.md](docs/handoff.md)。実機で2台の動作、追従ON/OFF、再生の一時停止・再開、画面と通知からの停止、片方の切断時に残る機器の停止を確認しました。残件は **[docs/TODO.md](docs/TODO.md)** にまとめています。19分の既存構成を保ち、15分の新構成・8レシピ・音の特徴による選択は第2タスクへ回します。
+第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功し、端末へ更新しました。**本人との新しい2台動作・実音声・一時停止／再開試験は未実施**です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
 
-## 使う順番
+## 画面と操作
 
-1. Macとスマホを同じWi-Fiへ接続し、MacのIntifaceを起動します。既存Webの動作を止めてタブを閉じます。対象機器の電源を入れます。
-2. Rosebudの接続先を入力し「接続先を保存して接続」。**MacのIPだけでも入力できます**（例 `192.168.11.10`）。12345番と `ws://` を補い、全角数字と「。」を整えます。LANのIPは変更されることがあります。
-3. 「機器をスキャン」し、一覧を確認します。2台なら **「対応する機器すべて（2台）」→「選んだ対象を決定」**。1台だけ選ぶこともできます。接続後に追加された機器は動作対象へ勝手に追加しません。
-4. 初回の比較は「音声追従」OFF、出力上限は両方30%。「動作開始」で初めて動きます。「動作だけ停止」は取得と接続を維持し、再開始は最初からです。
-5. 音と連動させる場合は少し下へスクロールして「取得を開始」。録音権限とAndroidの共有許可を本人が操作します。**接続・取得だけでは動きません。** 新しい許可は取得開始ごとに必要です。
-6. 有線イヤホンでBraveの再生を始め、「音声追従」ONにして「動作開始」。アプリへ戻ると音量・段階・経過・生成値・機器ごとの送信／応答を確認できます。ON/OFFは動作中も比較可能。音が小さいときも弱めて動作と時間を継続します。
-7. 終了は **「全停止（取得・接続も終了）」** または通知の「停止」（ColorOSでは通知右の∨で展開し、下部の「停止」）。全対象へStopDeviceCmdを送り、音声取得・接続を終了します。「取得を停止」も同じ終了処理です。停止応答がない場合は未確認として表示します。
+- **セッション**：新15分＋エンドレス／比較用19分、時間、現在の自動レシピと状態、波形、出力上限、音追従。下部の開始・一時停止・再開と全停止は3画面共通。
+- **動き**：8レシピの波形と見本。カードを押しても実行中の動きを上書きしません。通常のレシピは30〜60秒保ち、その中で音に合わせて変化します。
+- **接続・設定**：接続先、対象選択、音声準備、プレビュー／実機。条件メモ、ログ共有、Wake Lock等は「診断・その他」へ。
 
-取得前に追従ONへ変えると動作が止まる場合があります。音声取得を始めてから、改めて「動作開始」を押します。取得・通信エラーや対象機器の消失後は、自動再開しません。
+**接続・音声準備だけでは動かず、開始が必要です。** 起動時はプレビュー。音追従OFFなら機器・取得なしで生成でき、機器への指令は送信しません。ONの場合は本当の音声取得を準備します。疑似音声や時間ジャンプはありません。
 
-今回の実機テストはユーザーの希望により2〜3分程度で区切ります。19分を実時間で待つ必要はなく、全段階と周回は自動テストで時刻を進めて確認します。実機試験では、一時停止／再開、追従ON/OFF、Brave前面、最後に停止と出力が戻らないことを比べます。長時間・非充電の成立とは分けます。
+実機の順番（本人の操作を一つずつ案内）：
 
-生音声・映像は保存しません。PCへ送るのは機器への指令だけです。マイクへの切り替えはありません。音量補正・上限の具体値、今回の失敗・未検証は [実装・検証の記録](docs/android-e2e.md) に残します。
+1. Macとスマホを同じWi-Fiへ。Intiface起動、既存Webの制御を全停止してタブを閉じ、対象2台の電源をON。
+2. 「接続・設定」で接続先を確認して接続。IPだけ・全角数字・「。」にも対応。保存先は `ws://192.168.11.10:12345` ですが、IPは変わり得ます。
+3. 一覧から「対応する機器すべて（2台）」を明示選択して決定。追加検出機器は自動で加えません。
+4. 「取得を開始」し、録音／共有許可を本人が操作。有線イヤホンでBrave再生を準備。
+5. プレビューを外して実機へ。セッションで「音とつくる15分」・音追従・上限を確認し、本人が「開始する」を押します。
+6. 一時停止は全対象の停止応答後に時計・レシピ位置を保持し、接続・取得を維持。再開は明示操作。全停止は取得・接続も終了。停止未確認を成功表示しません。
 
-## 再ビルド・上書き導入
+新規導入の出力上限は30/30%、追従OFF。今回の端末の保存値35/34%・追従ONは維持し、初期値で上書きしません。上限は目標値ではなく天井です。正の指令で実際に動く下限は未測定です。
 
-構築済みのJDK 21・SDK・署名を使います。環境の作り直しは不要です。
+無音では弱めながら時計と動作を続け、演出として予定したレストA/Bだけは実行します。取得エラー・機器消失・通信断では実行解除し、自動再開しません。通知の停止でも全停止できます（ColorOSは通知の∨で展開）。生音声・画面映像は保存せず、PCへは機器指令だけを送ります。
+
+## ビルド・更新
+
+構築済みのJDK21・SDK・署名を使用し、依存・環境は更新していません。
 
 ```bash
 cd '/Users/hyuta/Desktop/hyuta/遊び/bluetooth/rosebud-android'
@@ -30,25 +35,22 @@ source ./scripts/android-env.sh
 ./gradlew assembleDebug lint testDebugUnitTest --console=plain
 adb devices -l
 adb -d install -r app/build/outputs/apk/debug/app-debug.apk
-adb -d shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n jp.hyoutan.rosebud/.MainActivity
+adb -d shell am start -W -n jp.hyoutan.rosebud/.MainActivity
 ```
 
-APK：`/Users/hyuta/Desktop/hyuta/遊び/bluetooth/rosebud-android/app/build/outputs/apk/debug/app-debug.apk`。
+更新直後の起動が`LaunchState: UNKNOWN`でホーム画面に留まる場合、パッケージ更新完了後に最後の起動コマンドだけ再実行します。機器動作中は更新せず、全停止とサービス終了を先に確認。署名不一致で自動アンインストールしません。
 
-Lint：`app/build/reports/lint-results-debug.html`。テスト：`app/build/reports/tests/testDebugUnitTest/index.html`。APKはGit対象外です。署名不一致の場合は自動でアンインストールせず、元の鍵を確認します。実機で動作中にAPKを上書きせず、先に全停止の応答とサービス終了を確認してください。
+APK：`app/build/outputs/apk/debug/app-debug.apk`。Lint：`app/build/reports/lint-results-debug.html`。単体テスト：`app/build/reports/tests/testDebugUnitTest/index.html`。全てGit対象外です。AGP8.13.2／Kotlin2.3.10／Gradle8.13／SDK36／min31を維持。詳細は [環境記録](docs/environment.md)。
 
-AGP 8.13.2／Kotlin 2.3.10／Gradle 8.13、compile・target SDK 36、min SDK 31を維持します。[環境記録](docs/environment.md)の0.1.0部分は導入時の履歴、[音声取得記録](docs/verification.md)の0.2.0部分は取得だけの初期検証です。
+## 診断
 
-## 診断を残す
-
-「今回／直近のログを共有」で、音声集計と接続・送信・停止の診断を共有できます。取得の条件メモへ再生元・有線・充電・画面条件を入力し、「現在のメモをログに記録」で試験の目印を残せます。ブラウザの選択は記録用で、取得対象をUIDで制限しません。別の音声アプリは止めて比較します。
-
-USB接続中の開発者向け確認：
+「診断・その他」の共有で音声集計・接続・生成・送信・停止のログを取り出せます。音声ログは直近4セッション・約1MiB×3、controlログは別の約1MiB×3で巡回。`control.2.jsonl`→`control.1.jsonl`→`control.jsonl`の順です。PCM・URL・Bluetoothアドレス・端末シリアルは自動保存しません。試験後は必要な根拠を抽出し、全文ログを引き継ぎの前提にしないでください。
 
 ```bash
-adb -d shell run-as jp.hyoutan.rosebud cat shared_prefs/probe.xml
+adb -d shell run-as jp.hyoutan.rosebud cat shared_prefs/control_settings.xml
 adb -d shell run-as jp.hyoutan.rosebud tail -n 5 files/control.jsonl
-adb -d shell run-as jp.hyoutan.rosebud ls files/probe-logs
+adb -d shell dumpsys activity services jp.hyoutan.rosebud
+adb -d shell dumpsys media_projection
 ```
 
-音声ログは直近4セッション・各約1 MiB×3ファイル、制御ログは別に約1 MiB×3ファイルで巡回します。`control.2.jsonl` → `control.1.jsonl` → `control.jsonl` の順で読みます。必要な結果は試験後に保存してください。PCM・閲覧URL・機器のBluetoothアドレス・端末シリアルは診断へ自動保存しません。
+実機試験は1ケース2〜3分。15〜80分を待つ代わりに、長い進行は模擬時計・固定seedで検証済みです。通信が届かない条件の物理停止・画面オフ・非充電・長時間は未検証を引き継ぎます。
