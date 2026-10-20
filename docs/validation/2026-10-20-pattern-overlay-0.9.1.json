@@ -1,0 +1,199 @@
+{
+  "version": "0.9.1",
+  "version_code": 13,
+  "status": "built_tested_awaiting_user_stop_before_install",
+  "tests": {
+    "total": 81,
+    "failures": 0,
+    "errors": 0,
+    "audio_stats": 6,
+    "classic": 6,
+    "crescendo": 5,
+    "flicker": 18,
+    "trial": 2,
+    "controller": 27,
+    "scenario": 17
+  },
+  "build": "successful",
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "apk_sha256": "7e0aabe60911fdb884ca405d85904facc7d59a30edeba5fb8818555a1025d2c8",
+  "certificate_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "measurement_condition": "all 8 pinned, nonquiet/level1, rest0, early305..365s / late825..885s; command percent, not physical units",
+  "pattern_ranges": [
+    {
+      "id": 0,
+      "early_vibrate": [
+        17.695,
+        29.676
+      ],
+      "early_flicker": [
+        10,
+        13
+      ],
+      "late_vibrate": [
+        39.473,
+        83.849
+      ],
+      "late_flicker": [
+        20,
+        26
+      ]
+    },
+    {
+      "id": 1,
+      "early_vibrate": [
+        15.872,
+        31.84
+      ],
+      "early_flicker": [
+        10,
+        13
+      ],
+      "late_vibrate": [
+        34.754,
+        80.205
+      ],
+      "late_flicker": [
+        20,
+        27
+      ]
+    },
+    {
+      "id": 2,
+      "early_vibrate": [
+        15.688,
+        30.523
+      ],
+      "early_flicker": [
+        10,
+        19
+      ],
+      "late_vibrate": [
+        35.421,
+        75.069
+      ],
+      "late_flicker": [
+        20,
+        38
+      ]
+    },
+    {
+      "id": 3,
+      "early_vibrate": [
+        15.947,
+        29.295
+      ],
+      "early_flicker": [
+        10,
+        20
+      ],
+      "late_vibrate": [
+        35.771,
+        77.084
+      ],
+      "late_flicker": [
+        20,
+        38
+      ]
+    },
+    {
+      "id": 4,
+      "early_vibrate": [
+        17.058,
+        33.746
+      ],
+      "early_flicker": [
+        10,
+        22
+      ],
+      "late_vibrate": [
+        37.812,
+        80.602
+      ],
+      "late_flicker": [
+        20,
+        45
+      ]
+    },
+    {
+      "id": 5,
+      "early_vibrate": [
+        16.963,
+        31.108
+      ],
+      "early_flicker": [
+        10,
+        51
+      ],
+      "late_vibrate": [
+        37.347,
+        77.711
+      ],
+      "late_flicker": [
+        20,
+        93
+      ]
+    },
+    {
+      "id": 6,
+      "early_vibrate": [
+        16.528,
+        33.827
+      ],
+      "early_flicker": [
+        10,
+        24
+      ],
+      "late_vibrate": [
+        38.395,
+        83.738
+      ],
+      "late_flicker": [
+        20,
+        47
+      ]
+    },
+    {
+      "id": 7,
+      "early_vibrate": [
+        16.592,
+        32.019
+      ],
+      "early_flicker": [
+        10,
+        50
+      ],
+      "late_vibrate": [
+        44.172,
+        74.356
+      ],
+      "late_flicker": [
+        20,
+        95
+      ]
+    }
+  ],
+  "actual_morphology_checks": [
+    "short 1sec F peak then 2sec tail and 2sec moving valley",
+    "F rising stairs and return",
+    "F paired peaks separated by moving valley",
+    "V paired-peak count 20 vs ramp 3 during same 120sec simulation"
+  ],
+  "audio_checks": [
+    "input kind weighted selection retained",
+    "V nonquiet level scales output",
+    "V density/onset remain and no phase reset on density step",
+    "middle F level sampled at next ON; current ON percent and deadline frozen"
+  ],
+  "classic_fixture_changed": false,
+  "capture_code_changed": false,
+  "ui_layout_changed": false,
+  "physical_motion_test": false,
+  "phone_install": false,
+  "installed_version": "0.9.0",
+  "current_hardware": "idle; audio capture only active",
+  "previous_audio_zero_cause": "undetermined; nonzero input confirmed in latest capture"
+}

@@ -171,7 +171,7 @@ class ScenarioEngineTest {
             }
         }
         assertEquals((0..7).toSet(),seen); assertEquals(Strength.entries.toSet(),states)
-        assertTrue(minimumLate <= .33 && maximumLate >= .72)
+        assertTrue("actual motif range=$minimumLate..$maximumLate",minimumLate <= .33 && maximumLate >= .65)
         assertEquals(.75,styles[3].toDouble()/samplesLate,.06)
     }
     @Test fun quietingActsWithinHeldRecipeAndDoesNotStopItsClock() {

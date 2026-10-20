@@ -10,14 +10,14 @@ internal data class FlickerFrame(val output: Double, val pattern: Int, val patte
     val manualPattern: Int = -1, val pendingPattern: Boolean = false)
 
 internal val flickerPatterns = listOf(
-    Recipe("ゆっくり往復", "広い波をゆっくり上げ、谷へ戻る。", "谷 → 山 → 戻り。進行とともに山が育つ", Shape.WAVE),
-    Recipe("触れて、間を置く", "丸い山から、動いたままの谷へ。", "動く谷 → 丸い山 → 余韻", Shape.TOUCH),
-    Recipe("まばらな小波", "長めの広い波で、山谷を感じる。", "広い谷 → 育つ山 → 谷", Shape.SPARSE),
-    Recipe("ずらした二連", "少しずれた波を、山から次へつなぐ。", "谷 → 山 → 肩 → 次の波", Shape.DOUBLE),
-    Recipe("階段と戻り", "一動作ずつ広い山を上り、戻る。", "上り → 頂点 → 下り → 谷", Shape.RISE),
-    Recipe("短い山と余韻", "やや短い周期で、広い山と余韻。", "谷 → 山 → 余韻。終盤は長い山へ", Shape.HOLD),
-    Recipe("ほどける波", "広い波がほどけ、動く谷から戻る。", "育つ山 → 戻り → 谷 → 次の山", Shape.UNRAVEL),
-    Recipe("変わるまとまり", "丸さと位相を変え、広い波を連ねる。", "谷 → 山 → 肩。進行に合わせて拡大", Shape.CLUSTER))
+    Recipe("ゆっくり往復", "小さな往復の形へ、育つ強弱を重ねる。", "小 → 谷 → 少し上 → 小／2・2・3・2秒", Shape.WAVE),
+    Recipe("触れて、間を置く", "触れる一動作から、動く谷へ。", "少し上 → 谷 → 小 → 谷／各2秒", Shape.TOUCH),
+    Recipe("まばらな小波", "小さな反復へ、ときどき山を置く。", "小 → 谷 → 山 → 小／各2秒", Shape.SPARSE),
+    Recipe("ずらした二連", "少し違う二つの山を、谷で区切る。", "山 → 谷 → 小さい山 → 小 → 谷／2・2・3・2・2秒", Shape.DOUBLE),
+    Recipe("階段と戻り", "一動作ずつ上り、最初の小ささへ戻る。", "小 → 少し上 → 山 → 高い山 → 小／2・3・2・2・2秒", Shape.RISE),
+    Recipe("短い山と余韻", "1秒の山のあとに、弱い余韻を残す。", "短い山1秒 → 余韻2秒 → 小2秒 → 谷2秒", Shape.HOLD),
+    Recipe("ほどける波", "長めの動きがほどけ、谷から戻る。", "山 → 中 → 小 → 谷 → 別の山／3・2・2・2・2秒", Shape.UNRAVEL),
+    Recipe("変わるまとまり", "長短の山と谷を、まとまりで連ねる。", "山2秒 → 小2秒 → 短い山1秒 → 中3秒 → 谷2秒", Shape.CLUSTER))
 
 private data class FlickerUnit(val percent: Int, val seconds: Double, val phase: FlickerPhase = FlickerPhase.ON,
     val gapBias: Int = 0)
@@ -57,10 +57,21 @@ private fun bridge(percent: Int, finish: Boolean) = on(if (finish) {
 /** Middle broad-wave example at progress 627s; budget rests are deliberately separate. */
 internal fun sampleFlicker(pattern: Int, seconds: Double): Double {
     require(pattern in flickerUnits.indices && seconds.isFinite() && seconds >= 0.0)
-    val at = floor(seconds/2.0)*2.0
     val range = FavoriteCrescendo.range(627.0)
-    val wave = FavoriteCrescendo.wave(pattern,at,false)
-    return ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*wave)*100).roundToInt()/100.0
+    val units = flickerUnits[pattern]
+    fun duration(unit: FlickerUnit) = if (unit.phase == FlickerPhase.ON) unit.seconds else 2.0
+    val cycle = units.sumOf(::duration)
+    val cycleStart = floor(seconds/cycle)*cycle
+    var at = cycleStart
+    for (unit in units) {
+        if (seconds < at+duration(unit)) {
+            val motif = if (unit.phase == FlickerPhase.ON) (unit.percent-7)/33.0 else 0.0
+            val gain = FavoriteCrescendo.macroGain(FavoriteCrescendo.wave(pattern,at,false))
+            return ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*motif*gain)*100).roundToInt()/100.0
+        }
+        at += duration(unit)
+    }
+    return range.flickerFloor
 }
 
 /** Independent monotonic clock and PRNG. Random draws happen only at unit/pattern boundaries. */
@@ -103,11 +114,15 @@ internal class FlickerTrack(seed: Long) {
         pattern = next
         cursor = 0
     }
-    private fun middleUnit(source: FlickerUnit, at: Double, progress: Double): FlickerUnit {
+    private fun middleUnit(source: FlickerUnit, at: Double, progress: Double, sound: SoundFeatures): FlickerUnit {
         val range = FavoriteCrescendo.range(progress)
         val wave = FavoriteCrescendo.wave(pattern,at,false)
-        val percent = ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*wave)*100).roundToInt()
-        return on(percent,if(percent == 100 || source.seconds < 3.0) 2.0 else 3.0)
+        val motif = if (source.phase == FlickerPhase.ON) (source.percent-7)/33.0 else 0.0
+        val gain = FavoriteCrescendo.macroGain(wave)
+        val level = if (sound.level.isFinite()) sound.level.coerceIn(0.0,1.0) else 0.0
+        val audioGain = .8+.2*level
+        val percent = ((range.flickerFloor+(range.flickerPeak-range.flickerFloor)*motif*gain*audioGain)*100).roundToInt()
+        return on(percent,if(source.phase == FlickerPhase.ON) source.seconds else 2.0)
     }
     private fun finishUnit(source: FlickerUnit, at: Double): FlickerUnit {
         val percent = when (source.percent) {
@@ -146,7 +161,7 @@ internal class FlickerTrack(seed: Long) {
                     else on(if (previous == FlickerPhase.ON && unit.percent == 7) 10 else 7,2.0)
                 stage == 0 -> on(if (source.percent == 7 || source.phase != FlickerPhase.ON) 7 else 10,2.0)
                 stage == 2 -> finishUnit(source,at)
-                else -> middleUnit(source,at,progress)
+                else -> middleUnit(source,at,progress,sound)
             }
             unit = if (previous == FlickerPhase.ON && candidate.percent == unit.percent) {
                 if (stage == 0 || quiet) bridge(candidate.percent,stage == 2) else {

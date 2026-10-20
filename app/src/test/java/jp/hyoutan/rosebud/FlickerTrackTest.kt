@@ -5,6 +5,50 @@ import org.junit.Test
 
 class FlickerTrackTest {
     private val sound = SoundFeatures(kind=SoundKind.SMOOTH, level=1.0, density=.5)
+    private fun motifFrames(pattern: Int, count: Int): List<FlickerFrame> {
+        val track = FlickerTrack(42)
+        track.setRestSettings(RestSettings(0,0,0))
+        val initial = track.frame(0.0,627.0,sound)
+        track.selectPattern(0.0,pattern,sound)
+        var frame = track.frame(initial.unitEnd,627.0+initial.unitEnd,sound)
+        return List(count) {
+            val result = frame
+            frame = track.frame(frame.unitEnd,627.0+frame.unitEnd,sound)
+            result
+        }
+    }
+    @Test fun actualMiddleFramesKeepShortPeakTailStairsAndTwoSeparatePeaks() {
+        val short = motifFrames(5,3)
+        assertEquals(listOf(1.0,2.0,2.0),short.map { it.unitEnd-it.unitStart })
+        assertTrue(short[0].percent > short[1].percent+15)
+        assertTrue(short[1].percent > short[2].percent+3)
+        val stairs = motifFrames(4,5).map { it.percent }
+        assertTrue(stairs[0] < stairs[1] && stairs[1] < stairs[2] && stairs[2] < stairs[3])
+        assertTrue(stairs[4] < stairs[1])
+        val double = motifFrames(3,4).map { it.percent }
+        assertTrue(double[0] > double[1] && double[2] > double[1] && double[2] > double[3])
+        assertTrue(double[0] > double[2])
+        val weakPeak = motifFrames(0,30).maxOf { it.percent }
+        val strongPeak = motifFrames(5,30).maxOf { it.percent }
+        assertTrue("weak motifs must not be independently expanded to full range",strongPeak > weakPeak+25)
+    }
+    @Test fun middleAudioLevelChangesNextOnWithoutRewritingTheCurrentOn() {
+        val loud = FlickerTrack(42); val soft = FlickerTrack(42)
+        val low = sound.copy(level=0.0)
+        for (track in listOf(loud,soft)) track.setRestSettings(RestSettings(0,0,0))
+        val first = loud.frame(0.0,627.0,sound)
+        soft.frame(0.0,627.0,low)
+        loud.selectPattern(0.0,5,sound); soft.selectPattern(0.0,5,low)
+        val a = loud.frame(first.unitEnd,627.0+first.unitEnd,sound)
+        val b = soft.frame(first.unitEnd,627.0+first.unitEnd,low)
+        assertTrue(a.percent > b.percent)
+        val held = loud.frame(a.unitStart+.5,627.0+a.unitStart+.5,low)
+        assertEquals(a.percent,held.percent)
+        assertEquals(a.unitEnd,held.unitEnd,0.0)
+        val next = loud.frame(a.unitEnd,627.0+a.unitEnd,low)
+        val nextSoft = soft.frame(b.unitEnd,627.0+b.unitEnd,low)
+        assertEquals(next.percent,nextSoft.percent)
+    }
 
     @Test fun activeUnitSurvivesSoundChangesAndKeepsAbsolutePercent() {
         val track = FlickerTrack(42)
@@ -145,7 +189,7 @@ class FlickerTrackTest {
         track.resumeFromPause(.7)
         assertEquals(resumed, track.frame(.7,.7,sound))
     }
-    @Test fun middleSamplesBroadWaveOncePerCompleteTwoOrThreeSecondOn() {
+    @Test fun middleKeepsMotifAndEnvelopeFrozenForOriginalOneTwoOrThreeSecondOn() {
         for (pattern in 0..7) {
             val track = FlickerTrack(pattern.toLong())
             track.setRestSettings(RestSettings(0,0,0))
@@ -155,7 +199,7 @@ class FlickerTrackTest {
             val values = mutableListOf<Int>()
             while (frame.unitStart < 70.0) {
                 assertTrue(frame.percent in 10..75)
-                assertTrue(frame.unitEnd-frame.unitStart in 2.0..3.0)
+                assertTrue(frame.unitEnd-frame.unitStart in 1.0..3.0)
                 values.add(frame.percent)
                 val inside = (frame.unitStart+.2).coerceAtLeast(3.0)
                 if (inside < frame.unitEnd) {
@@ -165,14 +209,16 @@ class FlickerTrackTest {
                 }
                 frame = track.frame(frame.unitEnd,627.0+frame.unitEnd,sound)
             }
-            assertTrue(values.max()-values.min() >= 50)
+            assertTrue(values.max()-values.min() >= if(pattern in listOf(5,7)) 40 else 2)
         }
     }
     @Test fun samplesShowEightIndependentUnscaledBroadStepExamples() {
         assertEquals(8,flickerPatterns.size)
         assertEquals(.10,sampleFlicker(0,0.0),0.0)
-        assertEquals(.40,sampleFlicker(0,4.0),0.0)
-        assertEquals(.70,sampleFlicker(0,8.0),0.0)
+        assertTrue(sampleFlicker(0,4.0) in .11.. .16)
+        assertEquals(.10,sampleFlicker(0,8.0),0.0)
+        assertTrue(sampleFlicker(5,0.0) > sampleFlicker(5,1.0))
+        assertTrue(sampleFlicker(5,1.0) > sampleFlicker(5,3.0))
         assertEquals(sampleFlicker(0,4.0),sampleFlicker(0,5.9),0.0)
         val track = FlickerTrack(17)
         val before = track.frame(0.0,0.0,sound)
@@ -197,7 +243,7 @@ class FlickerTrackTest {
         }
         assertTrue(repeatedGaps > 0)
         // Middle examples also retain the broad moving valley.
-        assertEquals(.70,sampleFlicker(0,8.0),0.0)
+        assertEquals(.10,sampleFlicker(0,8.0),0.0)
     }
     @Test fun invalidClocksAreRejectedWithoutChangingTrack() {
         val track = FlickerTrack(5)

@@ -10,6 +10,7 @@ internal data class FavoriteRange(val vibrationFloor: Double, val vibrationPeak:
 
 /** Initial command ranges based on boiling_frog; the new 2–3 second physical feel is unverified. */
 internal object FavoriteCrescendo {
+    const val minimumMacroGain = .45
     private val times = doubleArrayOf(300.0,464.0,627.0,791.0,900.0)
     private val ranges = listOf(
         FavoriteRange(.15,.30,.10,.40), FavoriteRange(.20,.50,.10,.70),
@@ -46,4 +47,5 @@ internal object FavoriteCrescendo {
         val u = phase-floor(phase)
         return (.5-.5*cos(2*PI*u)).pow(roundness[pattern]).coerceIn(0.0,1.0)
     }
+    fun macroGain(wave: Double) = minimumMacroGain+(1-minimumMacroGain)*wave.coerceIn(0.0,1.0)
 }

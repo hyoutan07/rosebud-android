@@ -240,8 +240,16 @@ internal class ScenarioEngine(seed: Long) {
                 legacyVibration.coerceAtLeast(MotionDefaults.finishVibrationFloor*MotionDefaults.nominalVibrationCap) else legacyVibration
             else -> {
                 val range = FavoriteCrescendo.range(progress)
-                val wave = FavoriteCrescendo.waveFromPhase(recipe,macroPhase,true)
-                (range.vibrationFloor+(range.vibrationPeak-range.vibrationFloor)*wave)*audioGain
+                val macro = FavoriteCrescendo.macroGain(FavoriteCrescendo.waveFromPhase(recipe,macroPhase,true))
+                val motif = shape(recipes[recipe].shape,phase)
+                val segment = when(state) {
+                    Strength.ULTRA -> .10
+                    Strength.WEAK -> .40
+                    Strength.STRONG -> 1.0
+                    Strength.REST_A,Strength.REST_B -> 0.0
+                }
+                val level = (.70*motif+.30*segment)*macro
+                (range.vibrationFloor+(range.vibrationPeak-range.vibrationFloor)*level)*audioGain
             }
         }
         val target = Output(vibration,0.0)
