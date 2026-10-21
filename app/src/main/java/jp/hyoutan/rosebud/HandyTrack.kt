@@ -38,6 +38,8 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         fun candidates(stage: String): IntRange = when(stage) { "はじめ" -> 0..2; "中間" -> 3..9; else -> 10..12 }
     }
     private val random = SeededRandom(seed xor 0x48414e4459L)
+    private val waveSeed = seed xor 0x53545245414dL
+    private var wave: HandyWave? = null
     private var last = 0L
     private var progress = 0L
     private var age = 0L
@@ -58,7 +60,7 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
     fun start(time: Long) {
         running = true; last = time; progress = 0; age = 0; segmentEnd = time; step = 0; weak = false
         forward = false; resumeAt = null; previousTarget = (settings.lower+settings.upper)/2
-        previousSpeed = 32.0; speedAt = time
+        previousSpeed = 32.0; speedAt = time; wave = null
         frame = HandyFrame(running = true)
     }
     fun stop() { running = false; weak = false; frame = frame.copy(running = false, weak = false, move = null) }
@@ -72,6 +74,7 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
     fun alignPosition(normalized: Double) {
         require(normalized.isFinite() && normalized in 0.0..1.0)
         previousTarget = normalized.coerceIn(settings.lower,settings.upper)
+        wave = null
         if(weak) weakCenter = previousTarget
     }
     /** Caller first stops the physical leg and reads position before asking for a fresh segment. */
@@ -101,6 +104,46 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         val stage = currentStage()
         frame = frame.copy(running = true, weak = weak, elapsedMs = progress, ageMs = age, stage = stage,
             cycle = if(stage=="フィニッシュ") (progress-settings.introMs-settings.middleMs)/settings.finishMs+1 else 0)
+        return frame
+    }
+    /** Streaming path: output is a continuous future sample, not an endpoint-and-wait leg.
+     * Call alignPosition only after an explicit stop/resync; routine state polls must preserve phase. */
+    fun sampleTrajectory(time: Long, sound: SoundFeatures, currentNormalized: Double,
+        physicalSpanMm: Double=80.0, horizonMs: Long=200): HandyFrame {
+        require(currentNormalized.isFinite() && currentNormalized in 0.0..1.0)
+        if(!running) return frame
+        lastSound=sound
+        clockFrame(time)
+        val stage=currentStage()
+        val pool=candidates(stage)
+        if(step==0L || !weak && (pattern !in pool || age>=20000 && (sound.kind!=selectedSound || age>=80000))) {
+            val affinities=when(sound.kind) {
+                SoundKind.SMOOTH -> setOf(0,3,4,7,11)
+                SoundKind.REGULAR -> setOf(1,5,8,10)
+                SoundKind.BROKEN -> setOf(2,6,9,12)
+                SoundKind.QUIET -> setOf(0,2,4,6,11)
+                else -> emptySet()
+            }
+            val scores=pool.map { i -> settings.normalizedWeights[i]*(if(i in affinities) 3.0 else 1.0)*(if(i==pattern && step>0) .35 else 1.0) }
+            var draw=random.next()*scores.sum()
+            pattern=pool.firstOrNull { draw-=scores[it-pool.first];draw<=0 } ?: pool.last
+            age=0;selectedSound=sound.kind;step++
+        }
+        val speedWave=.5+.5*sin(age/4700.0+pattern*.41)
+        val soundGain=if(sound.kind==SoundKind.QUIET) .9 else 1.0+.05*(sound.density.takeIf { it.isFinite() } ?: 0.0).coerceIn(0.0,1.0)
+        val middleProgress=((progress-settings.introMs).toDouble()/settings.middleMs).coerceIn(0.0,1.0)
+        var peak=when(stage) {
+            "はじめ" -> (36+24*speedWave)*soundGain
+            "中間" -> (75+75*speedWave)*(.85+.25*middleProgress)*soundGain
+            else -> (180+80*speedWave)*soundGain
+        }.coerceIn(32.0,if(stage=="はじめ") 60.0 else if(stage=="中間") 150.0 else 260.0)
+        val recovery=resumeAt?.let { ((time-it)/3000.0).coerceIn(0.0,1.0) } ?: 1.0
+        if(weak) peak=32.0 else peak=32+(peak-32)*recovery
+        val planner=wave ?: HandyWave(waveSeed,currentNormalized.coerceIn(settings.lower,settings.upper),time).also { wave=it }
+        val point=planner.sample(time,pattern,peak,physicalSpanMm,settings.lower,settings.upper,weak,horizonMs,currentNormalized)
+        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,
+            move=if(point.plannedRest) null else LinearMove(point.targetPosition,point.suggestedHorizonMs),
+            segmentEndMs=time+point.suggestedHorizonMs,plannedRest=point.plannedRest)
         return frame
     }
     fun tick(time: Long, sound: SoundFeatures): HandyFrame {

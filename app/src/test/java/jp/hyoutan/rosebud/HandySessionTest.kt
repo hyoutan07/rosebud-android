@@ -50,26 +50,64 @@ class HandySessionTest {
     }
 }
 
-class HandyScenarioPacingTest {
+class HandyContinuousStreamTest {
     private val bounds = HandyBounds(5.0, 85.0)
 
-    @Test fun scenarioUsesPhysicalSpeedWithinReadDeviceLimits() {
-        assertEquals(390L, bounds.scenarioDuration(6.0, 84.0, 500.0, 32.0, 200.0))
-        assertEquals(2438L, bounds.scenarioDuration(6.0, 84.0, 1.0, 32.0, 400.0))
-        assertEquals(300L, bounds.scenarioDuration(6.0, 84.0, 260.0, 32.0, 400.0))
+    @Test fun futureTargetsRemainInsideSavedLimitWithBothMargins() {
+        assertEquals(6.0, bounds.streamCommand(45.0, 0.0, 200, 400.0).targetMm, 0.0)
+        assertEquals(84.0, bounds.streamCommand(45.0, 1.0, 200, 400.0).targetMm, 0.0)
+        assertThrows(IllegalArgumentException::class.java) { bounds.streamCommand(45.0, 1.01, 200, 400.0) }
+        assertThrows(IllegalArgumentException::class.java) { bounds.streamCommand(90.0, .5, 200, 400.0) }
     }
-    @Test fun shortScenarioMovesHaveNoQuarterSecondOrMultiSecondFloor() {
-        assertEquals(10L, bounds.scenarioDuration(45.0, 46.0, 100.0, 32.0, 400.0))
-        assertEquals(1L, bounds.scenarioDuration(45.0, 45.0, 100.0, 32.0, 400.0))
-        assertTrue(bounds.target(1.0) < 85.0)
-        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(45.0, 90.0, 100.0, 32.0, 400.0) }
+    @Test fun stateLagExtendsTravelDurationWithoutAnArrivalFailureOrAnEndpointWait() {
+        val command = bounds.streamCommand(6.0, 1.0, 200, 50.0)
+        assertEquals(84.0, command.targetMm, 0.0)
+        assertEquals(1560L, command.durationMs)
+        val quantized = bounds.streamCommand(42.0, bounds.normalized(43.189343), 200, 400.0)
+        assertEquals(43.189343, quantized.targetMm, .000001)
+        assertEquals(200L, quantized.durationMs)
     }
-    @Test fun invalidSpeedInformationCannotArmANewLeg() {
-        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, Double.NaN, 32.0, 400.0) }
-        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, 100.0, 0.0, 400.0) }
-        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, 100.0, 100.0, 32.0) }
+    @Test fun invalidStreamInformationCannotArmANewCommand() {
+        assertThrows(IllegalArgumentException::class.java) { bounds.streamCommand(45.0, .5, 200, Double.NaN) }
+        assertThrows(IllegalArgumentException::class.java) { bounds.streamCommand(45.0, .5, 200, 0.0) }
+        assertThrows(IllegalArgumentException::class.java) { bounds.streamCommand(45.0, .5, 0, 400.0) }
     }
-    @Test fun delayedFirmwareAcknowledgementDoesNotReplaceArrivalConfirmation() {
+    @Test fun delayedAcknowledgementSchedulesOnlyTheNextCurrentSample() {
+        val cadence = HandyStreamCadence(0)
+        cadence.commandSent(0)
+        assertEquals(75L, cadence.nextDelay(25))
+        assertEquals(0L, cadence.nextDelay(1500))
+        assertTrue(cadence.stateDue(1500))
+        cadence.readCompleted(1500)
+        cadence.commandSent(1500)
+        assertFalse(cadence.stateDue(1749))
+        assertTrue(cadence.stateDue(1750))
+        assertEquals(100L, cadence.nextDelay(1500))
+    }
+    @Test fun lookaheadAdaptsToSerialRoundTripsAndRemainsBounded() {
+        val cadence=HandyStreamCadence(0)
+        val before=cadence.horizonMs()
+        repeat(5) { i ->
+            cadence.commandSent(i*1000L)
+            cadence.commandCompleted(i*1000L+250)
+            cadence.readCompleted(i*1000L+450,200)
+        }
+        assertTrue(cadence.horizonMs()>before)
+        assertTrue(cadence.horizonMs() in 200..500)
+        assertEquals(500,cadence.horizonMs())
+        repeat(20) { i -> cadence.commandSent(i*100L);cadence.commandCompleted(i*100L+5);cadence.readCompleted(i*100L+10,5) }
+        assertEquals(200,cadence.horizonMs())
+    }
+    @Test fun freshFiniteUpdatesContinueButMissingUpdatesHaveAFiniteDeadline() {
+        val cadence = HandyStreamCadence(1000)
+        assertTrue(cadence.stateFresh(1000, 2000))
+        assertTrue(cadence.stateFresh(1000, 5000))
+        assertFalse(cadence.stateFresh(1000, 5001))
+        assertFalse(cadence.stateFresh(1000, 999))
+        cadence.readCompleted(5000)
+        assertFalse(cadence.stateDue(5249))
+    }
+    @Test fun inputTestStillRequiresAcknowledgementPositionAndStoppedSpeed() {
         val gate = HandyArrivalGate(84.0)
         assertFalse(gate.canContinue(84.0, 0.0, 2000))
         gate.acknowledge(3000)

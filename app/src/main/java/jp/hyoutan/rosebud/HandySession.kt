@@ -26,15 +26,15 @@ internal data class HandyBounds(val minimumMm: Double, val upperMm: Double) {
         require(maximumSpeed.isFinite() && maximumSpeed > 0)
         return maxOf(plannedMs, ceil(abs(target - from) / maximumSpeed * 1000).toLong(), 250)
     }
-    /** Scenario pace is a physical speed request; no input-test wait is added at the endpoint. */
-    fun scenarioDuration(from: Double, target: Double, requestedSpeed: Double, minimumSpeed: Double, maximumSpeed: Double): Long {
-        require(contains(from) && contains(target))
-        require(requestedSpeed.isFinite() && requestedSpeed > 0)
-        require(minimumSpeed.isFinite() && maximumSpeed.isFinite() && minimumSpeed > 0 && maximumSpeed >= minimumSpeed)
-        val speed = requestedSpeed.coerceIn(minimumSpeed, maximumSpeed)
-        val duration = ceil(abs(target - from) / speed * 1000).toLong().coerceAtLeast(1)
-        require(duration <= 120000) { "指定速度での移動時間が長すぎます" }
-        return duration
+    /** Recompute one bounded future point from the latest read; an old target is never queued. */
+    fun streamCommand(from: Double, normalizedTarget: Double, horizonMs: Long, maximumSpeed: Double): HandyStreamCommand {
+        require(contains(from))
+        require(horizonMs in 50..2000)
+        require(maximumSpeed.isFinite() && maximumSpeed > 0)
+        val target = target(normalizedTarget)
+        val duration = maxOf(horizonMs, ceil(abs(target - from) / maximumSpeed * 1000).toLong(), 1)
+        require(duration <= 120000) { "軌道の移動時間が長すぎます" }
+        return HandyStreamCommand(target, duration)
     }
     companion object {
         fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double): HandyBounds {
@@ -63,4 +63,27 @@ internal class HandyArrivalGate(private val targetMm: Double, private val minimu
         return time >= accepted && time - accepted >= minimumWaitMs && positionMm.isFinite() && speedMmPerSec.isFinite() &&
             abs(positionMm - targetMm) <= 1.0 && abs(speedMmPerSec) <= .1
     }
+}
+
+internal data class HandyStreamCommand(val targetMm: Double, val durationMs: Long)
+
+/** Schedules the next fresh sample, never a list of missed samples after a delayed response. */
+internal class HandyStreamCadence(initialSampleAt: Long) {
+    private var lastReadAt = initialSampleAt
+    private var lastCommandAt = Long.MIN_VALUE / 2
+    private var ackCostMs = 40.0
+    private var readCostMs = 40.0
+    fun stateDue(time: Long) = time - lastReadAt >= 250
+    fun readCompleted(time: Long, costMs: Long = 0) {
+        lastReadAt = time
+        if(costMs > 0) readCostMs = readCostMs*.7 + costMs.coerceAtMost(1500)*.3
+    }
+    fun commandCompleted(time: Long) {
+        val cost = (time-lastCommandAt).coerceIn(0,1500)
+        ackCostMs = ackCostMs*.7 + cost*.3
+    }
+    fun horizonMs(): Long = (100 + ackCostMs*2 + readCostMs).toLong().coerceIn(200,500)
+    fun commandSent(time: Long) { lastCommandAt = time }
+    fun nextDelay(time: Long) = (100 - (time - lastCommandAt)).coerceIn(0, 100)
+    fun stateFresh(sampledAt: Long, time: Long) = time - sampledAt in 0..4000
 }

@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-21 JST",
+  "version": "0.14.2",
+  "version_code": 20,
+  "sha256": "e4e9004a76578b197ff393c56bfe5ce19da720350778756e21bdf29e5fa324e0",
+  "unit_tests": {
+    "tests": 190,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "build": "successful",
+  "lint": {
+    "errors": 0,
+    "warnings": 12
+  },
+  "installed_device": "CPH2199",
+  "saved_preferences_preserved": {
+    "settings": true,
+    "bounds": true
+  },
+  "before_update": "dedicated stop accepted, BLE disconnected, CaptureService and MediaProjection ended",
+  "after_update": "version20 installed; existing Handy screen and stage buttons confirmed; no services, MediaProjection or automatic movement",
+  "scenario": "continuous latest trajectory samples; no endpoint arrival or zero-speed gate",
+  "transient_arrival_difference": "43.189343mm target vs 42.0mm telemetry is not an interruption condition for scenario",
+  "unchanged": "BLE connection/permission/protobuf code; target stop true; upper bound/margins; manual stop; missing/corrupt state guards",
+  "physical_waveform": "not verified after update; user resumes to assess feel"
+}

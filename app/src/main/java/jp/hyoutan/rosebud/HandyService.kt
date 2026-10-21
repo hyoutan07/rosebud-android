@@ -25,7 +25,7 @@ class HandyService : Service() {
     private var track: HandyTrack? = null
     private var trial: HandyTrialPlan? = null
     private var trialIndex = -1
-    private var lastSegment = Long.MIN_VALUE
+    private var streamCadence: HandyStreamCadence? = null
     private var lastTargetMm: Double? = null
     private var follow = false
     private var wake: PowerManager.WakeLock? = null
@@ -125,14 +125,15 @@ class HandyService : Service() {
         require(!follow || freshSound()) { "音声連動には音声取得を開始してください" }
         val epoch = ++generation
         track = HandyTrack(now(), configuration)
-        trial = null; lastSegment = Long.MIN_VALUE
+        trial = null; streamCadence = null
         prepare(epoch) {
             track?.start(now())
             alignTrack()
             update { it.copy(running = true, trialActive = false, trialStatus = "未実施", error = null, status = "シナリオ実行中") }
             acquireWake()
+            streamCadence = HandyStreamCadence(checkNotNull(state).sampledAt)
             startClock(epoch)
-            pump(epoch)
+            stream(epoch)
         }
     }
 
@@ -181,6 +182,11 @@ class HandyService : Service() {
         fun advance() {
             if (epoch != generation || destroyed || track == null || !app.handyState.running) return
             if (follow && !freshSound()) { fail("音声の更新が途切れたため停止しました"); return }
+            val currentState = state
+            val cadence = streamCadence
+            if (currentState == null || cadence?.stateFresh(currentState.sampledAt, now()) == false) {
+                fail("位置の更新を4秒間確認できなかったため停止しました"); return
+            }
             renewWake()
             val frame = checkNotNull(track).clockFrame(now())
             update { it.copy(frame = frame) }
@@ -189,26 +195,62 @@ class HandyService : Service() {
         advance()
     }
 
-    private fun pump(epoch: Long) {
-        if (epoch != generation || track == null || destroyed) return
+    /** One acknowledged request at a time; late responses select the current trajectory, never replay old points. */
+    private fun stream(epoch: Long) {
+        if (epoch != generation || track == null || destroyed || app.handyState.stopping) return
+        val cadence = streamCadence ?: return
+        val currentState = state ?: run { fail("現在位置を確認できませんでした"); return }
+        if (!cadence.stateFresh(currentState.sampledAt, now())) {
+            fail("位置の更新を4秒間確認できなかったため停止しました"); return
+        }
+        if (follow && !freshSound()) { fail("音声の更新が途切れたため停止しました"); return }
         renewWake()
+        if (cadence.stateDue(now())) {
+            val readBegan = now()
+            ble.readState { received ->
+                if (epoch != generation || destroyed || track == null) return@readState
+                val envelope = bounds ?: return@readState
+                if (!received.positionMm.isFinite() || !received.speedMmPerSec.isFinite() ||
+                    !envelope.contains(received.positionMm) || !cadence.stateFresh(received.sampledAt, now())) {
+                    fail("動作位置が設定範囲内か確認できなかったため停止しました")
+                    return@readState
+                }
+                state = received
+                cadence.readCompleted(now(), now() - readBegan)
+                update { it.copy(positionMm = received.positionMm) }
+                sendLatestTrajectory(epoch)
+            }
+        } else sendLatestTrajectory(epoch)
+    }
+
+    private fun sendLatestTrajectory(epoch: Long) {
+        if (epoch != generation || track == null || destroyed || app.handyState.stopping) return
+        val cadence = streamCadence ?: return
         try {
             check(!follow || freshSound()) { "音声の更新が途切れたため停止しました" }
+            val envelope = checkNotNull(bounds)
+            val received = checkNotNull(state)
+            check(cadence.stateFresh(received.sampledAt, now())) { "位置の更新を4秒間確認できなかったため停止しました" }
             val sound = if (follow) app.handySound else SoundFeatures()
-            val frame = checkNotNull(track).tick(now(), sound)
+            val frame = checkNotNull(track).sampleTrajectory(now(), sound, envelope.normalized(received.positionMm),
+                envelope.targetMaximumMm - envelope.targetMinimumMm, cadence.horizonMs())
             update { it.copy(frame = frame, status = if (frame.weak) "Handyだけ弱めています" else "${frame.stage}：${HandyTrack.names[frame.pattern]}") }
-            if (frame.segmentEndMs != lastSegment) {
-                lastSegment = frame.segmentEndMs
-                if (frame.move != null) {
-                    leg(epoch, checkNotNull(bounds).target(frame.move.target), frame.move.durationMs, frame.speedMmPerSec) {
-                        track?.completeSegment(now())
-                        pump(epoch)
-                    }
-                    return
-                }
+            val move = frame.move
+            if (move == null) {
+                // Explicit short pattern rests let the last bounded command finish; no mode stop/restart.
+                main.postDelayed({ stream(epoch) }, 100)
+                return
             }
-            main.postDelayed({ pump(epoch) }, 100)
-        } catch (e: Exception) { fail(e.message ?: "シナリオを継続できませんでした") }
+            val command = envelope.streamCommand(received.positionMm, move.target, move.durationMs, received.maximumSpeedMmPerSec)
+            lastTargetMm = command.targetMm
+            cadence.commandSent(now())
+            // Each command still stops at its bounded target if the stream is interrupted.
+            ble.move(command.targetMm, command.durationMs) {
+                if (epoch != generation || destroyed || track == null) return@move
+                cadence.commandCompleted(now())
+                main.postDelayed({ stream(epoch) }, cadence.nextDelay(now()))
+            }
+        } catch (e: Exception) { fail(e.message ?: "軌道を継続できませんでした") }
     }
 
     private fun nextTrial(epoch: Long) {
@@ -228,14 +270,12 @@ class HandyService : Service() {
     }
 
     /** Only one move, then one acknowledged state poll at a time. Nothing accumulates behind a slow device. */
-    private fun leg(epoch: Long, target: Double, plannedMs: Long, scenarioSpeed: Double? = null, done: () -> Unit) {
+    private fun leg(epoch: Long, target: Double, plannedMs: Long, done: () -> Unit) {
         val envelope = checkNotNull(bounds)
         val previous = checkNotNull(state)
         check(envelope.contains(previous.positionMm) && envelope.contains(target)) { "設定した上限の外へは動かせません" }
-        val duration = if (scenarioSpeed == null) envelope.duration(previous.positionMm, target, plannedMs, previous.maximumSpeedMmPerSec)
-            else envelope.scenarioDuration(previous.positionMm, target, scenarioSpeed, previous.minimumSpeedMmPerSec, previous.maximumSpeedMmPerSec)
-        val gate = HandyArrivalGate(target, if (scenarioSpeed == null) duration else 0)
-        val pollMs = if (scenarioSpeed == null) 250L else 75L
+        val duration = envelope.duration(previous.positionMm, target, plannedMs, previous.maximumSpeedMmPerSec)
+        val gate = HandyArrivalGate(target, duration)
         lastTargetMm = target
         val began = now()
         var finished = false
@@ -261,7 +301,7 @@ class HandyService : Service() {
                         done()
                     } else if (now() - began > duration + 4000) {
                         fail("移動の応答が遅れたため停止しました")
-                    } else main.postDelayed({ poll() }, pollMs)
+                    } else main.postDelayed({ poll() }, 250)
                 }
             }
             poll()
@@ -275,12 +315,16 @@ class HandyService : Service() {
         else if (!current.selectStage(stage ?: return, now())) return
         val epoch = ++generation
         current.interruptSegment(now())
-        lastSegment = Long.MIN_VALUE
+        streamCadence = null
         update { it.copy(stopping = true, status = "動作を切り替えるため停止中") }
         ble.stop { accepted ->
             if (epoch != generation || destroyed) return@stop
             if (!accepted) { fail("停止応答を確認できません。本体の停止ボタンを押してください"); return@stop }
-            prepare(epoch) { startClock(epoch); pump(epoch) }
+            prepare(epoch) {
+                streamCadence = HandyStreamCadence(checkNotNull(state).sampledAt)
+                startClock(epoch)
+                stream(epoch)
+            }
         }
     }
 
@@ -289,7 +333,7 @@ class HandyService : Service() {
         val wasConnecting = app.handyState.connecting
         val closeAfterStop = disconnect || wasConnecting
         val wasTrial = app.handyState.trialActive
-        track?.stop(); track = null; trial = null; bounds = null
+        track?.stop(); track = null; trial = null; bounds = null; streamCadence = null
         releaseWake()
         if (closeAfterStop) leaving = true
         update { it.copy(running = false, trialActive = false, stopping = true, connecting = false,
@@ -337,7 +381,7 @@ class HandyService : Service() {
 
     override fun onDestroy() {
         destroyed = true; generation++
-        track?.stop(); track = null; trial = null
+        track?.stop(); track = null; trial = null; streamCadence = null
         releaseWake()
         app.handyServiceActive = false
         publish(app.handyState.copy(connected = false, connecting = false, running = false, trialActive = false,
