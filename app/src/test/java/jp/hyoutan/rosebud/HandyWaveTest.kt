@@ -157,4 +157,21 @@ class HandyWaveTest {
         assertTrue(average("フィニッシュ")>average("はじめ")*3)
     }
 
+    @Test fun introUsesLowSpeedEvenWhenReportedPositionLagsBehindTheTrajectory() {
+        val track=HandyTrack(31);track.start(0)
+        val bounds=HandyBounds(5.0,87.0)
+        var moves=0
+        for(time in 0L..45000L step 100) {
+            val frame=track.sampleTrajectory(time,SoundFeatures(),.5,80.0)
+            assertTrue(frame.speedLimitMmPerSec in 32.0..40.0)
+            frame.move?.let { move ->
+                val command=bounds.streamCommand(6.0,move.target,move.durationMs,frame.speedLimitMmPerSec)
+                val distance=abs(command.targetMm-6.0)
+                assertTrue(distance/command.durationMs*1000<=40.00001)
+                moves++
+            }
+        }
+        assertTrue(moves>100)
+    }
+
 }

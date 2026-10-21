@@ -43,7 +43,7 @@ internal class HandyBleTransport(
     private var maximumSpeed = 400.0
     private var stopToken = 0L
     private var nextId = 0x40000000L + (SystemClock.elapsedRealtime() and 0xfffffff)
-    private data class Request(val id: Long, val method: Int, val bytes: ByteArray, val done: (HandyRpc.Reply) -> Unit)
+    private data class Request(val id: Long, val method: Int, val bytes: ByteArray, val done: (HandyRpc.Reply) -> Unit, val unavailable: (() -> Unit)? = null)
     private val queue = ArrayDeque<Request>()
     private var pending: Request? = null
     private var stopCallbacks = mutableListOf<(Boolean) -> Unit>()
@@ -82,16 +82,38 @@ internal class HandyBleTransport(
         } catch (_: Exception) { fail("Handyの検索を開始できませんでした。") }
     }
 
-    fun readState(done: (HandyDeviceState) -> Unit) = dispatch {
+    /** A failed telemetry read does not destroy an otherwise acknowledged BLE session. */
+    fun readState(unavailable: (() -> Unit)? = null, done: (HandyDeviceState) -> Unit): Unit = dispatch {
         if (failing || closing) return@dispatch
-        send(842) { reply ->
+        val generation = epoch
+        val token = stopToken
+        fun retry() {
+            if (unavailable != null) unavailable()
+            else {
+                onState("位置を再確認しています（接続は維持しています）")
+                main.postDelayed({
+                    if (generation == epoch && token == stopToken && !closing && !stopping) readState(done = done)
+                }, 250)
+            }
+        }
+        send(842, unavailable = { retry() }) { reply ->
             val low = minimum; val high = maximum
             val position = reply.values["positionMm"]; val speed = reply.values["speedMmPerSec"]
             if (low == null || high == null || position == null || speed == null ||
-                !position.isFinite() || !speed.isFinite() || position < low - 0.1 || position > high + 0.1) {
-                fail("Handyの位置を確認できませんでした。")
-            } else done(HandyDeviceState(low, high, position, speed, SystemClock.elapsedRealtime(), minimumSpeed, maximumSpeed))
+                !position.isFinite() || !speed.isFinite()) {
+                telemetryEvent("invalid_values", position, speed)
+                retry()
+            } else {
+                if (position < low - .1 || position > high + .1) telemetryEvent("outside_stroke", position, speed)
+                done(HandyDeviceState(low, high, position, speed, SystemClock.elapsedRealtime(), minimumSpeed, maximumSpeed))
+            }
         }
+    }
+    private fun telemetryEvent(reason: String, position: Double? = null, speed: Double? = null) {
+        ProbeRepository.get(context).controlEvent("handy_telemetry_retry", mapOf(
+            "reason" to reason, "position_mm" to (position?.takeIf { it.isFinite() } ?: org.json.JSONObject.NULL),
+            "speed_mm_s" to (speed?.takeIf { it.isFinite() } ?: org.json.JSONObject.NULL),
+            "minimum_mm" to (minimum ?: org.json.JSONObject.NULL), "maximum_mm" to (maximum ?: org.json.JSONObject.NULL)))
     }
     fun move(targetMm: Double, durationMs: Long, done: () -> Unit) = dispatch {
         if (failing) return@dispatch
@@ -226,15 +248,15 @@ internal class HandyBleTransport(
             val copy = value.copyOf(); current(g) { if (characteristic.uuid == RX) receive(copy) }
         }
     }
-    private fun request(method: Int, done: (HandyRpc.Reply) -> Unit, target: Double? = null, duration: Long? = null): Request {
+    private fun request(method: Int, done: (HandyRpc.Reply) -> Unit, target: Double? = null, duration: Long? = null, unavailable: (() -> Unit)? = null): Request {
         nextId = if (nextId >= 0xffffffffL) 0x40000000L else nextId + 1
-        return Request(nextId, method, HandyRpc.request(nextId, method, target, duration), done)
+        return Request(nextId, method, HandyRpc.request(nextId, method, target, duration), done, unavailable)
     }
-    private fun send(method: Int, target: Double? = null, duration: Long? = null, done: (HandyRpc.Reply) -> Unit) {
+    private fun send(method: Int, target: Double? = null, duration: Long? = null, unavailable: (() -> Unit)? = null, done: (HandyRpc.Reply) -> Unit) {
         if (!subscribed || !permissions() || (stopping && method != 715) || queue.size >= 4) {
             fail("Handyとの通信を継続できませんでした。"); return
         }
-        try { queue.addLast(request(method, done, target, duration)); pump() }
+        try { queue.addLast(request(method, done, target, duration, unavailable)); pump() }
         catch (_: IllegalArgumentException) { fail("Handyの通信条件が不正です。") }
     }
     private fun pump() {
@@ -244,7 +266,12 @@ internal class HandyBleTransport(
         val request = queue.removeFirst(); pending = request; writeBusy = true
         val generation = epoch
         rpcTimer?.let(main::removeCallbacks)
-        rpcTimer = Runnable { if (epoch == generation && pending === request) fail("Handyの応答が時間切れになりました。物理停止は未確認です。") }
+        rpcTimer = Runnable {
+            if (epoch == generation && pending === request) {
+                if (request.unavailable != null && !writeBusy) unreadable(request, "read_timeout")
+                else fail("Handyの応答が時間切れになりました。物理停止は未確認です。")
+            }
+        }
             .also { main.postDelayed(it, 3000) }
         try {
             val accepted = if (Build.VERSION.SDK_INT >= 33) connection.writeCharacteristic(characteristic, request.bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS
@@ -264,7 +291,16 @@ internal class HandyBleTransport(
             pending = null; rpcTimer?.let(main::removeCallbacks); rpcTimer = null
             request.done(reply)
             pump()
-        } catch (_: IllegalArgumentException) { fail("Handyからの応答を確認できませんでした。") }
+        } catch (_: IllegalArgumentException) {
+            if (request.unavailable != null) unreadable(request, "invalid_read_reply")
+            else fail("Handyからの応答を確認できませんでした。")
+        }
+    }
+    private fun unreadable(request: Request, reason: String) {
+        pending = null; rpcTimer?.let(main::removeCallbacks); rpcTimer = null
+        telemetryEvent(reason)
+        request.unavailable?.invoke()
+        pump()
     }
     private fun stage(ms: Long, work: () -> Unit) {
         stageTimer?.let(main::removeCallbacks)

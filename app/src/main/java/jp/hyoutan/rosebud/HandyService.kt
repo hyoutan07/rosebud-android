@@ -160,9 +160,11 @@ class HandyService : Service() {
             if (epoch != generation || destroyed) return@readState
             try {
                 val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper())
-                envelope.requireStart(received.positionMm, received.speedMmPerSec, received.sampledAt, now())
-                state = received; bounds = envelope
-                update { it.copy(stopping = false, positionMm = received.positionMm, upperMm = envelope.upperMm,
+                val position = HandyTelemetry.position(received.positionMm, envelope.minimumMm, envelope.upperMm)
+                    ?: error("現在位置が設定範囲の外です。位置を確認してから開始してください")
+                envelope.requireStart(position, received.speedMmPerSec, received.sampledAt, now())
+                state = received.copy(positionMm = position); bounds = envelope
+                update { it.copy(stopping = false, positionMm = position, upperMm = envelope.upperMm,
                     minimumMm = received.minimumMm, maximumMm = received.maximumMm) }
                 alignTrack()
                 done()
@@ -182,11 +184,6 @@ class HandyService : Service() {
         fun advance() {
             if (epoch != generation || destroyed || track == null || !app.handyState.running) return
             if (follow && !freshSound()) { fail("音声の更新が途切れたため停止しました"); return }
-            val currentState = state
-            val cadence = streamCadence
-            if (currentState == null || cadence?.stateFresh(currentState.sampledAt, now()) == false) {
-                fail("位置の更新を4秒間確認できなかったため停止しました"); return
-            }
             renewWake()
             val frame = checkNotNull(track).clockFrame(now())
             update { it.copy(frame = frame) }
@@ -199,28 +196,40 @@ class HandyService : Service() {
     private fun stream(epoch: Long) {
         if (epoch != generation || track == null || destroyed || app.handyState.stopping) return
         val cadence = streamCadence ?: return
-        val currentState = state ?: run { fail("現在位置を確認できませんでした"); return }
-        if (!cadence.stateFresh(currentState.sampledAt, now())) {
-            fail("位置の更新を4秒間確認できなかったため停止しました"); return
-        }
         if (follow && !freshSound()) { fail("音声の更新が途切れたため停止しました"); return }
         renewWake()
-        if (cadence.stateDue(now())) {
+        if (state == null || cadence.stateDue(now())) {
             val readBegan = now()
-            ble.readState { received ->
+            ble.readState(unavailable = { unavailablePosition(epoch) }) { received ->
                 if (epoch != generation || destroyed || track == null) return@readState
                 val envelope = bounds ?: return@readState
-                if (!received.positionMm.isFinite() || !received.speedMmPerSec.isFinite() ||
-                    !envelope.contains(received.positionMm) || !cadence.stateFresh(received.sampledAt, now())) {
-                    fail("動作位置が設定範囲内か確認できなかったため停止しました")
+                val position = HandyTelemetry.position(received.positionMm, envelope.minimumMm, envelope.upperMm)
+                if (position == null || !received.speedMmPerSec.isFinite() || !cadence.stateFresh(received.sampledAt, now())) {
+                    ProbeRepository.get(this).controlEvent("handy_position_recheck", mapOf(
+                        "raw_position_mm" to received.positionMm, "minimum_mm" to envelope.minimumMm,
+                        "upper_mm" to envelope.upperMm, "last_target_mm" to (lastTargetMm ?: org.json.JSONObject.NULL)))
+                    unavailablePosition(epoch)
                     return@readState
                 }
-                state = received
+                state = received.copy(positionMm = position)
                 cadence.readCompleted(now(), now() - readBegan)
-                update { it.copy(positionMm = received.positionMm) }
+                update { it.copy(positionMm = position, error = null) }
                 sendLatestTrajectory(epoch)
             }
         } else sendLatestTrajectory(epoch)
+    }
+
+    private fun unavailablePosition(epoch: Long) {
+        if (epoch != generation || track == null || destroyed || app.handyState.stopping) return
+        val cadence = streamCadence ?: return
+        cadence.readCompleted(now()) // Throttle retries without refreshing the last trusted position.
+        val received = state
+        if (received != null && cadence.stateFresh(received.sampledAt, now())) sendLatestTrajectory(epoch)
+        else {
+            update { it.copy(status = "位置を再確認中です。接続とシナリオを維持しています", error = null) }
+            // Last command stops at its bounded target. Read recovery resumes the same session automatically.
+            main.postDelayed({ stream(epoch) }, 250)
+        }
     }
 
     private fun sendLatestTrajectory(epoch: Long) {
@@ -230,18 +239,21 @@ class HandyService : Service() {
             check(!follow || freshSound()) { "音声の更新が途切れたため停止しました" }
             val envelope = checkNotNull(bounds)
             val received = checkNotNull(state)
-            check(cadence.stateFresh(received.sampledAt, now())) { "位置の更新を4秒間確認できなかったため停止しました" }
+            if (!cadence.stateFresh(received.sampledAt, now())) {
+                unavailablePosition(epoch)
+                return
+            }
             val sound = if (follow) app.handySound else SoundFeatures()
             val frame = checkNotNull(track).sampleTrajectory(now(), sound, envelope.normalized(received.positionMm),
                 envelope.targetMaximumMm - envelope.targetMinimumMm, cadence.horizonMs())
             update { it.copy(frame = frame, status = if (frame.weak) "Handyだけ弱めています" else "${frame.stage}：${HandyTrack.names[frame.pattern]}") }
             val move = frame.move
             if (move == null) {
-                // Explicit short pattern rests let the last bounded command finish; no mode stop/restart.
+                // Explicit pattern rests let the last bounded command finish; no mode stop/restart.
                 main.postDelayed({ stream(epoch) }, 100)
                 return
             }
-            val command = envelope.streamCommand(received.positionMm, move.target, move.durationMs, received.maximumSpeedMmPerSec)
+            val command = envelope.streamCommand(received.positionMm, move.target, move.durationMs, minOf(received.maximumSpeedMmPerSec, frame.speedLimitMmPerSec))
             lastTargetMm = command.targetMm
             cadence.commandSent(now())
             // Each command still stops at its bounded target if the stream is interrupted.

@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-21",
+  "version": "0.14.4",
+  "versionCode": 22,
+  "tests": {
+    "tests": 199,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "build": "success",
+  "lint": {
+    "Error": 0,
+    "Warning": 16
+  },
+  "apk": "app/build/releases/rosebud-0.14.4-debug.apk",
+  "sha256": "34173ea1d1674b8d086471218eed028d2ae0b559039ca9258e4aa77b8f38dd76",
+  "device": {
+    "model": "CPH2199",
+    "installedCode": 22,
+    "settingsByteIdentical": true,
+    "boundsByteIdentical": true,
+    "connected": true,
+    "positionMm": 68.0,
+    "reportedStrokeMaxMm": 67.6961669921875,
+    "reportedSpeedMmSec": 0.0,
+    "running": false,
+    "startedMotionAutomatically": false,
+    "mediaProjection": "null",
+    "foregroundService": "HandyService (idle BLE connection retained)"
+  },
+  "causeEvidence": "Current stopped telemetry is 0.303833mm above reported stroke maximum; old +/-0.1mm check would reject and close BLE. Original failing sample was not logged.",
+  "physicalRecoveryDuringMotion": "not induced; normal use confirmation remains",
+  "screenshot": "handy-recovery/connected-handy.png",
+  "connectionReadback": "handy-recovery/connection-readback.json",
+  "priorErrorExcerpt": "handy-recovery/prior-error.json",
+  "ws": "user confirmed resolved; no WS configuration change"
+}

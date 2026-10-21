@@ -134,3 +134,36 @@ class HandyLimitDefaultsTest {
         org.junit.Assert.assertEquals(86.0,HandyBounds.create(5.0,119.0,87.0).target(1.0),0.0)
     }
 }
+
+class HandyTelemetryRecoveryTest {
+    @org.junit.Test fun encoderRoundingAtBothEndsDoesNotRejectAnOtherwiseValidRead() {
+        val high=67.6961669921875
+        org.junit.Assert.assertEquals(high,HandyTelemetry.position(68.0,5.0,high)!!,0.0)
+        org.junit.Assert.assertEquals(5.0,HandyTelemetry.position(4.6666665,5.0,high)!!,0.0)
+        org.junit.Assert.assertEquals(30.0,HandyTelemetry.position(30.0,5.0,high)!!,0.0)
+    }
+    @org.junit.Test fun corruptOrLargeOutOfRangeSamplesCannotRefreshTrustedPosition() {
+        for(p in listOf(Double.NaN,Double.POSITIVE_INFINITY,0.0,90.0)) {
+            org.junit.Assert.assertNull(HandyTelemetry.position(p,5.0,87.0))
+        }
+        org.junit.Assert.assertNull(HandyTelemetry.position(5.0,87.0,5.0))
+    }
+    @org.junit.Test fun repeatedUnusableReadsDoNotRefreshTrustButARecoveredReadDoes() {
+        val cadence=HandyStreamCadence(1000)
+        var trustedSampleAt=1000L
+        for(time in 1250L..5500L step 250) {
+            cadence.readCompleted(time)
+            org.junit.Assert.assertNull(HandyTelemetry.position(0.0,5.0,87.0))
+        }
+        org.junit.Assert.assertFalse(cadence.stateFresh(trustedSampleAt,5500))
+        org.junit.Assert.assertNotNull(HandyTelemetry.position(42.0,5.0,87.0))
+        trustedSampleAt=5750
+        cadence.readCompleted(trustedSampleAt)
+        org.junit.Assert.assertTrue(cadence.stateFresh(trustedSampleAt,5750))
+        val bounds=HandyBounds(5.0,87.0)
+        for(target in listOf(0.0,.5,1.0)) {
+            val command=bounds.streamCommand(42.0,target,200,400.0)
+            org.junit.Assert.assertTrue(command.targetMm in 6.0..86.0)
+        }
+    }
+}

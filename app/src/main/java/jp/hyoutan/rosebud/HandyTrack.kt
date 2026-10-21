@@ -25,7 +25,7 @@ internal data class LinearMove(val target: Double, val durationMs: Long) {
 internal data class HandyFrame(val running: Boolean = false, val weak: Boolean = false, val elapsedMs: Long = 0,
     val stage: String = "待機", val cycle: Long = 0, val pattern: Int = 0, val ageMs: Long = 0,
     val move: LinearMove? = null, val segmentEndMs: Long = 0, val plannedRest: Boolean = false,
-    val speedMmPerSec: Double = 32.0)
+    val speedMmPerSec: Double = 32.0, val speedLimitMmPerSec: Double = 400.0)
 
 /** Position windows and explicit physical speeds. The service derives duration from actual distance,
  * then completeSegment advances immediately on arrival. No scheduled endpoint dwell is required.
@@ -133,16 +133,16 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         val soundGain=if(sound.kind==SoundKind.QUIET) .9 else 1.0+.05*(sound.density.takeIf { it.isFinite() } ?: 0.0).coerceIn(0.0,1.0)
         val middleProgress=((progress-settings.introMs).toDouble()/settings.middleMs).coerceIn(0.0,1.0)
         var peak=when(stage) {
-            "はじめ" -> (48+42*speedWave)*soundGain
+            "はじめ" -> (32+8*speedWave)*soundGain
             "中間" -> (120+160*speedWave)*(.85+.25*middleProgress)*soundGain
             else -> (300+100*speedWave)*soundGain
-        }.coerceIn(32.0,if(stage=="はじめ") 90.0 else if(stage=="中間") 280.0 else 400.0)
+        }.coerceIn(32.0,if(stage=="はじめ") 40.0 else if(stage=="中間") 280.0 else 400.0)
         val recovery=resumeAt?.let { ((time-it)/3000.0).coerceIn(0.0,1.0) } ?: 1.0
         if(weak) peak=32.0 else peak=32+(peak-32)*recovery
         val planner=wave ?: HandyWave(waveSeed,currentNormalized.coerceIn(settings.lower,settings.upper),time).also { wave=it }
         val point=planner.sample(time,pattern,peak,physicalSpanMm,settings.lower,settings.upper,weak,horizonMs,currentNormalized,
             if(stage=="はじめ") .45 else if(stage=="中間") .65+.25*middleProgress else .96)
-        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,
+        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=peak,
             move=if(point.plannedRest) null else LinearMove(point.targetPosition,point.suggestedHorizonMs),
             segmentEndMs=time+point.suggestedHorizonMs,plannedRest=point.plannedRest)
         return frame

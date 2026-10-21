@@ -92,3 +92,12 @@ internal object HandyLimits {
     const val DEFAULT_UPPER_MM = 87f
     fun migratedUpper(previous: Float?): Float = if(previous==null || !previous.isFinite() || previous==85f) DEFAULT_UPPER_MM else previous
 }
+
+/** Read noise never widens a command envelope. Two encoder steps (about 1.33mm) plus rounding. */
+internal object HandyTelemetry {
+    fun position(positionMm: Double, minimumMm: Double, upperMm: Double): Double? {
+        if (!positionMm.isFinite() || !minimumMm.isFinite() || !upperMm.isFinite() || minimumMm >= upperMm) return null
+        if (positionMm < minimumMm - 1.5 || positionMm > upperMm + 1.5) return null
+        return positionMm.coerceIn(minimumMm, upperMm)
+    }
+}

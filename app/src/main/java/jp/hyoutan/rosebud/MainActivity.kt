@@ -34,7 +34,6 @@ class MainActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private var permissionStage: String? = null
     private var permissionSession: String? = null
-    private var handyTrialDialog: HandyTrialDialog? = null
     private var exporting = false
     private var sessionDevice = "rosebud"
     private var mainPage = "session"
@@ -200,7 +199,6 @@ class MainActivity : Activity() {
     private lateinit var handyPhase: TextView
     private lateinit var handyStatus: TextView
     private lateinit var handyStart: Button
-    private lateinit var handyWeak: Button
     private val handyStages = linkedMapOf<String,Button>()
     private val handySliders = mutableListOf<SeekBar>()
     private lateinit var handyConnect: Button
@@ -265,24 +263,7 @@ class MainActivity : Activity() {
         label("Handyはスマホへ直接接続します。IntifaceではHandyの接続を外してください。",panel,12f)
         handyStart = button(R.string.handy_start_preview,panel) { handyCommand(if(handyState.running) "stop" else "start") }
         handyStart.setBackgroundResource(R.drawable.primary_button)
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        panel.addView(actions)
-        handyWeak = button(R.string.handy_weaken,actions) { handyCommand("weak") }
-        handyWeak.layoutParams = LinearLayout.LayoutParams(-1,-2)
         label(getString(R.string.handy_preparing),panel,12f).apply { setTextColor(0xFFFCA5A5.toInt()); setPadding(0,dp(10),0,dp(12)) }
-        button(R.string.handy_trial_open,panel) {
-            if(handyTrialDialog == null) {
-                handyTrialDialog = HandyTrialDialog(this, stopAll = {
-                    stopEverything()
-                }, onClosed = { handyTrialDialog = null }, startReal = { plan ->
-                    handySend(HandyService.ACTION_TRIAL) {
-                        it.putExtra("mode",plan.mode).putExtra("initial_percent",plan.initialPercent)
-                            .putExtra("points_percent",plan.points.map { p->p.percent }.toDoubleArray())
-                            .putExtra("durations_ms",plan.points.map { p->p.durationMs }.toLongArray())
-                    }
-                }, stopReal = { handySend(HandyService.ACTION_STOP) }, realState = { handyState }).also { it.show() }
-            }
-        }
         val settingsPanel = column().apply { visibility = View.GONE }
         val weightsPanel = column().apply { visibility = View.GONE }
         button(R.string.handy_range_settings,panel) { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
@@ -362,8 +343,6 @@ class MainActivity : Activity() {
             (h.running || !findViewById<CheckBox>(R.id.audio_follow).isChecked || control.audioReady)
         handyStart.setText(if(h.running) R.string.handy_end_preview else R.string.handy_start_preview)
         handyStart.alpha=if(handyStart.isEnabled) 1f else .45f
-        handyWeak.isEnabled = h.running && !live.stopping
-        handyWeak.setText(if(h.weak) R.string.handy_release else R.string.handy_weaken)
         handyStages.forEach { (stage,button) ->
             button.isEnabled=h.running && !h.weak && !live.stopping && stage!=h.stage
             button.setTextColor(if(h.running && stage==h.stage) 0xFFF472B6.toInt() else 0xFFD1D5DB.toInt())
@@ -717,7 +696,7 @@ class MainActivity : Activity() {
         if (repo.snapshot.busy) repo.event("probe_ui_visible")
         main.post(refresh)
     }
-    override fun onPause() { handyTrialDialog?.close(); main.removeCallbacks(refresh); super.onPause() }
+    override fun onPause() { main.removeCallbacks(refresh); super.onPause() }
     override fun onStop() {
         if (repo.snapshot.busy) repo.event("probe_ui_hidden")
         super.onStop()
