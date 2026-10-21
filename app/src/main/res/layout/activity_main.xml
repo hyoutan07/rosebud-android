@@ -1,124 +1,105 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:id="@+id/content" android:padding="@dimen/content_padding">
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="10dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_1" android:textSize="18sp" android:textColor="#EC4899" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-    <TextView android:textSize="11sp" android:id="@+id/app_version" android:layout_width="match_parent" android:layout_height="wrap_content" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="@dimen/content_padding" android:id="@+id/content" android:orientation="vertical">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="6dp" android:paddingBottom="10dp" android:orientation="vertical">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_1" android:textSize="12sp" android:textColor="#F472B6" android:letterSpacing=".10" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/session_heading" android:textSize="20sp" android:textColor="#F9FAFB" android:layout_marginTop="4dp" android:id="@+id/page_title" />
   </LinearLayout>
   <TextView android:id="@+id/session_notice" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FCA5A5" android:textSize="12sp" android:accessibilityLiveRegion="polite" android:visibility="gone" />
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_2" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="0dp" android:paddingBottom="8dp" android:id="@+id/session_chips" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:background="@drawable/panel" android:padding="4dp" android:layout_marginBottom="10dp" android:id="@+id/device_tabs">
+    <Button android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="56dp" android:text="@string/device_rosebud" android:textAllCaps="false" android:textSize="14sp" android:background="@drawable/device_tab" android:backgroundTint="@null" android:textColor="@color/device_tab_text" android:id="@+id/device_rosebud" />
+    <Button android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="56dp" android:text="@string/device_handy" android:textAllCaps="false" android:textSize="14sp" android:background="@drawable/device_tab" android:backgroundTint="@null" android:textColor="@color/device_tab_text" android:id="@+id/device_handy" />
+  </LinearLayout>
   <ScrollView android:id="@+id/screen_scroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/screen_session">
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_2" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/session_chips" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:text="@string/ui_3" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-        <Spinner android:id="@+id/scenario" android:layout_width="match_parent" android:layout_height="48dp" android:contentDescription="@string/ui_3" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_4" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/scenario_note" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/ui_5" android:textSize="32sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/elapsed" android:textStyle="bold" />
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/ui_6" android:textSize="14sp" android:textColor="#34D399" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/phase" android:textStyle="bold" />
-        </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_7" android:textSize="11sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/timeline" />
-        <LinearLayout android:id="@+id/stage_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-          <Button android:background="@drawable/stage_button" android:id="@+id/skip_intro" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_intro" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
-          <Button android:background="@drawable/stage_button" android:id="@+id/skip_middle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_middle" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
-          <Button android:background="@drawable/stage_button" android:id="@+id/skip_finish" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_finish" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
-        </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/progress_detail" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" android:id="@+id/progress_detail" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/panel" android:padding="18dp" android:layout_marginTop="12dp">
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_8" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/strength" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_9" android:textSize="18sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/recipe_name" android:textStyle="bold" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_10" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/recipe_hint" />
-          <Button android:id="@+id/choose_vibration" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/choose_vibration" android:textSize="13sp" />
-          <TextView android:id="@+id/flicker_motion" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/flicker_motion" android:textSize="16sp" android:textColor="#F472B6" android:paddingTop="12dp" android:paddingBottom="12dp" />
-          <Button android:id="@+id/choose_flicker" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/choose_flicker" android:textSize="13sp" />
-          <TextView android:id="@+id/pattern_mode" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/pattern_mode" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="8dp" android:paddingBottom="8dp" />
-          <jp.hyoutan.rosebud.MotionWaveView android:id="@+id/session_wave" android:layout_width="match_parent" android:layout_height="72dp" android:contentDescription="@string/ui_11" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_12" android:textSize="11sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-        </LinearLayout>
-        <TextView android:id="@+id/vibrate_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <SeekBar android:id="@+id/vibrate_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/vibrate_cap" />
-        <TextView android:id="@+id/flicker_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <SeekBar android:id="@+id/flicker_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/flicker_cap" />
-        <CheckBox android:id="@+id/audio_follow" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/audio_follow" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:layout_marginTop="12dp">
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/suction_title" android:textSize="18sp" android:textColor="#F472B6" />
-          <Button android:id="@+id/suction_auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/suction_auto_off" />
-          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <Button android:id="@+id/suction_interval_minus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_minus" android:contentDescription="@string/suction_interval_minus" />
-            <TextView android:id="@+id/suction_interval_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" />
-            <Button android:id="@+id/suction_interval_plus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_plus" android:contentDescription="@string/suction_interval_plus" />
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:id="@+id/screen_session" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:id="@+id/rosebud_panel" android:orientation="vertical">
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/panel" android:padding="16dp" android:layout_marginBottom="12dp" android:id="@+id/rosebud_motion" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/device_rosebud" android:textSize="16sp" android:textColor="#F472B6" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+              <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/ui_5" android:textSize="32sp" android:textColor="#F9FAFB" android:paddingTop="4dp" android:paddingBottom="4dp" android:id="@+id/elapsed" android:textStyle="bold" />
+              <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/ui_6" android:textSize="13sp" android:textColor="#34D399" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/phase" android:textStyle="bold" />
+            </LinearLayout>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/progress_detail" android:textSize="12sp" android:paddingTop="0dp" android:paddingBottom="8dp" android:id="@+id/progress_detail" />
+            <LinearLayout android:id="@+id/stage_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+              <Button android:background="@drawable/stage_button" android:id="@+id/skip_intro" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_intro" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
+              <Button android:background="@drawable/stage_button" android:id="@+id/skip_middle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_middle" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
+              <Button android:background="@drawable/stage_button" android:id="@+id/skip_finish" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/skip_finish" android:minHeight="48dp" android:textSize="13sp" android:textColor="#F9FAFB" />
+            </LinearLayout>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_9" android:textSize="14sp" android:textColor="#F9FAFB" android:paddingTop="12dp" android:paddingBottom="2dp" android:id="@+id/recipe_name" android:textStyle="normal" />
+            <Button android:id="@+id/choose_vibration" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/choose_vibration" android:textSize="13sp" />
+            <TextView android:id="@+id/flicker_motion" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/flicker_motion" android:textSize="14sp" android:textColor="#F472B6" android:paddingTop="8dp" android:paddingBottom="2dp" />
+            <Button android:id="@+id/choose_flicker" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/choose_flicker" android:textSize="13sp" />
           </LinearLayout>
-          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <Button android:id="@+id/suction_duration_minus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_minus" android:contentDescription="@string/suction_duration_minus" />
-            <TextView android:id="@+id/suction_duration_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" />
-            <Button android:id="@+id/suction_duration_plus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_plus" android:contentDescription="@string/suction_duration_plus" />
+          <Button android:id="@+id/motion_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_31" android:background="@drawable/primary_button" android:backgroundTint="@null" android:textColor="#FFFFFF" android:minHeight="48dp" android:textSize="14sp" android:textAllCaps="false" android:layout_marginBottom="6dp" />
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:layout_marginTop="12dp" android:id="@+id/suction_panel">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/suction_title" android:textSize="18sp" android:textColor="#F472B6" />
+            <Button android:id="@+id/suction_auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/suction_auto_off" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+              <Button android:id="@+id/suction_interval_minus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_minus" android:contentDescription="@string/suction_interval_minus" />
+              <TextView android:id="@+id/suction_interval_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" />
+              <Button android:id="@+id/suction_interval_plus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_plus" android:contentDescription="@string/suction_interval_plus" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+              <Button android:id="@+id/suction_duration_minus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_minus" android:contentDescription="@string/suction_duration_minus" />
+              <TextView android:id="@+id/suction_duration_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" />
+              <Button android:id="@+id/suction_duration_plus" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/suction_plus" android:contentDescription="@string/suction_duration_plus" />
+            </LinearLayout>
+            <TextView android:id="@+id/suction_target_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <SeekBar android:id="@+id/suction_target" android:layout_width="match_parent" android:layout_height="48dp" android:max="5" android:progress="5" android:contentDescription="@string/suction_target" />
+            <TextView android:id="@+id/suction_current" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <SeekBar android:id="@+id/suction_manual" android:layout_width="match_parent" android:layout_height="48dp" android:max="5" android:contentDescription="@string/suction_manual" />
+            <TextView android:id="@+id/suction_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#9CA3AF" android:textSize="12sp" />
           </LinearLayout>
-          <TextView android:id="@+id/suction_target_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-          <SeekBar android:id="@+id/suction_target" android:layout_width="match_parent" android:layout_height="48dp" android:max="5" android:progress="5" android:contentDescription="@string/suction_target" />
-          <TextView android:id="@+id/suction_current" android:layout_width="match_parent" android:layout_height="wrap_content" />
-          <SeekBar android:id="@+id/suction_manual" android:layout_width="match_parent" android:layout_height="48dp" android:max="5" android:contentDescription="@string/suction_manual" />
-          <TextView android:id="@+id/suction_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#9CA3AF" android:textSize="12sp" />
+          <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rosebud_adjustments" android:minHeight="48dp" android:textSize="14sp" android:textAllCaps="false" android:background="@drawable/stage_button" android:backgroundTint="@null" android:id="@+id/toggle_rosebud_adjustments" />
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/panel" android:padding="16dp" android:layout_marginBottom="12dp" android:id="@+id/rosebud_adjustments" android:orientation="vertical" android:visibility="gone" android:layout_marginTop="8dp">
+            <TextView android:id="@+id/vibrate_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <SeekBar android:id="@+id/vibrate_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/vibrate_cap" />
+            <TextView android:id="@+id/flicker_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <SeekBar android:id="@+id/flicker_cap" android:layout_width="match_parent" android:layout_height="48dp" android:min="5" android:max="100" android:contentDescription="@string/flicker_cap" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_3" android:textSize="13sp" android:layout_marginTop="8dp" />
+            <Spinner android:id="@+id/scenario" android:layout_width="match_parent" android:layout_height="48dp" android:contentDescription="@string/ui_3" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_4" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/scenario_note" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_7" android:textSize="11sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/timeline" />
+            <LinearLayout android:id="@+id/rest_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="0dp" android:visibility="visible" android:layout_marginTop="8dp">
+              <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/toggle_rest" android:textSize="14sp" />
+              <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rest_help" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingBottom="12dp" />
+              <TextView android:id="@+id/rest_intro_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <SeekBar android:id="@+id/rest_intro" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_intro" />
+              <TextView android:id="@+id/rest_middle_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <SeekBar android:id="@+id/rest_middle" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_middle" />
+              <TextView android:id="@+id/rest_finish_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <SeekBar android:id="@+id/rest_finish" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_finish" />
+              <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rest_note" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="12dp" />
+            </LinearLayout>
+          </LinearLayout>
         </LinearLayout>
-        <LinearLayout android:id="@+id/handy_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:layout_marginTop="12dp" />
-        <Button android:id="@+id/toggle_rest" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/toggle_rest" />
-        <LinearLayout android:id="@+id/rest_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:visibility="gone">
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rest_help" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingBottom="12dp" />
-          <TextView android:id="@+id/rest_intro_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-          <SeekBar android:id="@+id/rest_intro" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_intro" />
-          <TextView android:id="@+id/rest_middle_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-          <SeekBar android:id="@+id/rest_middle" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_middle" />
-          <TextView android:id="@+id/rest_finish_label" android:layout_width="match_parent" android:layout_height="wrap_content" />
-          <SeekBar android:id="@+id/rest_finish" android:layout_width="match_parent" android:layout_height="48dp" android:max="50" android:contentDescription="@string/rest_finish" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rest_note" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="12dp" />
-        </LinearLayout>
-        <Button android:id="@+id/toggle_control" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_13" android:minHeight="48dp" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/control_details" android:visibility="gone">
-          <TextView android:id="@+id/control_values" android:layout_width="match_parent" android:layout_height="wrap_content" android:textIsSelectable="true" />
-        </LinearLayout>
+        <LinearLayout android:id="@+id/handy_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="0dp" android:layout_marginTop="0dp" android:visibility="gone" />
       </LinearLayout>
-      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/screen_patterns" android:visibility="gone">
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_14" android:textSize="24sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_15" android:textSize="14sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_16" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/pattern_active" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/recipe_cards" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_17" android:textSize="20sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/sample_title" android:textStyle="bold" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_18" android:textSize="14sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/sample_description" />
-        <jp.hyoutan.rosebud.MotionWaveView android:id="@+id/sample_wave" android:layout_width="match_parent" android:layout_height="100dp" android:contentDescription="@string/ui_19" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_20" android:textSize="14sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/sample_sequence" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_21" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-      </LinearLayout>
-      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/screen_settings" android:visibility="gone">
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_22" android:textSize="24sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_23" android:textSize="14sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-        <Button android:id="@+id/toggle_trial" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/open_trial" android:minHeight="48dp" />
-        <LinearLayout android:id="@+id/trial_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:background="@drawable/panel" android:visibility="gone">
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_title" android:textSize="18sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_help" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_percent_label" android:textSize="14sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
-          <EditText android:id="@+id/trial_percent" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="number" android:hint="@string/trial_unset_percent" android:maxLength="3" android:importantForAutofill="no" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_duration_label" android:textSize="14sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
-          <EditText android:id="@+id/trial_seconds" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="numberDecimal" android:hint="@string/trial_unset_seconds" android:maxLength="6" android:importantForAutofill="no" />
-          <Button android:id="@+id/trial_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_start" android:minHeight="48dp" android:enabled="false" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_status" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" android:id="@+id/trial_status" android:accessibilityLiveRegion="polite" />
-          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_stop_hint" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:id="@+id/screen_settings" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/panel" android:padding="16dp" android:layout_marginBottom="12dp" android:id="@+id/connection_card" android:orientation="vertical">
+          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/mac_connection_title" android:textSize="16sp" android:textColor="#F472B6" />
+          <EditText android:id="@+id/server_url" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="textUri|textNoSuggestions" android:imeOptions="actionDone|flagForceAscii" android:singleLine="true" android:hint="@string/server_url_hint" android:importantForAutofill="no" />
+          <Button android:id="@+id/connect" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/connect" />
+          <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:accessibilityLiveRegion="polite" />
+          <CheckBox android:id="@+id/preview" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/ui_28" android:checked="true" />
+          <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/device_selection_toggle" android:minHeight="48dp" android:textSize="14sp" android:textAllCaps="false" android:id="@+id/toggle_device_selection" />
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:id="@+id/device_selection" android:orientation="vertical">
+            <Button android:id="@+id/scan" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/scan" />
+            <Spinner android:id="@+id/devices" android:layout_width="match_parent" android:layout_height="48dp" android:contentDescription="@string/devices" />
+            <Button android:id="@+id/select_device" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/select_device" />
+          </LinearLayout>
         </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_24" android:textSize="18sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-        <EditText android:id="@+id/server_url" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="textUri|textNoSuggestions" android:imeOptions="actionDone|flagForceAscii" android:singleLine="true" android:hint="@string/server_url_hint" android:importantForAutofill="no" />
-        <Button android:id="@+id/connect" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/connect" />
-        <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:accessibilityLiveRegion="polite" />
-        <Button android:id="@+id/scan" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/scan" />
-        <Spinner android:id="@+id/devices" android:layout_width="match_parent" android:layout_height="48dp" android:contentDescription="@string/devices" />
-        <Button android:id="@+id/select_device" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/select_device" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_25" android:textSize="18sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-        <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/start" />
-        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ready" android:accessibilityLiveRegion="polite" />
-        <ProgressBar android:id="@+id/meter" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="24dp" android:max="1200" android:contentDescription="@string/meter_hint" />
-        <TextView android:id="@+id/levels" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_26" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_27" android:textSize="18sp" android:textColor="#F9FAFB" android:paddingTop="7dp" android:paddingBottom="7dp" android:textStyle="bold" />
-        <CheckBox android:id="@+id/preview" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/ui_28" android:checked="true" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_29" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/panel" android:padding="16dp" android:layout_marginBottom="12dp" android:id="@+id/audio_card" android:orientation="vertical">
+          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/audio_preparation_title" android:textSize="16sp" android:textColor="#F472B6" />
+          <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/start" />
+          <Button android:id="@+id/stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/stop" />
+          <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ready" android:accessibilityLiveRegion="polite" />
+          <ProgressBar android:id="@+id/meter" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="24dp" android:max="1200" android:contentDescription="@string/meter_hint" />
+          <TextView android:id="@+id/levels" android:layout_width="match_parent" android:layout_height="wrap_content" />
+          <CheckBox android:id="@+id/audio_follow" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/audio_follow" />
+        </LinearLayout>
         <Button android:id="@+id/toggle_diagnostics" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_30" android:minHeight="48dp" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/diagnostics" android:visibility="gone">
-          <Button android:id="@+id/stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/stop" />
           <Spinner android:id="@+id/browser" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/browsers" />
           <EditText android:id="@+id/note" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:hint="@string/condition_hint" android:inputType="textCapSentences|textMultiLine" android:maxLength="240" android:maxLines="3" android:importantForAutofill="no" />
           <CheckBox android:id="@+id/wake_lock" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/wake_lock_option" />
@@ -127,19 +108,36 @@
           <Button android:id="@+id/settings" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/settings" />
           <TextView android:id="@+id/metrics" android:layout_width="match_parent" android:layout_height="wrap_content" />
           <TextView android:id="@+id/session" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textIsSelectable="true" />
+          <Button android:id="@+id/toggle_trial" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/open_trial" android:minHeight="48dp" />
+          <LinearLayout android:id="@+id/trial_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:background="@drawable/panel" android:visibility="gone">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_title" android:textSize="18sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_help" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_percent_label" android:textSize="14sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+            <EditText android:id="@+id/trial_percent" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="number" android:hint="@string/trial_unset_percent" android:maxLength="3" android:importantForAutofill="no" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_duration_label" android:textSize="14sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+            <EditText android:id="@+id/trial_seconds" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="numberDecimal" android:hint="@string/trial_unset_seconds" android:maxLength="6" android:importantForAutofill="no" />
+            <Button android:id="@+id/trial_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_start" android:minHeight="48dp" android:enabled="false" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_status" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" android:id="@+id/trial_status" android:accessibilityLiveRegion="polite" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/trial_stop_hint" android:textSize="12sp" android:paddingTop="8dp" android:paddingBottom="8dp" />
+          </LinearLayout>
+          <Button android:id="@+id/toggle_control" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_13" android:minHeight="48dp" />
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/control_details" android:visibility="gone">
+            <TextView android:id="@+id/control_values" android:layout_width="match_parent" android:layout_height="wrap_content" android:textIsSelectable="true" />
+          </LinearLayout>
+          <TextView android:textSize="11sp" android:id="@+id/app_version" android:layout_width="match_parent" android:layout_height="wrap_content" />
+          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_8" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/strength" />
+          <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_10" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="7dp" android:paddingBottom="7dp" android:id="@+id/recipe_hint" />
+          <TextView android:id="@+id/pattern_mode" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/pattern_mode" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingTop="8dp" android:paddingBottom="8dp" />
         </LinearLayout>
       </LinearLayout>
     </LinearLayout>
   </ScrollView>
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="8dp">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="6dp" android:orientation="vertical">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/session_summary_waiting" android:textSize="11sp" android:textColor="#9CA3AF" android:paddingBottom="6dp" android:id="@+id/session_summary" />
+    <Button android:id="@+id/all_stop" android:minHeight="48dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/global_stop" android:backgroundTint="#7F1D1D" android:textColor="#FCA5A5" android:textSize="14sp" android:textAllCaps="false" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-      <Button android:id="@+id/motion_start" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_31" android:layout_weight="1" android:background="@drawable/primary_button" android:backgroundTint="@null" android:textColor="#FFFFFF" />
-      <Button android:id="@+id/all_stop" android:minHeight="48dp" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_32" android:layout_weight="1" android:backgroundTint="#7F1D1D" android:textColor="#FCA5A5" />
-    </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-      <Button android:id="@+id/tab_session" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_33" android:minHeight="48dp" android:layout_weight="1" android:textSize="12sp" style="?android:attr/buttonBarButtonStyle" />
-      <Button android:id="@+id/tab_patterns" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_34" android:minHeight="48dp" android:layout_weight="1" android:textSize="12sp" style="?android:attr/buttonBarButtonStyle" />
-      <Button android:id="@+id/tab_settings" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_22" android:minHeight="48dp" android:layout_weight="1" android:textSize="12sp" style="?android:attr/buttonBarButtonStyle" />
+      <Button android:id="@+id/tab_session" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_33" android:minHeight="48dp" android:layout_weight="1" android:textSize="12sp" style="?android:attr/buttonBarButtonStyle" android:textAllCaps="false" />
+      <Button android:id="@+id/tab_settings" android:layout_width="0dp" android:layout_height="wrap_content" android:text="@string/ui_22" android:minHeight="48dp" android:layout_weight="1" android:textSize="12sp" style="?android:attr/buttonBarButtonStyle" android:textAllCaps="false" />
     </LinearLayout>
   </LinearLayout>
 </LinearLayout>

@@ -35,6 +35,9 @@ class MainActivity : Activity() {
     private var permissionStage: String? = null
     private var permissionSession: String? = null
     private var exporting = false
+    private var sessionDevice = "rosebud"
+    private var mainPage = "session"
+    private val deviceScroll = mutableMapOf<String, Int>()
     private var deviceItems = emptyList<ControlDevice>()
     private val prefs by lazy { getSharedPreferences("control_settings", MODE_PRIVATE) }
     private val control get() = (application as ProbeApplication).control
@@ -50,6 +53,8 @@ class MainActivity : Activity() {
         if (repo.snapshot.busy && repo.snapshot.phase == "permission" && permissionStage == null) {
             repo.end("permission_flow_interrupted")
         }
+        sessionDevice = savedInstanceState?.getString("session_device")?.takeIf { it == "handy" } ?: "rosebud"
+        mainPage = savedInstanceState?.getString("main_page")?.takeIf { it == "settings" } ?: "session"
         setContentView(R.layout.activity_main)
         val content = findViewById<android.view.View>(R.id.content)
         val padding = resources.getDimensionPixelSize(R.dimen.content_padding)
@@ -65,6 +70,7 @@ class MainActivity : Activity() {
         setupScreens()
         setupSuction()
         setupHandy()
+        showScreen()
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
         findViewById<Button>(R.id.stop).setOnClickListener {
             startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP).putExtra("reason", "ui_stop"))
@@ -187,6 +193,8 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
     }
+    private lateinit var handyClock: TextView
+    private lateinit var handyPhase: TextView
     private lateinit var handyStatus: TextView
     private lateinit var handyStart: Button
     private lateinit var handyWeak: Button
@@ -194,28 +202,46 @@ class MainActivity : Activity() {
     private val handySliders = mutableListOf<SeekBar>()
     private fun setupHandy() {
         val panel = findViewById<LinearLayout>(R.id.handy_panel)
-        fun label(text: String, parent: LinearLayout = panel) = TextView(this).also { it.text = text; parent.addView(it) }
-        label("Handy · 無送信プレビュー").apply { textSize = 18f; setTextColor(0xFFF472B6.toInt()) }
-        label(HandyStopPolicy.reason).apply { textSize = 12f; setTextColor(0xFFFCA5A5.toInt()) }
-        label("範囲・時間・音との対応は調整用の仮値です。現在位置は取得していません。")
-        handyStatus = label("待機中")
-        fun button(text: String, operation: String) = Button(this).also { b ->
-            b.text = text; panel.addView(b); b.setOnClickListener { handyCommand(operation) }
+        fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+        fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        fun label(text: String, parent: LinearLayout, size: Float = 14f) = TextView(this).also {
+            it.text = text; it.textSize = size; parent.addView(it)
         }
-        handyStart = button("Handyプレビューを開始", "start")
-        handyWeak = button("Handyだけ弱める", "weak")
-        handyFinish = button("Handyをフィニッシュへ", "finish")
-        button("Handyプレビュー終了", "stop")
-        val settingsPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        Button(this).also { b -> b.setText(R.string.handy_settings_toggle); panel.addView(b)
-            b.setOnClickListener { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE } }
+        fun button(title: Int, parent: LinearLayout, action: () -> Unit) = Button(this).also {
+            it.setText(title); it.isAllCaps = false; it.textSize = 14f; it.minHeight = dp(48)
+            parent.addView(it, LinearLayout.LayoutParams(-1,-2)); it.setOnClickListener { action() }
+        }
+        val summary = column().apply { setPadding(dp(16),dp(16),dp(16),dp(16)); setBackgroundResource(R.drawable.panel) }
+        panel.addView(summary)
+        label(getString(R.string.handy_title),summary,16f).setTextColor(0xFFF472B6.toInt())
+        val clockRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        summary.addView(clockRow)
+        handyClock = TextView(this).apply { textSize = 32f; setTextColor(0xFFF9FAFB.toInt()) }
+        handyPhase = TextView(this).apply { textSize = 13f; setTextColor(0xFF6EE7B7.toInt()) }
+        clockRow.addView(handyClock,LinearLayout.LayoutParams(0,-2,1f))
+        clockRow.addView(handyPhase,LinearLayout.LayoutParams(0,-2,1f))
+        handyStatus = label(getString(R.string.handy_waiting),summary,13f)
+        handyStatus.setPadding(0,dp(10),0,0)
+        handyStart = button(R.string.handy_start_preview,panel) { handyCommand(if(control.handy.running) "stop" else "start") }
+        handyStart.setBackgroundResource(R.drawable.primary_button)
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        panel.addView(actions)
+        handyWeak = button(R.string.handy_weaken,actions) { handyCommand("weak") }
+        handyFinish = button(R.string.handy_finish,actions) { handyCommand("finish") }
+        listOf(handyWeak,handyFinish).forEach { it.layoutParams = LinearLayout.LayoutParams(0,-2,1f) }
+        label(getString(R.string.handy_preparing),panel,12f).apply { setTextColor(0xFFFCA5A5.toInt()); setPadding(0,dp(10),0,dp(12)) }
+        val settingsPanel = column().apply { visibility = View.GONE }
+        val weightsPanel = column().apply { visibility = View.GONE }
+        button(R.string.handy_range_settings,panel) { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
         panel.addView(settingsPanel)
+        label(getString(R.string.handy_bounds_note),settingsPanel,12f)
         val values = intArrayOf(8,7,5,45,55,3,100,100,100)
         val titles = listOf("はじめ（分）","中間（分）","フィニッシュ1展開（分）","位置下限（%・仮）","位置上限（%・仮）","片道の基準（秒・仮）")+HandyTrack.names.map { "$it · 出やすさ" }
         val minima = intArrayOf(1,1,1,40,52,2,10,10,10)
         val maxima = intArrayOf(60,60,60,48,60,10,200,200,200)
         values.indices.forEach { i ->
-            val text = label("",settingsPanel)
+            val parent = if(i<6) settingsPanel else weightsPanel
+            val text = label("",parent)
             val slider = SeekBar(this).apply { min = minima[i]; max = maxima[i]; progress = prefs.getInt("handy_$i",values[i]).coerceIn(min,max); contentDescription = titles[i] }
             fun show() { text.text = getString(R.string.handy_setting_value,titles[i],slider.progress) }
             slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -223,8 +249,10 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar) { prefs.edit().putInt("handy_$i",seekBar.progress).apply() }
             })
-            handySliders.add(slider); settingsPanel.addView(slider,LinearLayout.LayoutParams(-1,(48*resources.displayMetrics.density).toInt())); show()
+            handySliders.add(slider); parent.addView(slider,LinearLayout.LayoutParams(-1,dp(48))); show()
         }
+        button(R.string.handy_weights_settings,panel) { weightsPanel.visibility = if(weightsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
+        panel.addView(weightsPanel)
     }
     private fun handyCommand(operation: String) {
         command(CaptureService.ACTION_HANDY) { intent ->
@@ -240,15 +268,22 @@ class MainActivity : Activity() {
     }
     private fun renderHandy() {
         val h = control.handy
-        handyStatus.text = if(!h.running) "待機 · 送信なし · 現在位置は未取得" else
-            "%02d:%02d · %s%s\n%s · 保持 %d秒%s\n%s".format(Locale.ROOT,h.elapsedMs/60000,h.elapsedMs/1000%60,h.stage,
-                if(h.cycle>0) " · 展開${h.cycle}" else "",HandyTrack.names[h.pattern],h.ageMs/1000,
-                if(h.weak) " · Handy時計保留" else "", if(h.plannedRest) "予定された間（模擬）" else h.move?.let { "生成目標 %.1f%% / %.2f秒 · 到達は未確認".format(Locale.ROOT,it.target*100,it.durationMs/1000.0) } ?: "区間待ち")
-        handyStart.isEnabled = !h.running && !control.stopping && !control.trialActive && (!control.follow || control.audioReady)
+        handyClock.text = getString(R.string.elapsed_clock,h.elapsedMs/60000,h.elapsedMs/1000%60)
+        handyPhase.text = if(!h.running) getString(R.string.handy_clock_waiting) else if(h.weak) getString(R.string.handy_clock_paused) else h.stage
+        handyStatus.text = if(!h.running) "%d分 → %d分 → %d分反復\n待機 · 送信なし".format(Locale.ROOT,handySliders[0].progress,handySliders[1].progress,handySliders[2].progress) else
+            "%s · 保持 %d秒%s\n%s".format(Locale.ROOT,HandyTrack.names[h.pattern],h.ageMs/1000,
+                if(h.cycle>0) " · 展開${h.cycle}" else "", if(h.plannedRest) "予定された間（プレビュー）" else h.move?.let { "生成目標 %.1f%% / %.2f秒 · 到達は未確認".format(Locale.ROOT,it.target*100,it.durationMs/1000.0) } ?: "区間待ち")
+        handyStart.isEnabled = !control.stopping && !control.trialActive && (h.running || !findViewById<CheckBox>(R.id.audio_follow).isChecked || control.audioReady)
+        handyStart.setText(if(h.running) R.string.handy_end_preview else R.string.handy_start_preview)
         handyWeak.isEnabled = h.running && !control.stopping
-        handyWeak.text = if(h.weak) "Handyの弱化を解除" else "Handyだけ弱める"
+        handyWeak.setText(if(h.weak) R.string.handy_release else R.string.handy_weaken)
         handyFinish.isEnabled = h.running && !h.weak && h.stage!="フィニッシュ" && !control.stopping
         handySliders.forEach { it.isEnabled = !h.running }
+        fun rosebudState() = when { control.stopping -> "停止確認中"; control.paused -> "一時停止"; control.active -> "進行中"; else -> "待機" }
+        val handyState = if(h.weak) "時計保留" else if(h.running) "プレビュー中" else "待機"
+        setText(R.id.device_rosebud,"ROSEBUD\n${rosebudState()}")
+        setText(R.id.device_handy,"The Handy\n$handyState")
+        setText(R.id.session_summary,"ROSEBUD ${rosebudState()} · Handy $handyState" + if(control.suctionAuto || control.suctionLevel>0) " · 吸引 ${control.suctionLevel}/5" else "")
     }
 
     private fun suctionCommand(fill: (Intent) -> Unit) {
@@ -333,7 +368,7 @@ class MainActivity : Activity() {
         val followCheck = findViewById<CheckBox>(R.id.audio_follow)
         val audioReady = !followCheck.isChecked || c.audioReady
         startButton.isEnabled = !c.trialActive && !c.stopping && (c.active || ((preview || (connected && c.selected.isNotEmpty())) && audioReady)) && repo.snapshot.phase != "stopping"
-        setText(R.id.motion_start, when { c.stopping -> "停止を確認中"; c.active -> "一時停止"; c.paused -> "再開する"; else -> "開始する" })
+        setText(R.id.motion_start, when { c.stopping -> "停止を確認中"; c.active -> "全対象を一時停止"; c.paused -> "ROSEBUDを再開"; else -> if(preview) "ROSEBUDのプレビューを開始" else "ROSEBUDを開始" })
         val notice = c.error.ifEmpty { if(c.stopping || c.stopStatus.contains("未確認")) c.stopStatus else "" }
         setText(R.id.session_notice, notice)
         findViewById<View>(R.id.session_notice).visibility = if(notice.isEmpty()) View.GONE else View.VISIBLE
@@ -350,7 +385,7 @@ class MainActivity : Activity() {
             findViewById<Button>(id).backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor(if(index==currentStage && (c.active || c.paused)) "#9D174D" else "#1F2937"))
             findViewById<Button>(id).alpha = if(index==currentStage && (c.active || c.paused)) 1f else if(canSkip) .85f else .45f
         }
-        setText(R.id.progress_detail, if(c.active || c.paused) "進行位置 %02d:%02d · いつでも行き来できます".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ ⇄ 中間 ⇄ フィニッシュ · 自動でも進みます")
+        setText(R.id.progress_detail, if(c.active || c.paused) "進行位置 %02d:%02d · いつでも行き来できます".format(Locale.ROOT,c.progressMs/60000,c.progressMs/1000%60) else "はじめ → 中間 → フィニッシュ")
         val suctionReady = !c.stopping && !c.paused && !c.trialActive && c.error.isEmpty() &&
             (preview || (connected && c.selected.isNotEmpty() && c.devices.filter { it.index in c.selected }.all { it.suctionCompatible }))
         findViewById<Button>(R.id.suction_auto).isEnabled = suctionReady
@@ -389,8 +424,7 @@ class MainActivity : Activity() {
         }
         setText(R.id.trial_status,trialNote)
         listOf(R.id.rest_intro,R.id.rest_middle,R.id.rest_finish).forEach { findViewById<SeekBar>(it).isEnabled = !trialBusy }
-        findViewById<View>(R.id.toggle_rest).visibility=if(classic) View.GONE else View.VISIBLE
-        if(classic) findViewById<View>(R.id.rest_panel).visibility=View.GONE
+        findViewById<View>(R.id.rest_panel).visibility=if(classic) View.GONE else View.VISIBLE
         followCheck.isEnabled = !trialBusy
         findViewById<SeekBar>(R.id.vibrate_cap).isEnabled = !trialBusy
         findViewById<SeekBar>(R.id.flicker_cap).isEnabled = !trialBusy
@@ -398,8 +432,8 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.scenario_note).visibility=if(classic) View.VISIBLE else View.GONE
         findViewById<View>(R.id.timeline).visibility=if(classic) View.VISIBLE else View.GONE
         setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
-        setText(R.id.session_chips, "${c.selected.size}台を選択 · ${if(c.audioReady) "音声準備済み" else "音声準備待ち"} · ${if(preview) "プレビュー・送信なし" else "実機"}")
-        setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.let { "振動 · ${it.title}" } ?: if(classic) "これまでの19分" else "音に合わせて自動で選びます")
+        setText(R.id.session_chips, "${if(preview) "プレビュー・送信なし" else "実機モード"} · ${if(c.audioReady) "音声取得中" else "音声未取得"}")
+        setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.let { "振動 · ${it.title}" } ?: if(classic) "これまでの19分" else "振動 · 開始前")
         setText(R.id.strength, "振動 · ${c.strength}")
         setText(R.id.recipe_hint, if(c.recipe>=0) "${if(c.manualVibrationPattern<0) "自動 · 次の変化まで約" else "選択を固定 · 次の変化まで約"}${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
         findViewById<View>(R.id.flicker_motion).visibility = if(classic) View.GONE else View.VISIBLE
@@ -414,13 +448,9 @@ class MainActivity : Activity() {
         setText(R.id.flicker_motion,"Flicker · $flickerTitle\n$flickerDetail" + when { c.flickerPendingPattern -> "\nこの一動作のあと、選んだパターンへ"; c.flickerPendingStage -> "\nこの一動作のあと、新しい段階へ"; else -> "" })
         listOf(R.id.choose_vibration,R.id.choose_flicker,R.id.pattern_mode).forEach { findViewById<View>(it).visibility=if(classic) View.GONE else View.VISIBLE }
         listOf(R.id.choose_vibration,R.id.choose_flicker).forEach { findViewById<Button>(it).isEnabled=canChoosePattern() }
-        setText(R.id.choose_vibration, if(c.manualVibrationPattern<0) "振動のパターン · 自動 ▾" else "振動 · ${recipes[c.manualVibrationPattern].title} ▾")
-        setText(R.id.choose_flicker, if(c.manualFlickerPattern<0) "Flickerのパターン · 自動 ▾" else "Flicker · ${flickerPatterns[c.manualFlickerPattern].title} ▾")
+        setText(R.id.choose_vibration, if(c.manualVibrationPattern<0) "振動 · 自動 ▾" else "振動 · ${recipes[c.manualVibrationPattern].title} ▾")
+        setText(R.id.choose_flicker, if(c.manualFlickerPattern<0) "Flicker · 自動 ▾" else "Flicker · ${flickerPatterns[c.manualFlickerPattern].title} ▾")
         setText(R.id.pattern_mode, if(c.manualVibrationPattern>=0 || c.manualFlickerPattern>=0) "選択を固定 · 自動で選ぶに戻すまで続きます" else "自動 · 音と段階に合わせます")
-        setText(R.id.pattern_active, "振動：${recipes.getOrNull(c.recipe)?.title ?: "開始前"}\nFlicker：$flickerTitle")
-        if(c.active) findViewById<MotionWaveView>(R.id.session_wave).add(if(classic)
-            Output(c.raw.vibrate*c.multiplier*c.vibrateCap/100.0,c.raw.flicker*c.multiplier*c.flickerCap/100.0) else
-            Output((c.raw.vibrate*c.multiplier).coerceAtMost(c.vibrateCap/100.0),c.raw.flicker.coerceAtMost(c.flickerCap/100.0)))
         setText(R.id.control_values, getString(R.string.control_detail,
             "${c.stage} / ${c.style} / ${c.strength} / ${c.sound}（密度 %.2f・規則性 %.2f）".format(Locale.ROOT,c.density,c.regularity), c.elapsedMs / 1000.0, if (c.follow) "ON" else "OFF", c.envelope, c.multiplier,
             c.raw.vibrate, c.raw.flicker, c.sent.vibrate, c.sent.flicker, c.acknowledged.vibrate, c.acknowledged.flicker,
@@ -433,39 +463,41 @@ class MainActivity : Activity() {
 
     private fun setupScreens() {
         findViewById<Spinner>(R.id.scenario).adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("音とつくる15分", "これまでの19分"))
-        val tabs = listOf(R.id.tab_session to R.id.screen_session, R.id.tab_patterns to R.id.screen_patterns, R.id.tab_settings to R.id.screen_settings)
-        tabs.forEach { (button, panel) -> findViewById<Button>(button).setOnClickListener {
-            tabs.forEach { (b,p) -> findViewById<View>(p).visibility=if(p==panel) View.VISIBLE else View.GONE
-                findViewById<Button>(b).alpha=if(b==button) 1f else .55f }
-            findViewById<android.widget.ScrollView>(R.id.screen_scroll).post { findViewById<android.widget.ScrollView>(R.id.screen_scroll).scrollTo(0,0) }
-        } }
-        listOf(R.id.toggle_rest to R.id.rest_panel, R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics, R.id.toggle_trial to R.id.trial_panel).forEach { (b,p) ->
+        listOf(R.id.tab_session to "session", R.id.tab_settings to "settings").forEach { (id,page) ->
+            findViewById<Button>(id).setOnClickListener { mainPage = page; showScreen(); scrollTop() }
+        }
+        listOf(R.id.device_rosebud to "rosebud", R.id.device_handy to "handy").forEach { (id,device) ->
+            findViewById<Button>(id).setOnClickListener {
+                if(sessionDevice == device) return@setOnClickListener
+                val scroll = findViewById<android.widget.ScrollView>(R.id.screen_scroll)
+                deviceScroll[sessionDevice] = scroll.scrollY
+                sessionDevice = device
+                showScreen()
+                scroll.post { scroll.scrollTo(0,deviceScroll[device] ?: 0) }
+            }
+        }
+        listOf(R.id.toggle_rosebud_adjustments to R.id.rosebud_adjustments, R.id.toggle_device_selection to R.id.device_selection,
+            R.id.toggle_control to R.id.control_details, R.id.toggle_diagnostics to R.id.diagnostics, R.id.toggle_trial to R.id.trial_panel).forEach { (b,p) ->
             findViewById<Button>(b).setOnClickListener { val v=findViewById<View>(p); v.visibility=if(v.visibility==View.VISIBLE) View.GONE else View.VISIBLE }
         }
-        fun showSample(i: Int) {
-            val recipe=flickerPatterns[i]
-            setText(R.id.sample_title, "Flicker · " + recipe.title + " · 見本")
-            setText(R.id.sample_description, recipe.description + "\n中間の形の見本。休止は段階ごとの割合で入ります。フィニッシュは専用の連続配列です。\n緑は振動、ピンクはFlicker。")
-            setText(R.id.sample_sequence, recipe.sequence)
-            findViewById<MotionWaveView>(R.id.sample_wave).sample(i)
+    }
+    private fun scrollTop() {
+        findViewById<android.widget.ScrollView>(R.id.screen_scroll).post { findViewById<android.widget.ScrollView>(R.id.screen_scroll).scrollTo(0,0) }
+    }
+    /** Navigation changes view visibility only. It never selects devices or invokes control commands. */
+    private fun showScreen() {
+        findViewById<View>(R.id.screen_session).visibility = if(mainPage=="session") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.screen_settings).visibility = if(mainPage=="settings") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.device_tabs).visibility = if(mainPage=="session") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.rosebud_panel).visibility = if(sessionDevice=="rosebud") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.handy_panel).visibility = if(sessionDevice=="handy") View.VISIBLE else View.GONE
+        findViewById<Button>(R.id.device_rosebud).isSelected = sessionDevice=="rosebud"
+        findViewById<Button>(R.id.device_handy).isSelected = sessionDevice=="handy"
+        listOf(R.id.tab_session to "session",R.id.tab_settings to "settings").forEach { (id,page) ->
+            findViewById<Button>(id).alpha = if(mainPage==page) 1f else .55f
+            findViewById<Button>(id).isSelected = mainPage==page
         }
-        val cards=findViewById<LinearLayout>(R.id.recipe_cards)
-        var row = LinearLayout(this)
-        fun dp(v: Int) = (v*resources.displayMetrics.density).toInt()
-        flickerPatterns.forEachIndexed { i,r ->
-            if(i%2==0) {
-                row = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-                cards.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
-            }
-            val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(10),dp(10),dp(10),dp(10)); setBackgroundResource(R.drawable.panel) }
-            val label=TextView(this).apply { text=r.title; textSize=13f; setTextColor(android.graphics.Color.parseColor("#F9FAFB")) }
-            card.addView(label)
-            card.addView(MotionWaveView(this).apply { sample(i) },LinearLayout.LayoutParams(-1,(42*resources.displayMetrics.density).toInt()))
-            card.isClickable=true; card.isFocusable=true; card.contentDescription=r.title+"の見本を表示"
-            card.setOnClickListener { showSample(i) }
-            row.addView(card, LinearLayout.LayoutParams(0,-2,1f).apply { if(i%2==0) marginEnd=dp(8) })
-        }
-        showSample(0)
+        setText(R.id.page_title,getString(if(mainPage=="session") R.string.session_heading else R.string.ui_22))
     }
 
     private fun begin() {
@@ -599,6 +631,8 @@ class MainActivity : Activity() {
         super.onStop()
     }
     override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("session_device", sessionDevice)
+        outState.putString("main_page", mainPage)
         outState.putString("permission_stage", permissionStage)
         outState.putString("permission_session", permissionSession)
         super.onSaveInstanceState(outState)

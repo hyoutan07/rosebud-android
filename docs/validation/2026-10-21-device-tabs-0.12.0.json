@@ -1,0 +1,35 @@
+{
+  "date_jst": "2026-10-21",
+  "version_name": "0.12.0",
+  "version_code": 16,
+  "base_commit": "35d59d42c3c56c8e465d9f60e87791f9d9438a72",
+  "command": "./gradlew testDebugUnitTest assembleDebug lint --console=plain",
+  "result": "BUILD SUCCESSFUL",
+  "tests": {
+    "tests": 130,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "error": 0,
+    "warning": 9
+  },
+  "application_id": "jp.hyoutan.rosebud",
+  "apk_path": "app/build/releases/rosebud-0.12.0-debug.apk",
+  "apk_sha256": "48c30086fb86364be6a9d1166f38d9484e718903dc4558bc5ddc8e94cc3ea79b",
+  "signer_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "suction_controls_attributes_and_size_preserved": true,
+  "suction_always_expanded_within_rosebud": true,
+  "control_implementation_changed": false,
+  "duplicate_or_missing_layout_ids": false,
+  "device_connected": false,
+  "installed": false,
+  "native_ui_visual_check": false,
+  "scan_or_motion_started": false,
+  "handy_real_output_enabled": false,
+  "remaining": [
+    "USB connection required for installation and native UI verification",
+    "Handy physical stop and live linear output remain pending"
+  ]
+}
