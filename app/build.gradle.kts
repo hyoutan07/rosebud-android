@@ -14,8 +14,8 @@ android {
         applicationId = "jp.hyoutan.rosebud"
         minSdk = 31
         targetSdk = 36
-        versionCode = 23
-        versionName = "0.14.5"
+        versionCode = 24
+        versionName = "0.14.6"
     }
 
     buildFeatures {

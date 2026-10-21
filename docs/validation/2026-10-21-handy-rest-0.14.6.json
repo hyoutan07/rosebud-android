@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-21",
+  "version": "0.14.6",
+  "versionCode": 24,
+  "tests": {
+    "tests": 204,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Error": 0,
+    "Warning": 16
+  },
+  "build": "success",
+  "apk": "app/build/releases/rosebud-0.14.6-debug.apk",
+  "sha256": "0895c93e99ed4af6d06a9d5fbb8532af56ceea604140ad234f4bf12e518cdf81",
+  "device": {
+    "model": "CPH2199",
+    "installedCode": 24,
+    "controlSettingsByteIdentical": true,
+    "handySettingsByteIdentical": true,
+    "upperMm": 87,
+    "servicesAfter": "none",
+    "mediaProjectionAfter": "null",
+    "startedMotionAutomatically": false,
+    "screenshot": "handy-rest/installed-handy.png"
+  },
+  "changes": {
+    "middleActiveBlockMs": [
+      10000,
+      18000
+    ],
+    "middleRestMs": [
+      1500,
+      2500
+    ],
+    "finishPlannedRests": false,
+    "introSpeedPositionSettings": "unchanged",
+    "audioSelectionAndSeededRandomness": "unchanged; production trajectory regression tested"
+  },
+  "physicalFeel": "awaits user start; software tests do not guarantee gapless BLE hardware motion"
+}

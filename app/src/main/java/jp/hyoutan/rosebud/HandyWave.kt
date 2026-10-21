@@ -54,7 +54,7 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
         val family=if(pattern<3) 0 else if(pattern<10) 1 else 2
         fun activeBlockMs(): Long = when(family) {
             0 -> 4000L+(random.next()*4000).toLong()
-            1 -> 8000L+(random.next()*7000).toLong()
+            1 -> 10000L+(random.next()*8000).toLong()
             else -> 16000L+(random.next()*12000).toLong()
         }
         if(nextRestAt==null || restFamily!=family || wasWeak && !weak) {
@@ -65,11 +65,11 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
             val previous=segments.peekLast()
             val from=previous?.to ?: anchorPosition
             val began=previous?.end ?: anchorAt
-            val rest=previous!=null && !previous.rest && !weak && began>=checkNotNull(nextRestAt)
+            val rest=family!=2 && previous!=null && !previous.rest && !weak && began>=checkNotNull(nextRestAt)
             if(rest) {
                 val pause=when(family) {
                     0 -> 1000L+(random.next()*1000).toLong()
-                    1 -> 700L+(random.next()*800).toLong()
+                    1 -> 1500L+(random.next()*1000).toLong()
                     else -> 400L+(random.next()*600).toLong()
                 }
                 segments.addLast(Segment(from,from,began,pause,true,32.0))

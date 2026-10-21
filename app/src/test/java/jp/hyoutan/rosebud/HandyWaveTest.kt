@@ -140,12 +140,12 @@ class HandyWaveTest {
             var restAt:Long?=null;var lastEnd=0L;var rests=0
             for(time in 0L..180000L step 10) {
                 val p=wave.sample(time,pattern,180.0,80.0)
-                if(p.plannedRest && restAt==null) { assertTrue(time-lastEnd>=if(pattern<3) 4000 else if(pattern<10) 8000 else 16000);restAt=time }
+                if(p.plannedRest && restAt==null) { assertTrue(time-lastEnd>=if(pattern<3) 4000 else if(pattern<10) 10000 else 16000);restAt=time }
                 if(!p.plannedRest && restAt!=null) {
-                    assertTrue(time-restAt in if(pattern<3) 990..2010 else if(pattern<10) 690..1510 else 390..1010);rests++;lastEnd=time;restAt=null
+                    assertTrue(time-restAt in if(pattern<3) 990..2010 else if(pattern<10) 1490..2510 else 390..1010);rests++;lastEnd=time;restAt=null
                 }
             }
-            assertTrue(rests>=2)
+            if(pattern<10) assertTrue(rests>=2) else assertEquals(0,rests)
         }
     }
     @Test fun finishTrajectoryHasClearlyHigherSustainedPace() {
@@ -217,6 +217,26 @@ class HandyWaveTest {
                 }
             }
             assertTrue(moving>100)
+        }
+    }
+
+    @Test fun streamedAudioStillChangesMotionAndSeededRandomnessRemains() {
+        fun trace(seed:Long,sound:SoundFeatures):List<HandyFrame> {
+            val track=HandyTrack(seed);track.start(0);track.selectStage("中間",0)
+            return (0L..60000L step 500).map { track.sampleTrajectory(it,sound,.5,80.0) }
+        }
+        val smooth=SoundFeatures(SoundKind.SMOOTH,.2,.2,.2)
+        val broken=SoundFeatures(SoundKind.BROKEN,.9,.9,.9)
+        assertEquals(trace(4,smooth),trace(4,smooth))
+        assertNotEquals(trace(4,smooth),trace(4,broken))
+        assertNotEquals(trace(4,smooth),trace(5,smooth))
+    }
+    @Test fun allFinishCandidatesContinueWithoutPlannedRests() {
+        for(pattern in 10..12) {
+            val wave=HandyWave(71,.5,0)
+            for(time in 0L..600000L step 100) {
+                assertFalse(wave.sample(time,pattern,350.0,80.0).plannedRest)
+            }
         }
     }
 
