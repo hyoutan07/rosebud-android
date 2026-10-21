@@ -44,14 +44,12 @@ class HandyTrialTest {
     }
     @Test fun rangeAndDurationLimitsApplyToBothInputModes() {
         rejects { HandyTrialPlan.range("55","45","3","1") }
-        rejects { HandyTrialPlan.range("9","20","3","1") }
-        rejects { HandyTrialPlan.range("45","91","3","1") }
-        rejects { HandyTrialPlan.range("40","60.001","3","1") }
-        for(seconds in listOf("1.999","20.001")) rejects { HandyTrialPlan.sequence("45","55,$seconds","1") }
+        rejects { HandyTrialPlan.range("101","102","3","1") }
+        rejects { HandyTrialPlan.range("45","101","3","1") }
+        for(seconds in listOf("0.249","20.001")) rejects { HandyTrialPlan.sequence("45","55,$seconds","1") }
     }
     @Test fun totalTimeBudgetAndInitialPositionAreChecked() {
         rejects { HandyTrialPlan.range("45","55","20","4") }
-        rejects { HandyTrialPlan.sequence("10","55,20","1") }
         rejects { HandyTrialPlan.sequence("","55,3","1") }
     }
     @Test fun directPlansCannotBypassValidation() {
@@ -63,13 +61,28 @@ class HandyTrialTest {
         val p=HandyTrialPlan.sequence("45","55,2.001\n45,3","1")
         val text=p.share("  上りは良い\n戻りをゆっくりに  ","完了")
         assertTrue(text.contains("Handyテスト案 v1"));assertTrue(text.contains("55% / 2.001秒"))
-        assertTrue(text.contains("実機未確認"));assertTrue(text.contains("実位置は未取得"));assertTrue(text.contains("上りは良い\n戻りをゆっくりに"))
+        assertTrue(text.contains("実機未確認"));assertTrue(text.contains("図は予定値・受信位置とは別"));assertTrue(text.contains("上りは良い\n戻りをゆっくりに"))
         assertFalse(text.contains("ws://"));assertFalse(text.contains("Firmware確認済み"))
     }
     @Test fun shareRejectsInventedTestStatusAndBoundsNotes() {
         val p=HandyTrialPlan.range("45","55","3","1")
         val text=p.share("a".repeat(1000)+"\u0000","物理停止確認済み")
         assertTrue(text.contains("入力プレビュー：未実施"));assertFalse(text.contains("\u0000"));assertEquals(500,text.substringAfter("感想：").length)
+    }
+    @Test fun fullRangeShortSchedulesAndRepeatedJunctionsAreAccepted() {
+        val p=HandyTrialPlan.range("0","100","0.25","10")
+        assertEquals(20,p.points.size);assertEquals(5000,p.totalMs)
+        val sequence=HandyTrialPlan.sequence("0","100,0.25\n0,20","2")
+        assertEquals(40500,sequence.totalMs)
+    }
+    @Test fun actualSharingRecordsSettingsWithoutClaimingPhysicalVerification() {
+        val p=HandyTrialPlan.range("0","100","3","1")
+        val text=p.share("途中で止まった","途中終了",actualStatus="途中終了",maximumMm=85.0)
+        assertTrue(text.contains("85mm"));assertTrue(text.contains("実機送信テスト 途中終了"))
+        assertTrue(text.contains("最低速度"));assertTrue(text.contains("物理動作・停止の確認は感想に記入"))
+        assertFalse(text.contains("物理停止確認済み"))
+        assertTrue(p.share("","完了","物理停止確認済み",85.0).contains("実機未確認"))
+        rejects { p.share("","完了",maximumMm=Double.NaN) }
     }
     private fun rejects(block:()->Unit) {
         try { block();fail("expected invalid trial") } catch(_:IllegalArgumentException) { }

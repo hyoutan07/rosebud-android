@@ -25,8 +25,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
-/** No device transport is available here. Design preview and user-initiated text export only. */
-internal class HandyTrialDialog(private val activity: Activity, private val stopAll: () -> Unit, private val onClosed: () -> Unit) {
+/** Input diagram, explicit bounded hardware execution, and user-initiated text export. */
+internal class HandyTrialDialog(private val activity: Activity, private val stopAll: () -> Unit, private val onClosed: () -> Unit,
+    private val startReal: (HandyTrialPlan)->Unit,
+    private val stopReal: ()->Unit,
+    private val realState: ()->HandySnapshot) {
     private val prefs = activity.getSharedPreferences("handy_trial_inputs",Context.MODE_PRIVATE)
     private val main = Handler(Looper.getMainLooper())
     private val fields = linkedMapOf<String,EditText>()
@@ -41,6 +44,33 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
     private var previewStatus = "未実施"
     private lateinit var status: TextView
     private lateinit var previewButton: Button
+    private lateinit var realButton: Button
+    private var sentPlan: HandyTrialPlan? = null
+    private var realResult: String? = null
+    private var sawRealRun = false
+    private var waitingReal = false
+    private var requestedAt = 0L
+    private val realTicker = object : Runnable {
+        override fun run() {
+            if(!::dialog.isInitialized || !dialog.isShowing) return
+            val live=realState()
+            if(sentPlan!=null) {
+                if(live.trialActive) { sawRealRun=true;waitingReal=false;realResult="実施中（完了・物理停止は未確認）" }
+                if(sawRealRun && !live.trialActive && !live.stopping) realResult=live.trialStatus
+                if(waitingReal && !live.trialActive && SystemClock.elapsedRealtime()-requestedAt>3500) {
+                    waitingReal=false;realResult="開始を確認できませんでした：${live.error?.takeIf { it.isNotEmpty() } ?: live.status}"
+                }
+                if(live.trialActive || live.stopping || waitingReal || sawRealRun) status.text=live.status+
+                    (if(live.error.isNullOrEmpty()) "" else "\n${live.error}")+
+                    (live.positionMm?.let { "\n受信位置：%.1fmm".format(java.util.Locale.ROOT,it) } ?: "")
+            }
+            val busy=live.running || live.trialActive || live.stopping || live.connecting || waitingReal
+            realButton.isEnabled=live.trialActive || (!busy && live.connected)
+            realButton.text=if(live.trialActive) "Handyテストを停止" else "実機で試す"
+            setEditable(!busy)
+            main.postDelayed(this,250)
+        }
+    }
     private lateinit var checkButton: Button
     private lateinit var modeRange: Button
     private lateinit var modeSequence: Button
@@ -98,8 +128,8 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
         input(range,"upper","上限（%）","例：55")
         input(range,"half","片道の時間（秒）","例：3.0")
         input(range,"cycles","往復回数","1〜10","1")
-        text("図の始点は下限です。実機の初期位置合わせではありません。",range,true)
-        input(sequence,"initial","図の開始点（%）","例：45")
+        text("開始位置への移動（別途約3秒の指定）の後、上限→下限で1往復します。",range,true)
+        input(sequence,"initial","開始位置（%）","例：0")
         input(sequence,"rows","目標位置（%）, 移動時間（秒）","55, 3.0\n45, 3.0",multiline=true)
         input(sequence,"repeats","列の繰り返し","1〜10","1")
         checkButton=button(R.string.handy_trial_check,content) { validate() }
@@ -112,11 +142,17 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
             plan=p;previewed=p;previewStatus="途中終了";began=SystemClock.elapsedRealtime();active=true;epoch++
             setEditable(false);previewButton.setText(R.string.handy_trial_end_preview);main.post(ticker)
         }
-        button(R.string.handy_trial_real,content) {}.isEnabled=false
+        previewButton.visibility=View.GONE
+        realButton=button(R.string.handy_trial_real,content) {
+            if(realState().trialActive) { waitingReal=false;stopReal();return@button }
+            val p=validate() ?: return@button
+            stopPreview();sentPlan=p;realResult="開始要求のみ（動作は未確認）";sawRealRun=false;waitingReal=true
+            requestedAt=SystemClock.elapsedRealtime();setEditable(false);startReal(p)
+        }
         val limits=column().apply { visibility=View.GONE }
         button(R.string.handy_trial_limits,content) { limits.visibility=if(limits.visibility==View.GONE) View.VISIBLE else View.GONE }
         content.addView(limits)
-        text("位置10〜90%・全体幅20ポイント以内。1区間2〜20秒、最大20区間・合計120秒。速度相当10ポイント/秒以下。試作の入力制限で、実機の推奨値ではありません。",limits,true)
+        text("位置0〜100%（保存した上限以内・両端1mm余白）。1区間0.25〜20秒、最大20区間・合計120秒。最低速度より遅い指定は早く到着して待機する場合があります。図は入力した予定で、実測位置ではありません。",limits,true)
         input(content,"notes","感想","良かった点、変えたい点",multiline=true).filters=arrayOf(InputFilter.LengthFilter(500))
         val container=column()
         container.addView(ScrollView(activity).apply { addView(content) },LinearLayout.LayoutParams(-1,0,1f))
@@ -132,7 +168,7 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
             .setPositiveButton(R.string.handy_trial_share,null)
             .setNeutralButton(R.string.handy_trial_copy,null)
             .setNegativeButton(R.string.handy_trial_close,null).create()
-        dialog.setOnDismissListener { stopPreview();save();onClosed() }
+        dialog.setOnDismissListener { main.removeCallbacks(realTicker);if(waitingReal || realState().trialActive) stopReal();waitingReal=false;stopPreview();save();onClosed() }
         dialog.show()
         dialog.window?.setLayout(-1,(activity.resources.displayMetrics.heightPixels*.9).toInt())
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -146,7 +182,7 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
             val intent=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,data)
             activity.startActivity(Intent.createChooser(intent,activity.getString(R.string.handy_trial_share)))
         }
-        applyMode()
+        applyMode();main.post(realTicker)
     }
     private fun value(key: String) = fields.getValue(key).text.toString()
     private fun current() = if(mode=="range") HandyTrialPlan.range(value("lower"),value("upper"),value("half"),value("cycles"))
@@ -165,9 +201,9 @@ internal class HandyTrialDialog(private val activity: Activity, private val stop
         stopPreview()
         val p=validate() ?: return null
         save()
-        return p.share(value("notes"),if(previewed==p) previewStatus else "未実施")
+        return p.share(value("notes"),if(previewed==p) previewStatus else "未実施",if(sentPlan==p) realResult else null,realState().upperMm)
     }
-    private fun chooseMode(next: String) { if(active) return;mode=next;applyMode();invalidateInput() }
+    private fun chooseMode(next: String) { if(active || waitingReal || realState().trialActive) return;mode=next;applyMode();invalidateInput() }
     private fun applyMode() {
         range.visibility=if(mode=="range") View.VISIBLE else View.GONE
         sequence.visibility=if(mode=="sequence") View.VISIBLE else View.GONE

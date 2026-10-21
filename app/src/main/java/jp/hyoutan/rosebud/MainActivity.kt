@@ -42,6 +42,8 @@ class MainActivity : Activity() {
     private var deviceItems = emptyList<ControlDevice>()
     private val prefs by lazy { getSharedPreferences("control_settings", MODE_PRIVATE) }
     private val control get() = (application as ProbeApplication).control
+    private val handyState get() = (application as ProbeApplication).handyState
+    private val handyPrefs by lazy { getSharedPreferences("handy_connection", MODE_PRIVATE) }
     private val refresh = object : Runnable {
         override fun run() { render(); main.postDelayed(this, 250) }
     }
@@ -54,7 +56,7 @@ class MainActivity : Activity() {
         if (repo.snapshot.busy && repo.snapshot.phase == "permission" && permissionStage == null) {
             repo.end("permission_flow_interrupted")
         }
-        sessionDevice = savedInstanceState?.getString("session_device")?.takeIf { it == "handy" } ?: "rosebud"
+        sessionDevice = (savedInstanceState?.getString("session_device") ?: intent.getStringExtra("session_device"))?.takeIf { it == "handy" } ?: "rosebud"
         mainPage = savedInstanceState?.getString("main_page")?.takeIf { it == "settings" } ?: "session"
         setContentView(R.layout.activity_main)
         val content = findViewById<android.view.View>(R.id.content)
@@ -192,7 +194,7 @@ class MainActivity : Activity() {
                 it.putExtra("trial_percent",percent);it.putExtra("trial_ms",duration)
             }
         }
-        findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
+        findViewById<Button>(R.id.all_stop).setOnClickListener { stopEverything() }
     }
     private lateinit var handyClock: TextView
     private lateinit var handyPhase: TextView
@@ -201,6 +203,30 @@ class MainActivity : Activity() {
     private lateinit var handyWeak: Button
     private lateinit var handyFinish: Button
     private val handySliders = mutableListOf<SeekBar>()
+    private lateinit var handyConnect: Button
+    private lateinit var handyUpper: EditText
+    private lateinit var handyUpperSave: Button
+    private fun stopEverything() {
+        if((application as ProbeApplication).handyServiceActive) handySend(HandyService.ACTION_STOP)
+        if((application as ProbeApplication).serviceActive || repo.snapshot.busy) command(CaptureService.ACTION_STOP) { it.putExtra("reason","all_ui_stop") }
+    }
+    private fun handySend(action: String, fill: (Intent)->Unit = {}) {
+        val intent = Intent(this,HandyService::class.java).setAction(action)
+            .putExtra("upper_mm",handyPrefs.getFloat("upper_mm",85f).toDouble())
+        fill(intent)
+        try {
+            if(action in listOf(HandyService.ACTION_CONNECT,HandyService.ACTION_START,HandyService.ACTION_TRIAL)) startForegroundService(intent)
+            else if((application as ProbeApplication).handyServiceActive) startService(intent)
+        } catch(e: Exception) { toast("Handyの操作を開始できませんでした：${e.javaClass.simpleName}") }
+    }
+    private fun connectHandy() {
+        if(handyState.connected || handyState.connecting) { handySend(HandyService.ACTION_DISCONNECT);return }
+        val permissions = arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        if(permissions.any { checkSelfPermission(it)!=PackageManager.PERMISSION_GRANTED }) {
+            requestPermissions(permissions,BLUETOOTH_PERMISSION);return
+        }
+        handySend(HandyService.ACTION_CONNECT)
+    }
     private fun setupHandy() {
         val panel = findViewById<LinearLayout>(R.id.handy_panel)
         fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -223,7 +249,9 @@ class MainActivity : Activity() {
         clockRow.addView(handyPhase,LinearLayout.LayoutParams(0,-2,1f))
         handyStatus = label(getString(R.string.handy_waiting),summary,13f)
         handyStatus.setPadding(0,dp(10),0,0)
-        handyStart = button(R.string.handy_start_preview,panel) { handyCommand(if(control.handy.running) "stop" else "start") }
+        handyConnect = button(R.string.handy_connect,panel) { connectHandy() }
+        label("Handyはスマホへ直接接続します。IntifaceではHandyの接続を外してください。",panel,12f)
+        handyStart = button(R.string.handy_start_preview,panel) { handyCommand(if(handyState.running) "stop" else "start") }
         handyStart.setBackgroundResource(R.drawable.primary_button)
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         panel.addView(actions)
@@ -234,8 +262,14 @@ class MainActivity : Activity() {
         button(R.string.handy_trial_open,panel) {
             if(handyTrialDialog == null) {
                 handyTrialDialog = HandyTrialDialog(this, stopAll = {
-                    if((application as ProbeApplication).serviceActive || repo.snapshot.busy) command(CaptureService.ACTION_STOP) { it.putExtra("reason","handy_trial_ui_all_stop") }
-                }, onClosed = { handyTrialDialog = null }).also { it.show() }
+                    stopEverything()
+                }, onClosed = { handyTrialDialog = null }, startReal = { plan ->
+                    handySend(HandyService.ACTION_TRIAL) {
+                        it.putExtra("mode",plan.mode).putExtra("initial_percent",plan.initialPercent)
+                            .putExtra("points_percent",plan.points.map { p->p.percent }.toDoubleArray())
+                            .putExtra("durations_ms",plan.points.map { p->p.durationMs }.toLongArray())
+                    }
+                }, stopReal = { handySend(HandyService.ACTION_STOP) }, realState = { handyState }).also { it.show() }
             }
         }
         val settingsPanel = column().apply { visibility = View.GONE }
@@ -243,19 +277,34 @@ class MainActivity : Activity() {
         button(R.string.handy_range_settings,panel) { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
         panel.addView(settingsPanel)
         label(getString(R.string.handy_bounds_note),settingsPanel,12f)
-        val values = intArrayOf(8,7,5,45,55,3,100,100,100)
-        val titles = listOf("はじめ（分）","中間（分）","フィニッシュ1展開（分）","位置下限（%・仮）","位置上限（%・仮）","片道の基準（秒・仮）")+HandyTrack.names.map { "$it · 出やすさ" }
-        val minima = intArrayOf(1,1,1,40,52,2,10,10,10)
-        val maxima = intArrayOf(60,60,60,48,60,10,200,200,200)
+        label("動かせる位置の上限（cm）",settingsPanel)
+        handyUpper = EditText(this).apply {
+            inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(HandyTrialPlan.number(handyPrefs.getFloat("upper_mm",85f)/10.0))
+            contentDescription="Handyの位置上限（cm）"; minHeight=dp(48)
+        }
+        settingsPanel.addView(handyUpper)
+        handyUpperSave=button(R.string.handy_upper_save,settingsPanel) {
+            val cm=handyUpper.text.toString().toDoubleOrNull()
+            if(cm==null || !cm.isFinite() || cm !in 1.0..12.0) toast("上限は1〜12cmで入力してください")
+            else {
+                handyPrefs.edit().putFloat("upper_mm",(cm*10).toFloat()).apply()
+                toast("位置上限を${HandyTrialPlan.number(cm)}cmに保存しました。次の開始から使います")
+            }
+        }
+        val values = intArrayOf(8,7,5,0,100,3) + IntArray(HandyTrack.names.size) { 100 }
+        val titles = listOf("はじめ（分）","中間（分）","フィニッシュ1展開（分）","範囲の下限（%）","範囲の上限（%）","片道の基準（秒）")+HandyTrack.names.map { "$it · 出やすさ" }
+        val minima = intArrayOf(1,1,1,0,1,1) + IntArray(HandyTrack.names.size) { 10 }
+        val maxima = intArrayOf(60,60,60,99,100,20) + IntArray(HandyTrack.names.size) { 200 }
         values.indices.forEach { i ->
             val parent = if(i<6) settingsPanel else weightsPanel
             val text = label("",parent)
-            val slider = SeekBar(this).apply { min = minima[i]; max = maxima[i]; progress = prefs.getInt("handy_$i",values[i]).coerceIn(min,max); contentDescription = titles[i] }
+            val slider = SeekBar(this).apply { min = minima[i]; max = maxima[i]; progress = prefs.getInt(if(i in 3..4 || i>=6) "handy_live_$i" else "handy_$i",values[i]).coerceIn(min,max); contentDescription = titles[i] }
             fun show() { text.text = getString(R.string.handy_setting_value,titles[i],slider.progress) }
             slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) { show() }
                 override fun onStartTrackingTouch(seekBar: SeekBar) {}
-                override fun onStopTrackingTouch(seekBar: SeekBar) { prefs.edit().putInt("handy_$i",seekBar.progress).apply() }
+                override fun onStopTrackingTouch(seekBar: SeekBar) { prefs.edit().putInt(if(i in 3..4 || i>=6) "handy_live_$i" else "handy_$i",seekBar.progress).apply() }
             })
             handySliders.add(slider); parent.addView(slider,LinearLayout.LayoutParams(-1,dp(48))); show()
         }
@@ -263,10 +312,16 @@ class MainActivity : Activity() {
         panel.addView(weightsPanel)
     }
     private fun handyCommand(operation: String) {
-        command(CaptureService.ACTION_HANDY) { intent ->
-            intent.putExtra("operation",operation)
+        val action=when(operation) {
+            "start"->HandyService.ACTION_START; "weak"->HandyService.ACTION_WEAK
+            "finish"->HandyService.ACTION_FINISH; else->HandyService.ACTION_STOP
+        }
+        if(operation=="start" && handySliders[3].progress>=handySliders[4].progress) {
+            toast("範囲の下限は上限より小さくしてください");return
+        }
+        handySend(action) { intent ->
             if(operation=="start") {
-                settingsIntent(intent)
+                intent.putExtra("follow",findViewById<CheckBox>(R.id.audio_follow).isChecked)
                 intent.putExtra("intro_ms",handySliders[0].progress*60000L).putExtra("middle_ms",handySliders[1].progress*60000L)
                     .putExtra("finish_ms",handySliders[2].progress*60000L).putExtra("lower",handySliders[3].progress/100.0)
                     .putExtra("upper",handySliders[4].progress/100.0).putExtra("half_ms",handySliders[5].progress*1000L)
@@ -275,20 +330,32 @@ class MainActivity : Activity() {
         }
     }
     private fun renderHandy() {
-        val h = control.handy
+        val live = handyState
+        val h = live.frame
         handyClock.text = getString(R.string.elapsed_clock,h.elapsedMs/60000,h.elapsedMs/1000%60)
         handyPhase.text = if(!h.running) getString(R.string.handy_clock_waiting) else if(h.weak) getString(R.string.handy_clock_paused) else h.stage
-        handyStatus.text = if(!h.running) "%d分 → %d分 → %d分反復\n待機 · 送信なし".format(Locale.ROOT,handySliders[0].progress,handySliders[1].progress,handySliders[2].progress) else
-            "%s · 保持 %d秒%s\n%s".format(Locale.ROOT,HandyTrack.names[h.pattern],h.ageMs/1000,
-                if(h.cycle>0) " · 展開${h.cycle}" else "", if(h.plannedRest) "予定された間（プレビュー）" else h.move?.let { "生成目標 %.1f%% / %.2f秒 · 到達は未確認".format(Locale.ROOT,it.target*100,it.durationMs/1000.0) } ?: "区間待ち")
-        handyStart.isEnabled = !control.stopping && !control.trialActive && (h.running || !findViewById<CheckBox>(R.id.audio_follow).isChecked || control.audioReady)
+        handyStatus.text = buildString {
+            append(live.status)
+            if(findViewById<CheckBox>(R.id.audio_follow).isChecked && !control.audioReady) append("\n音に合わせる場合は、接続・設定で音声取得を開始してください")
+            if(!live.error.isNullOrEmpty()) append("\n${live.error}")
+            live.positionMm?.let { append("\n受信位置 %.1fmm".format(Locale.ROOT,it)) }
+            append(" · 設定上限 %.1fcm".format(Locale.ROOT,handyPrefs.getFloat("upper_mm",85f)/10.0))
+            if(h.running) append("\n${HandyTrack.names.getOrElse(h.pattern) { "動作" }} · 保持 ${h.ageMs/1000}秒"+
+                if(h.plannedRest) " · 予定された間" else "")
+        }
+        val busy=live.running || live.trialActive || live.stopping || live.connecting
+        handyConnect.isEnabled = !live.stopping && !live.running && !live.trialActive
+        handyConnect.setText(if(live.connected || live.connecting) R.string.handy_disconnect else R.string.handy_connect)
+        handyStart.isEnabled = !live.stopping && !live.trialActive && !live.connecting && live.connected &&
+            (h.running || !findViewById<CheckBox>(R.id.audio_follow).isChecked || control.audioReady)
         handyStart.setText(if(h.running) R.string.handy_end_preview else R.string.handy_start_preview)
-        handyWeak.isEnabled = h.running && !control.stopping
+        handyWeak.isEnabled = h.running && !live.stopping
         handyWeak.setText(if(h.weak) R.string.handy_release else R.string.handy_weaken)
-        handyFinish.isEnabled = h.running && !h.weak && h.stage!="フィニッシュ" && !control.stopping
-        handySliders.forEach { it.isEnabled = !h.running }
+        handyFinish.isEnabled = h.running && !h.weak && h.stage!="フィニッシュ" && !live.stopping
+        handySliders.forEach { it.isEnabled = !busy }
+        handyUpper.isEnabled = !busy;handyUpperSave.isEnabled = !busy
         fun rosebudState() = when { control.stopping -> "停止確認中"; control.paused -> "一時停止"; control.active -> "進行中"; else -> "待機" }
-        val handyState = if(h.weak) "時計保留" else if(h.running) "プレビュー中" else "待機"
+        val handyState = when { live.stopping->"停止確認中";live.trialActive->"テスト中";h.weak->"弱化・時計保留";h.running->"進行中";live.connected->"接続済み";live.connecting->"接続中";else->"未接続" }
         setText(R.id.device_rosebud,"ROSEBUD\n${rosebudState()}")
         setText(R.id.device_handy,"The Handy\n$handyState")
         setText(R.id.session_summary,"ROSEBUD ${rosebudState()} · Handy $handyState" + if(control.suctionAuto || control.suctionLevel>0) " · 吸引 ${control.suctionLevel}/5" else "")
@@ -354,7 +421,7 @@ class MainActivity : Activity() {
         if (deviceItems != c.devices) {
             deviceItems = c.devices
             deviceSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
-                (listOf("Rosebud対象すべて（${deviceItems.count { it.scalarCompatible }}台）") + (if(deviceItems.any { it.linearCompatible }) listOf("識別した全機器（Handy実出力は無効）") else emptyList()) + deviceItems.map { "${it.index}: ${it.name}${if (it.linearCompatible) "（位置・停止未確認）" else if (it.compatible) "（V/F${if(it.suctionCompatible) " / 吸引" else "・吸引非対応"}）" else "（非対応：${it.problem}）"}" }))
+                (listOf("Rosebud対象すべて（${deviceItems.count { it.scalarCompatible }}台）") + (if(deviceItems.any { it.linearCompatible }) listOf("識別した全機器（Handyは専用タブ）") else emptyList()) + deviceItems.map { "${it.index}: ${it.name}${if (it.linearCompatible) "（専用タブから直接接続）" else if (it.compatible) "（V/F${if(it.suctionCompatible) " / 吸引" else "・吸引非対応"}）" else "（非対応：${it.problem}）"}" }))
         }
         findViewById<Button>(R.id.connect).isEnabled = c.connection == "未接続" && !c.stopping && !repo.snapshot.busy
         findViewById<EditText>(R.id.server_url).isEnabled = c.connection == "未接続"
@@ -380,7 +447,7 @@ class MainActivity : Activity() {
         val notice = c.error.ifEmpty { if(c.stopping || c.stopStatus.contains("未確認")) c.stopStatus else "" }
         setText(R.id.session_notice, notice)
         findViewById<View>(R.id.session_notice).visibility = if(notice.isEmpty()) View.GONE else View.VISIBLE
-        findViewById<Button>(R.id.all_stop).isEnabled = (application as ProbeApplication).serviceActive || repo.snapshot.busy
+        findViewById<Button>(R.id.all_stop).isEnabled = (application as ProbeApplication).serviceActive || (application as ProbeApplication).handyServiceActive || repo.snapshot.busy
         val seconds = c.elapsedMs / 1000
         setText(R.id.elapsed, "%02d:%02d".format(Locale.ROOT, seconds/60, seconds%60))
         setText(R.id.phase, when { c.stopping -> "停止を確認中"; c.paused -> "一時停止"; else -> when(c.stage) { "導入" -> "はじめ"; "中盤" -> "中間"; "強めへ" -> "中間 · 強めへ"; "エンドレス" -> "フィニッシュ · エンドレス"; else -> c.stage } })
@@ -420,7 +487,7 @@ class MainActivity : Activity() {
         val duration = FlickerTrialLimits.parseDuration(secondsView.text.toString())
         val device = c.devices.singleOrNull { it.index in c.selected }
         val trialOutput = if(percent!=null && device!=null) FlickerTrialLimits.output(percent,c.flickerCap,device.flickerSteps) else null
-        val trialValid = !locked && connected && !preview && c.selected.size==1 && device?.compatible==true && duration!=null && trialOutput!=null
+        val trialValid = !locked && !handyState.trialActive && !handyState.stopping && connected && !preview && c.selected.size==1 && device?.compatible==true && duration!=null && trialOutput!=null
         findViewById<Button>(R.id.trial_start).isEnabled = trialValid
         setText(R.id.trial_start, if(percent!=null && duration!=null) "%d%%・%.2f秒で1回試す".format(Locale.ROOT,percent,duration/1000.0) else "この条件で1回試す")
         val trialNote = when {
@@ -440,7 +507,7 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.scenario_note).visibility=if(classic) View.VISIBLE else View.GONE
         findViewById<View>(R.id.timeline).visibility=if(classic) View.VISIBLE else View.GONE
         setText(R.id.scenario_note, if(classic) "比較用 · 初回19分、以降13分周回" else "ゆっくり導入 → 緩急 → エンドレス")
-        setText(R.id.session_chips, "${if(preview) "プレビュー・送信なし" else "実機モード"} · ${if(c.audioReady) "音声取得中" else "音声未取得"}")
+        setText(R.id.session_chips, "${if(sessionDevice=="handy") "Handy · Bluetooth直接接続" else if(preview) "ROSEBUD · プレビュー・送信なし" else "ROSEBUD · 実機モード"} · ${if(c.audioReady) "音声取得中" else "音声未取得"}")
         setText(R.id.recipe_name, recipes.getOrNull(c.recipe)?.let { "振動 · ${it.title}" } ?: if(classic) "これまでの19分" else "振動 · 開始前")
         setText(R.id.strength, "振動 · ${c.strength}")
         setText(R.id.recipe_hint, if(c.recipe>=0) "${if(c.manualVibrationPattern<0) "自動 · 次の変化まで約" else "選択を固定 · 次の変化まで約"}${((c.recipeEndMs-c.elapsedMs).coerceAtLeast(0)+999)/1000}秒 · ${c.sound}" else "ひとつの動きを30〜60秒、大切に。")
@@ -620,7 +687,7 @@ class MainActivity : Activity() {
             s.samples / 96000.0, s.silentMs / 1000.0, s.longestSilenceMs / 1000.0, s.errors,
             s.maxReadGapMs / 1000.0, AudioStats.db(s.totalRms), AudioStats.db(s.maxPeak)))
         setText(R.id.session, getString(R.string.last_session, s.session))
-        findViewById<Button>(R.id.start).isEnabled = !s.busy && !exporting && !control.trialActive && !control.stopping
+        findViewById<Button>(R.id.start).isEnabled = !s.busy && !exporting && !control.trialActive && !control.stopping && !handyState.trialActive && !handyState.stopping
         findViewById<Button>(R.id.stop).isEnabled = s.busy && s.phase != "permission" && s.phase != "stopping"
         findViewById<Button>(R.id.share).isEnabled = !exporting && s.phase != "permission"
         findViewById<Button>(R.id.mark).isEnabled = s.busy && s.phase == "running"
@@ -652,6 +719,7 @@ class MainActivity : Activity() {
     private fun permissionCurrent() = repo.snapshot.busy && repo.snapshot.phase == "permission" && repo.snapshot.session == permissionSession
     private fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     companion object {
+        private const val BLUETOOTH_PERMISSION = 13
         private const val AUDIO_PERMISSION = 10
         private const val NOTIFICATION_PERMISSION = 11
         private const val PROJECTION_PERMISSION = 12

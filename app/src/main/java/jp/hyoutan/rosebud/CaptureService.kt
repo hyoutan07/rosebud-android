@@ -55,6 +55,7 @@ class CaptureService : Service() {
         repo = ProbeRepository.get(this)
         controller = MotionController(now = { SystemClock.elapsedRealtime() }, event = repo::controlEvent,
             publish = { (application as ProbeApplication).control = it },
+            soundPublish = { sound, at -> (application as ProbeApplication).apply { handySound = sound; handySoundAt = at } },
             fatal = { reason -> main.post { requestStop("control_failure: $reason") } },
             closed = { main.post { controllerClosed = true; finish() } })
         val settings = getSharedPreferences("control_settings", MODE_PRIVATE)
@@ -111,6 +112,11 @@ class CaptureService : Service() {
                 controller.start(SystemClock.elapsedRealtime()); return START_NOT_STICKY
             }
             ACTION_TRIAL -> {
+                val handy = (application as ProbeApplication).handyState
+                if (handy.trialActive || handy.stopping) {
+                    repo.controlEvent("flicker_trial_rejected", mapOf("reason" to "handy_trial_or_stop_active"))
+                    return START_NOT_STICKY
+                }
                 foreground(projection != null)
                 controller.session(intent.getBooleanExtra("preview",true),false)
                 controller.startTrial(intent.getIntExtra("trial_percent",0),intent.getLongExtra("trial_ms",0))
@@ -121,7 +127,16 @@ class CaptureService : Service() {
             ACTION_PAUSE -> { controller.pause(); return START_NOT_STICKY }
             ACTION_RESUME -> { controller.resume(); return START_NOT_STICKY }
             ACTION_MOTION_STOP -> { controller.stopMotion("motion_ui_stop"); return START_NOT_STICKY }
-            ACTION_START -> if (worker != null || projection != null) return START_NOT_STICKY
+            ACTION_START -> {
+                val handy = (application as ProbeApplication).handyState
+                if (handy.trialActive || handy.stopping) {
+                    foreground(projection != null)
+                    repo.controlEvent("audio_start_rejected", mapOf("reason" to "handy_trial_or_stop_active"))
+                    if(worker == null && projection == null && repo.snapshot.busy) repo.end("handy_trial_or_stop_active")
+                    return START_NOT_STICKY
+                }
+                if (worker != null || projection != null) return START_NOT_STICKY
+            }
             else -> { requestStop("invalid_service_action"); return START_NOT_STICKY }
         }
         ownedSession = repo.snapshot.session
@@ -268,6 +283,8 @@ class CaptureService : Service() {
         if (finished) return
         if (stopReason == null) {
             stopReason = reason
+            HandyService.requestStop(this)
+            (application as ProbeApplication).handySoundAt = 0L
             repo.controlEvent("stop_requested", mapOf("reason" to reason))
             if (repo.snapshot.busy && repo.snapshot.session == ownedSession) repo.event("stop_requested", mapOf("reason" to reason))
             if (repo.snapshot.busy) repo.update(repo.snapshot.copy(phase = "stopping"))

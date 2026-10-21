@@ -62,14 +62,15 @@ class HandyTrackTest {
             assertEquals(reference.frame(time/1000.0,sound),existing.frame(time/1000.0,sound))
         }
     }
-    @Test fun normalizedRangeAndSpeedAreBoundedAcrossStages() {
+    @Test fun normalizedRangeAndScheduledDurationAreBoundedAcrossStages() {
         val settings=HandySettings(lower=.4,upper=.6,halfMs=2000)
-        val t=HandyTrack(11,settings);t.start(0);var previous=.5
+        val t=HandyTrack(11,settings);t.start(0);var observedWide=false
         for(time in 0L..4000000L step 1000) {
             val f=t.tick(time,SoundFeatures(SoundKind.REGULAR))
-            f.move?.let { m -> assertTrue(m.target in settings.lower..settings.upper);assertTrue(m.durationMs in 2000..20000)
-                assertTrue(kotlin.math.abs(m.target-previous)*1000/m.durationMs<=.100001);previous=m.target }
+            f.move?.let { m -> assertTrue(m.target in settings.lower..settings.upper);assertTrue(m.durationMs in 250..20000)
+                if(m.target>.55 || m.target<.45) observedWide=true }
         }
+        assertTrue(observedWide)
     }
     @Test fun plannedRestIsNotWeakOrFault() {
         val t=HandyTrack(20,HandySettings(weights=listOf(10,10,200)));t.start(0)
@@ -85,7 +86,66 @@ class HandyTrackTest {
         assertTrue(count(listOf(200,10,10))>count(listOf(10,200,200)))
     }
     @Test(expected=IllegalArgumentException::class) fun invalidPositionRejected() { HandySettings(lower=Double.NaN) }
-    @Test(expected=IllegalArgumentException::class) fun excessiveRangeRejected() { HandySettings(lower=.2,upper=.8) }
+    @Test(expected=IllegalArgumentException::class) fun reversedRangeRejected() { HandySettings(lower=.8,upper=.2) }
+    @Test fun repertoireIsStageSpecificAndAllCandidatesCanBeSelected() {
+        assertEquals(3,HandyTrack.candidates("はじめ").count())
+        assertEquals(7,HandyTrack.candidates("中間").count())
+        assertEquals(3,HandyTrack.candidates("フィニッシュ").count())
+        val seen=mutableSetOf<Int>()
+        for(seed in 1L..30L) {
+            val track=HandyTrack(seed);track.start(0)
+            for(time in 0L..2400000L step 81000) {
+                val f=track.tick(time,SoundFeatures(SoundKind.UNCLEAR))
+                assertTrue(f.pattern in HandyTrack.candidates(f.stage));seen+=f.pattern
+            }
+        }
+        assertEquals(HandyTrack.names.indices.toSet(),seen)
+    }
+    @Test fun oldWeightsMigrateAndNewWeightsStayExact() {
+        val legacy=HandySettings(weights=listOf(10,100,200)).normalizedWeights
+        assertEquals(13,legacy.size);assertEquals(listOf(10,100,200),legacy.take(3))
+        val full=List(13) { 10+it }
+        assertEquals(full,HandySettings(weights=full).normalizedWeights)
+    }
+    @Test fun fullRangeAndShortLegSchedulesAreAccepted() {
+        val settings=HandySettings(lower=0.0,upper=1.0,halfMs=250)
+        val track=HandyTrack(7,settings);track.start(0);track.finish(0)
+        var time=0L
+        repeat(1000) {
+            val f=track.tick(time,SoundFeatures(SoundKind.REGULAR))
+            f.move?.let { assertTrue(it.target in 0.0..1.0);assertTrue(it.durationMs in 250..20000) }
+            time=f.segmentEndMs
+        }
+    }
+    @Test fun weakeningInterruptsOldIntervalAndResumeStartsWithoutTargetJump() {
+        val track=HandyTrack(8);track.start(0);track.finish(0)
+        val before=track.tick(0,SoundFeatures())
+        track.weaken(true,100);val weak=track.tick(100,SoundFeatures())
+        assertTrue(weak.weak);assertTrue(weak.segmentEndMs<before.segmentEndMs+20000)
+        val paused=weak.elapsedMs
+        track.tick(100000,SoundFeatures());assertEquals(paused,track.frame.elapsedMs)
+        val lastTarget=track.frame.move!!.target
+        track.weaken(false,100000);val resumed=track.tick(100000,SoundFeatures())
+        assertEquals(lastTarget,resumed.move!!.target,0.0)
+        assertEquals("フィニッシュ",resumed.stage)
+        assertEquals(paused+1000,track.tick(101000,SoundFeatures()).elapsedMs)
+    }
+    @Test fun physicalPositionAlignmentKeepsWeakMovesNearTheStoppedPosition() {
+        val track=HandyTrack(8);track.start(0);track.finish(0);track.tick(0,SoundFeatures())
+        track.weaken(true,100);track.alignPosition(.1);track.interruptSegment(100)
+        val weak=track.tick(100,SoundFeatures())
+        assertTrue(kotlin.math.abs(weak.move!!.target-.1)<=.035001)
+        track.weaken(false,1000);track.alignPosition(.11);track.interruptSegment(1000)
+        val first=track.tick(1000,SoundFeatures())
+        assertEquals(.11,first.move!!.target,1e-9);assertTrue(first.move.durationMs<=500)
+        assertEquals("フィニッシュ",first.stage)
+    }
+    @Test fun cancelledSegmentCannotKeepReturningAnOldMove() {
+        val track=HandyTrack(1);track.start(0);val before=track.tick(0,SoundFeatures())
+        track.interruptSegment(100);assertNull(track.frame.move)
+        val after=track.tick(100,SoundFeatures())
+        assertTrue(after.segmentEndMs>100);assertNotEquals(before.move,after.move)
+    }
     @Test fun linearBodyUsesDeviceAndFeatureIndicesAndMilliseconds() {
         val body=LinearMove(.52,2500).body(8,2);val v=body.getJSONArray("Vectors").getJSONObject(0)
         assertEquals(8,body.getInt("DeviceIndex"));assertEquals(2,v.getInt("Index"));assertEquals(2500,v.getInt("Duration"));assertEquals(.52,v.getDouble("Position"),0.0)

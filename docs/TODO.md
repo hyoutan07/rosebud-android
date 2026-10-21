@@ -1,6 +1,10 @@
 # 次のTODO
 
-更新：2026-10-20 JST。**第2は0.9.1/code13で完了し、本人が完成と評価。** 81テスト成功・Lintエラー0・APKハッシュをメインでも既存成果物と照合した。追加運転・再ビルドはしていない。現行仕様は[favorite-crescendo-spec.md](favorite-crescendo-spec.md)。0.4.0の短時間2台動作・停止の結果は[第2初期記録](android-second-task.md)と[根拠](validation/2026-10-20-second-live.json)に残す。
+更新：2026-10-21 JST。**第2は0.9.1/code13で完了し、本人が完成と評価。** 81テスト成功・Lintエラー0・APKハッシュをメインでも既存成果物と照合した。追加運転・再ビルドはしていない。現行仕様は[favorite-crescendo-spec.md](favorite-crescendo-spec.md)。0.4.0の短時間2台動作・停止の結果は[第2初期記録](android-second-task.md)と[根拠](validation/2026-10-20-second-live.json)に残す。
+
+## Handy直接BLE（0.14.0）
+
+直接接続・上限85mm初期値の編集・シナリオ・有限入力テストを実装。Macの実機結果とAndroidの結果は分ける。次の確認はスマホからの接続、上限内の単発と途中停止。その後に音声連動・Rosebudとの併用・画面オフを必要な範囲で確認する。[現行仕様・検証結果](handy-direct-implementation.md)。
 
 ## 新規依頼：吸引
 

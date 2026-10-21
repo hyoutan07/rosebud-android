@@ -1,7 +1,6 @@
 package jp.hyoutan.rosebud
 
 import java.math.BigDecimal
-import kotlin.math.abs
 
 /** Design points only: none are a measured physical position or an authorization to send. */
 internal data class HandyTrialPoint(val percent: Double, val durationMs: Long)
@@ -9,17 +8,12 @@ internal data class HandyTrialPlan(val mode: String, val initialPercent: Double,
     val totalMs get() = points.sumOf { it.durationMs }
     init {
         require(mode in listOf("range","sequence"))
-        require(initialPercent.isFinite() && initialPercent in 10.0..90.0) { "図の開始点は10〜90%で入力してください" }
+        require(initialPercent.isFinite() && initialPercent in 0.0..100.0) { "図の開始点は0〜100%で入力してください" }
         require(points.size in 1..20) { "区間数は1〜20にしてください" }
-        var previous = initialPercent
         points.forEach {
-            require(it.percent.isFinite() && it.percent in 10.0..90.0) { "位置は10〜90%で入力してください" }
-            require(it.durationMs in 2000..20000) { "1区間の時間は2〜20秒で入力してください" }
-            require(abs(it.percent-previous)*1000/it.durationMs <= 10.0+1e-9) { "速度相当は10ポイント/秒以下にしてください" }
-            previous = it.percent
+            require(it.percent.isFinite() && it.percent in 0.0..100.0) { "位置は0〜100%で入力してください" }
+            require(it.durationMs in 250..20000) { "1区間の時間は0.25〜20秒で入力してください" }
         }
-        val positions = points.map { it.percent } + initialPercent
-        require(positions.max()-positions.min() <= 20.0+1e-9) { "開始点を含む全体の幅は20ポイント以内にしてください" }
         require(totalMs <= 120000) { "1回のテストは120秒以内にしてください" }
     }
     /** Virtual interval progress, deliberately not named reached/current device position. */
@@ -36,13 +30,17 @@ internal data class HandyTrialPlan(val mode: String, val initialPercent: Double,
         }
         error("empty trial")
     }
-    fun share(notes: String, previewStatus: String): String {
+    fun share(notes: String, previewStatus: String, actualStatus: String? = null, maximumMm: Double? = null): String {
+        require(maximumMm == null || maximumMm.isFinite() && maximumMm > 0)
+        val actual = actualStatus?.takeIf { it in listOf("未実施","途中終了","完了","エラー") } ?: "未実施"
         val status = previewStatus.takeIf { it in listOf("未実施","途中終了","完了") } ?: "未実施"
         return buildString {
             appendLine("Handyテスト案 v1")
-            appendLine("確認：入力プレビューのみ／実機未確認")
+            appendLine(if(actual == "未実施") "確認：入力プレビューのみ／実機未確認" else "確認：実機送信テスト $actual（物理動作・停止の確認は感想に記入）")
+            if(maximumMm != null) appendLine("設定した位置上限：${number(maximumMm)}mm（機器の可動範囲とも照合・両端1mm余白）")
+            appendLine("秒数は指令の予定時間です。最低速度によって移動後に間が入る場合があります。")
             appendLine("入力方式：${if(mode=="range") "かんたん往復" else "位置列"}")
-            appendLine("図の開始点：${number(initialPercent)}%（実位置は未取得）")
+            appendLine("指定開始位置：${number(initialPercent)}%（図は予定値・受信位置とは別）")
             points.forEachIndexed { i,p -> appendLine("${i+1}. ${number(p.percent)}% / ${number(p.durationMs/1000.0)}秒") }
             appendLine("合計：${number(totalMs/1000.0)}秒 / ${points.size}区間")
             appendLine("入力プレビュー：$status")
@@ -58,10 +56,10 @@ internal data class HandyTrialPlan(val mode: String, val initialPercent: Double,
             return v.toBigDecimal()
         }
         private fun position(value: String) = decimal(value,"位置").toDouble().also {
-            require(it in 10.0..90.0) { "位置は10〜90%で入力してください" }
+            require(it in 0.0..100.0) { "位置は0〜100%で入力してください" }
         }
         private fun duration(value: String) = decimal(value,"秒数").also {
-            require(it >= BigDecimal("2") && it <= BigDecimal("20")) { "1区間の時間は2〜20秒で入力してください" }
+            require(it >= BigDecimal("0.25") && it <= BigDecimal("20")) { "1区間の時間は0.25〜20秒で入力してください" }
         }.multiply(BigDecimal(1000)).longValueExact()
         private fun count(value: String) = normal(value).toIntOrNull()?.also { require(it in 1..10) { "繰り返しは1〜10回で入力してください" } }
             ?: throw IllegalArgumentException("繰り返しは1〜10回で入力してください")

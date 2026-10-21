@@ -4,6 +4,8 @@
 
 ## その後の実機条件（2026-10-21）
 
+**後続の0.14.0でAndroid直接BLEを実装。** 以下の通常出力ゲート維持はIntiface経由のHandy出力についての説明。直接BLEは別のHandyServiceが所有する。[現行仕様・導入状態](handy-direct-implementation.md)。
+
 本体到着済み。本人報告FW `4.3.0+dcee7e58`・Wi-Fi＋Bluetooth、20:01にIntifaceのThe Handy 2 Standard（番号0）・Android対象選択・TCP接続を読取確認。本人が実動作調査とプレビュー解除を希望し、身体に使わず本体停止をすぐ操作できる準備を確認。下記の初期実装時点の「未到着」「旧Central」は履歴であり、現在はCentral3.2.2+46。現行Central/server12ではRaw APIも削除済みで、旧allowRawMessages保存キーは使えない。通常出力ゲートはそのままに、既存Swift/CoreBluetoothの限定診断で100mm往復と移動途中の専用停止を確認し、本人も「途中で止まり、戻らなかった」と回答。移動は約3秒で、10秒指定より早く、実測速度と読取設定は最低速度付近という見方と整合する。[実機結果と制約](handy-ble-probe.md)。Android入力画面からの実機送信は残件で、通常出力ゲートは維持。Intifaceは診断後に通常待受へ復元済み。
 
 ## 今できること

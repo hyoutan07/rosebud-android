@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21 JST",
+  "version": "0.14.0",
+  "version_code": 18,
+  "apk": "app/build/releases/rosebud-0.14.0-debug.apk",
+  "sha256": "8140cab9444d3b13ed9fa5b943d20930f9003a8002ae74cb0c5ed51aad41a24c",
+  "unit_tests": {
+    "tests": 167,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "build": "successful",
+  "lint": {
+    "errors": 0,
+    "warnings": 12
+  },
+  "device": "CPH2199",
+  "install": "successful",
+  "existing_control_settings_byte_identical": true,
+  "ui": "Handy waiting screen; upper 8.5cm; direct BLE connection button",
+  "services_after_launch": false,
+  "media_projection_after_launch": false,
+  "hardware_scan_connection_movement": "not started; Android BLE validation remains with user",
+  "prior_mac_evidence": "handy-ble-probe.md, not Android evidence"
+}

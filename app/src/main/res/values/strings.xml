@@ -99,12 +99,12 @@
   <string name="global_stop">■ すべて停止</string>
   <string name="session_summary_waiting">ROSEBUD 待機 · Handy 待機</string>
   <string name="handy_title">The Handy</string>
-  <string name="handy_preparing">実機出力は準備中 · 停止方式の確認待ち</string>
-  <string name="handy_bounds_note">現在位置は未取得。範囲・時間・音との対応は調整用の仮値です。</string>
+  <string name="handy_preparing">最低速度より遅い指定は、移動後の待ち時間になります。</string>
+  <string name="handy_bounds_note">0〜100%は設定上限内の範囲です。両端に1mmの余白を取り、取得した可動範囲も超えません。</string>
   <string name="handy_range_settings">範囲・移動時間・段階の長さ ▾</string>
   <string name="handy_weights_settings">パターンの出やすさ ▾</string>
-  <string name="handy_start_preview">Handyのプレビューを開始</string>
-  <string name="handy_end_preview">Handyのプレビューを終了</string>
+  <string name="handy_start_preview">Handyを開始</string>
+  <string name="handy_end_preview">Handyを停止</string>
   <string name="handy_weaken">Handyだけ弱める</string>
   <string name="handy_release">Handyの弱化を解除</string>
   <string name="handy_finish">フィニッシュへ</string>
@@ -116,14 +116,14 @@
   <string name="handy_trial_title">Handy · テストと共有</string>
   <string name="handy_trial_range">かんたん往復</string>
   <string name="handy_trial_sequence">位置列</string>
-  <string name="handy_trial_preview_only">入力プレビューは送信なし。実機テストは停止方式・初期位置の確認後に対応します。</string>
+  <string name="handy_trial_preview_only">接続後に実機で試せます。開始点へ移動してから入力した動きを実行します。0〜100%は設定上限内の範囲です（両端1mm余白）。</string>
   <string name="handy_trial_check">入力を確認</string>
   <string name="handy_trial_not_checked">入力を確認してください · 実機未確認</string>
   <string name="handy_trial_preview">入力プレビューを開始</string>
   <string name="handy_trial_end_preview">入力プレビューを終了</string>
   <string name="handy_trial_preview_completed">入力プレビュー完了 · 実機未確認</string>
   <string name="handy_trial_preview_stopped">入力プレビューを終了 · 実機未確認</string>
-  <string name="handy_trial_real">実機で試す（準備中）</string>
+  <string name="handy_trial_real">実機で試す</string>
   <string name="handy_trial_limits">入力できる範囲 ▾</string>
   <string name="handy_trial_summary">%1$d区間 / 合計 %2$.3f秒
 入力した目標列の図です。現在位置・到達の実測ではありません。</string>
@@ -134,4 +134,7 @@
   <string name="handy_trial_copy">条件をコピー</string>
   <string name="handy_trial_close">閉じる</string>
   <string name="handy_trial_copied">条件と感想をコピーしました</string>
+  <string name="handy_connect">Handyに接続</string>
+  <string name="handy_disconnect">Handyの接続を解除</string>
+  <string name="handy_upper_save">位置上限を保存</string>
 </resources>

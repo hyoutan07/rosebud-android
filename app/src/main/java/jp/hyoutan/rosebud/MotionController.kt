@@ -108,6 +108,7 @@ internal class MotionController(
     private val publish: (ControlSnapshot) -> Unit,
     private val fatal: (String) -> Unit,
     private val closed: () -> Unit,
+    private val soundPublish: (SoundFeatures, Long) -> Unit = { _, _ -> },
     private val http: OkHttpClient = OkHttpClient.Builder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(0, TimeUnit.SECONDS)
         .retryOnConnectionFailure(false).build(),
 ) {
@@ -264,7 +265,7 @@ internal class MotionController(
         log("devices_selected", mapOf("state" to state.json()))
     }
     fun audioStarted() = post { envelope.reset(); features = AudioFeatures(); update(state.copy(audioReady = true)) }
-    fun audio(rms: Double, at: Long) = post { if (state.audioReady && !closing) { envelope.add(rms, at); features.add(rms, at) } }
+    fun audio(rms: Double, at: Long) = post { if (state.audioReady && !closing) { envelope.add(rms, at); features.add(rms, at); soundPublish(features.snapshot, at) } }
     private fun freshAudio() = state.audioReady && envelope.lastAt >= 0 && now() - envelope.lastAt <= 2000
     fun session(preview: Boolean, classic: Boolean) = post {
         if (!suction.busy && !state.suctionPending && !state.active && !state.paused && !state.trialActive && !state.stopping && !closing) update(state.copy(preview = preview, classic = classic))
