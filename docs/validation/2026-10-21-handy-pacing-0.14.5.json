@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-21",
+  "version": "0.14.5",
+  "versionCode": 23,
+  "tests": {
+    "tests": 202,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Error": 0,
+    "Warning": 16
+  },
+  "build": "success",
+  "apk": "app/build/releases/rosebud-0.14.5-debug.apk",
+  "sha256": "830d147a8d33799acef0b09c7ebb11c99de871c49c08daf53f8408cb5f0efc85",
+  "device": {
+    "model": "CPH2199",
+    "installedCode": 23,
+    "controlSettingsByteIdentical": true,
+    "handySettingsByteIdentical": true,
+    "upperMm": 87,
+    "servicesAfter": "none",
+    "mediaProjectionAfter": "null",
+    "startedMotionAutomatically": false,
+    "screenshot": "handy-pacing/installed-handy.png"
+  },
+  "changes": {
+    "introSpeedLimitMmSec": 32,
+    "middleSpeedLimitMmSec": 130,
+    "introBroadSpeedLimitMmSec": 32,
+    "middleBroadSpeedLimitMmSec": 40,
+    "finishSpeedEnvelopeMmSec": [
+      300,
+      400
+    ],
+    "fullModeProbability": {
+      "intro": [
+        0.08,
+        0.18
+      ],
+      "middle": [
+        0.25,
+        0.5
+      ],
+      "finish": 0.96
+    },
+    "restsMs": {
+      "intro": [
+        1000,
+        2000
+      ],
+      "middle": [
+        700,
+        1500
+      ],
+      "finish": [
+        400,
+        1000
+      ]
+    },
+    "activeBlocksMs": {
+      "intro": [
+        4000,
+        8000
+      ],
+      "middle": [
+        8000,
+        15000
+      ],
+      "finish": [
+        16000,
+        28000
+      ]
+    }
+  },
+  "limitations": "Rates and speeds are planned, not hardware measured; new feel awaits user start. Existing telemetry recovery unchanged."
+}

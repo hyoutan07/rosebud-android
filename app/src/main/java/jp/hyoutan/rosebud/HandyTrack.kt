@@ -133,16 +133,16 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         val soundGain=if(sound.kind==SoundKind.QUIET) .9 else 1.0+.05*(sound.density.takeIf { it.isFinite() } ?: 0.0).coerceIn(0.0,1.0)
         val middleProgress=((progress-settings.introMs).toDouble()/settings.middleMs).coerceIn(0.0,1.0)
         var peak=when(stage) {
-            "はじめ" -> (32+8*speedWave)*soundGain
-            "中間" -> (120+160*speedWave)*(.85+.25*middleProgress)*soundGain
+            "はじめ" -> 32.0
+            "中間" -> (60+70*speedWave)*(.85+.15*middleProgress)*soundGain
             else -> (300+100*speedWave)*soundGain
-        }.coerceIn(32.0,if(stage=="はじめ") 40.0 else if(stage=="中間") 280.0 else 400.0)
+        }.coerceIn(32.0,if(stage=="はじめ") 32.0 else if(stage=="中間") 130.0 else 400.0)
         val recovery=resumeAt?.let { ((time-it)/3000.0).coerceIn(0.0,1.0) } ?: 1.0
         if(weak) peak=32.0 else peak=32+(peak-32)*recovery
         val planner=wave ?: HandyWave(waveSeed,currentNormalized.coerceIn(settings.lower,settings.upper),time).also { wave=it }
         val point=planner.sample(time,pattern,peak,physicalSpanMm,settings.lower,settings.upper,weak,horizonMs,currentNormalized,
-            if(stage=="はじめ") .45 else if(stage=="中間") .65+.25*middleProgress else .96)
-        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=peak,
+            if(stage=="はじめ") .08+.10*(progress.toDouble()/settings.introMs).coerceIn(0.0,1.0) else if(stage=="中間") .25+.25*middleProgress else .96)
+        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=minOf(peak,point.speedLimitMmPerSec),
             move=if(point.plannedRest) null else LinearMove(point.targetPosition,point.suggestedHorizonMs),
             segmentEndMs=time+point.suggestedHorizonMs,plannedRest=point.plannedRest)
         return frame

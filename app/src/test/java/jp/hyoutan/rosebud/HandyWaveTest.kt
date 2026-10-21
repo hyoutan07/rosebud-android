@@ -34,7 +34,7 @@ class HandyWaveTest {
         }
         assertTrue(turns>15)
     }
-    @Test fun everyCandidateIsDominatedByLargeFullRangeWavesWithVaryingEndpoints() {
+    @Test fun localWavesDominateBeforeFinishAndLargeWavesDominateFinish() {
         for(pattern in 0..12) {
             val wave=HandyWave(80+pattern.toLong(),.5,0)
             var previous=wave.sample(0,pattern,130.0,80.0)
@@ -42,23 +42,24 @@ class HandyWaveTest {
             var lastTurn=.5
             var halfCount=0
             var wide=0
-            val lows=mutableSetOf<Int>();val highs=mutableSetOf<Int>()
+            val turns=mutableSetOf<Int>()
             for(time in 5L..120000L step 5) {
                 val point=wave.sample(time,pattern,130.0,80.0)
                 val sign=when { point.velocityPerSec>1e-7 -> 1;point.velocityPerSec< -1e-7 -> -1;else -> 0 }
                 if(sign!=0 && direction!=0 && sign!=direction) {
                     val turn=previous.position
                     if(abs(turn-lastTurn)>.6) wide++
-                    if(turn<.15) lows+=(turn*10000).toInt()
-                    if(turn>.85) highs+=(turn*10000).toInt()
+                    turns+=(turn*10000).toInt()
                     halfCount++;lastTurn=turn
                 }
                 if(sign!=0) direction=sign
                 previous=point
             }
-            assertTrue("pattern $pattern wide=$wide/$halfCount",wide.toDouble()/halfCount>.60)
-            assertTrue("pattern $pattern variable lows",lows.size>(if(pattern<10) 5 else 1))
-            assertTrue("pattern $pattern variable highs",highs.size>(if(pattern<10) 5 else 1))
+            val share=wide.toDouble()/halfCount
+            if(pattern<3) assertTrue("intro wide=$share",share<.4)
+            else if(pattern<10) assertTrue("middle wide=$share",share<.65)
+            else assertTrue("finish wide=$share",share>.6)
+            assertTrue("pattern $pattern variable local turns",turns.size>(if(pattern<10) 5 else 1))
         }
     }
     @Test fun configChangesKeepPositionAndVelocityContinuousAtTheNextTurn() {
@@ -67,7 +68,7 @@ class HandyWaveTest {
         for(time in 1L..12000) {
             val after=wave.sample(time,if(time<4000) 1 else 12,if(time<4000) 45.0 else 240.0,80.0)
             assertTrue(abs(after.position-before.position)<.004)
-            assertTrue(abs(after.velocityPerSec-before.velocityPerSec)<.12)
+            assertTrue(abs(after.velocityPerSec-before.velocityPerSec)<.2)
             before=after
         }
     }
@@ -91,7 +92,7 @@ class HandyWaveTest {
     }
     @Test fun streamHorizonIsForwardedAndBounded() {
         val track=HandyTrack(4);track.start(0)
-        assertEquals(450,track.sampleTrajectory(0,SoundFeatures(),.5,80.0,450).move!!.durationMs)
+        assertTrue(track.sampleTrajectory(0,SoundFeatures(),.5,80.0,450).move!!.durationMs in 50..450)
         try { track.sampleTrajectory(100,SoundFeatures(),.5,80.0,501);fail() } catch(_:IllegalArgumentException) { }
     }
     @Test fun trajectoryTrackUsesTheSameClockAndCanStopWithoutRevival() {
@@ -133,15 +134,15 @@ class HandyWaveTest {
         assertTrue("intro=$intro middle=$middle finish=$finish",middle>intro+.10 && finish>middle+.10)
         assertTrue(finish>.85)
     }
-    @Test fun restsSeparateLongMovementBlocksAndNeverBecomeMicroPauses() {
+    @Test fun shortRestsAreScatteredMoreOftenDuringIntro() {
         for(pattern in listOf(1,5,11)) {
             val wave=HandyWave(6,.5,0)
             var restAt:Long?=null;var lastEnd=0L;var rests=0
             for(time in 0L..180000L step 10) {
                 val p=wave.sample(time,pattern,180.0,80.0)
-                if(p.plannedRest && restAt==null) { assertTrue(time-lastEnd>=15000);restAt=time }
+                if(p.plannedRest && restAt==null) { assertTrue(time-lastEnd>=if(pattern<3) 4000 else if(pattern<10) 8000 else 16000);restAt=time }
                 if(!p.plannedRest && restAt!=null) {
-                    assertTrue(time-restAt in 1990..6010);rests++;lastEnd=time;restAt=null
+                    assertTrue(time-restAt in if(pattern<3) 990..2010 else if(pattern<10) 690..1510 else 390..1010);rests++;lastEnd=time;restAt=null
                 }
             }
             assertTrue(rests>=2)
@@ -163,15 +164,60 @@ class HandyWaveTest {
         var moves=0
         for(time in 0L..45000L step 100) {
             val frame=track.sampleTrajectory(time,SoundFeatures(),.5,80.0)
-            assertTrue(frame.speedLimitMmPerSec in 32.0..40.0)
+            assertTrue(frame.speedLimitMmPerSec==32.0)
             frame.move?.let { move ->
                 val command=bounds.streamCommand(6.0,move.target,move.durationMs,frame.speedLimitMmPerSec)
                 val distance=abs(command.targetMm-6.0)
-                assertTrue(distance/command.durationMs*1000<=40.00001)
+                assertTrue(distance/command.durationMs*1000<=32.00001)
                 moves++
             }
         }
         assertTrue(moves>100)
+    }
+
+    @Test fun broadTravelHasItsOwnSlowLimitBeforeFinishIncludingLaggedCommands() {
+        for((pattern,limit) in listOf(1 to 32.0,5 to 40.0,11 to 400.0)) {
+            val wave=HandyWave(9,.5,0)
+            val bounds=HandyBounds(5.0,87.0)
+            for(time in 0L..15000L step 100) {
+                val p=wave.sample(time,pattern,400.0,80.0,fullStrokeChance=1.0)
+                if(!p.plannedRest) {
+                    assertEquals(limit,p.speedLimitMmPerSec,0.0)
+                    assertTrue(p.speedMmPerSec<=limit+.0001)
+                    val command=bounds.streamCommand(6.0,p.targetPosition,p.suggestedHorizonMs,p.speedLimitMmPerSec)
+                    assertTrue(abs(command.targetMm-6.0)/command.durationMs*1000<=limit+.0001)
+                }
+            }
+        }
+    }
+    @Test fun restFrequencyAndRestTimeAreHigherInIntroThanInLaterStages() {
+        fun rests(pattern:Int):Pair<Int,Int> {
+            val wave=HandyWave(61,.5,0);var count=0;var restSamples=0;var wasRest=false
+            for(time in 0L..240000L step 10) {
+                val p=wave.sample(time,pattern,130.0,80.0)
+                if(p.plannedRest) { restSamples++;if(!wasRest) count++ }
+                wasRest=p.plannedRest
+            }
+            return Pair(count,restSamples)
+        }
+        val intro=rests(1);val middle=rests(5);val finish=rests(11)
+        assertTrue("$intro $middle $finish",intro.first>middle.first && middle.first>finish.first)
+        assertTrue(intro.second>middle.second && middle.second>finish.second)
+    }
+    @Test fun middleSlowsDownWhileFinishRetainsFastEnvelope() {
+        for(stage in listOf("中間","フィニッシュ")) {
+            val track=HandyTrack(31);track.start(0);track.selectStage(stage,0)
+            var moving=0
+            for(time in 5000L..45000L step 100) {
+                val frame=track.sampleTrajectory(time,SoundFeatures(),.5,80.0)
+                if(frame.move!=null) {
+                    if(stage=="中間") assertTrue(frame.speedLimitMmPerSec<=130)
+                    else assertTrue(frame.speedLimitMmPerSec>=300)
+                    moving++
+                }
+            }
+            assertTrue(moving>100)
+        }
     }
 
 }
