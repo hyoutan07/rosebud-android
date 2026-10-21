@@ -99,7 +99,7 @@
   <string name="global_stop">■ すべて停止</string>
   <string name="session_summary_waiting">ROSEBUD 待機 · Handy 待機</string>
   <string name="handy_title">The Handy</string>
-  <string name="handy_preparing">動く場所と速さに緩急を付けて進みます。ときどき短い休みが入ります。</string>
+  <string name="handy_preparing">広い上下往復を中心に、場所と速さに緩急を付けて進みます。まとまって動き、ときどき休憩します。</string>
   <string name="handy_bounds_note">0〜100%は設定上限内の範囲です。両端に1mmの余白を取り、取得した可動範囲も超えません。</string>
   <string name="handy_range_settings">範囲・段階の長さ ▾</string>
   <string name="handy_weights_settings">パターンの出やすさ ▾</string>

@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-21",
+  "version": "0.14.3",
+  "versionCode": 21,
+  "unitTests": {
+    "tests": 195,
+    "failures": 0,
+    "errors": 0
+  },
+  "build": "success",
+  "lint": {
+    "Error": 0,
+    "Warning": 13
+  },
+  "apk": "app/build/releases/rosebud-0.14.3-debug.apk",
+  "sha256": "d21c0f11fe65ccfaee0848d624f1f0c5eb660a759ecfb131867bef44124c632e",
+  "device": {
+    "model": "CPH2199",
+    "installedVersion": "0.14.3",
+    "installedCode": 21,
+    "controlSettingsByteIdentical": true,
+    "handyBefore": "preference file absent, previous code default 85mm",
+    "handyUpperAfterMm": 87.0,
+    "screen": "handy-power/installed-handy.png",
+    "servicesAfter": "none",
+    "mediaProjectionAfter": "null",
+    "automaticallyStartedMotion": false
+  },
+  "physicalFeel": "new speed, stroke and rest not yet tested by user",
+  "limits": "device reported position/speed caps and 1mm end margins retained"
+}

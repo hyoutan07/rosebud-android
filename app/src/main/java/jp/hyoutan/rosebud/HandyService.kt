@@ -57,7 +57,7 @@ class HandyService : Service() {
     override fun onCreate() {
         super.onCreate()
         app.handyServiceActive = true
-        val upper = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", 85f).toDouble()
+        val upper = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", HandyLimits.DEFAULT_UPPER_MM).toDouble()
         publish(HandySnapshot(upperMm = upper))
         ble = HandyBleTransport(this,
             onState = { message -> update { it.copy(status = message) } },
@@ -106,7 +106,7 @@ class HandyService : Service() {
         }
     }
 
-    private fun readUpper(): Double = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", 85f).toDouble()
+    private fun readUpper(): Double = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", HandyLimits.DEFAULT_UPPER_MM).toDouble()
     private fun ready() {
         require(app.handyState.connected && !app.handyState.connecting && !app.handyState.stopping) { "Handyに接続してから開始してください" }
         require(!app.handyState.running && !app.handyState.trialActive) { "先に現在の動作を停止してください" }

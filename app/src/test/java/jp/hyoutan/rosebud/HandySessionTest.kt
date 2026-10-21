@@ -124,3 +124,13 @@ class HandyContinuousStreamTest {
         assertTrue(gate.canContinue(84.0, 0.0, 13000))
     }
 }
+
+class HandyLimitDefaultsTest {
+    @org.junit.Test fun default87MigrationChangesOnlyThePreviousDefault() {
+        org.junit.Assert.assertEquals(87f,HandyLimits.migratedUpper(null),0f)
+        org.junit.Assert.assertEquals(87f,HandyLimits.migratedUpper(85f),0f)
+        org.junit.Assert.assertEquals(72f,HandyLimits.migratedUpper(72f),0f)
+        org.junit.Assert.assertEquals(87f,HandyLimits.migratedUpper(87f),0f)
+        org.junit.Assert.assertEquals(86.0,HandyBounds.create(5.0,119.0,87.0).target(1.0),0.0)
+    }
+}

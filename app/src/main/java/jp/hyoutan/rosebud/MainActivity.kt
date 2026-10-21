@@ -212,7 +212,7 @@ class MainActivity : Activity() {
     }
     private fun handySend(action: String, fill: (Intent)->Unit = {}) {
         val intent = Intent(this,HandyService::class.java).setAction(action)
-            .putExtra("upper_mm",handyPrefs.getFloat("upper_mm",85f).toDouble())
+            .putExtra("upper_mm",handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM).toDouble())
         fill(intent)
         try {
             if(action in listOf(HandyService.ACTION_CONNECT,HandyService.ACTION_START,HandyService.ACTION_TRIAL)) startForegroundService(intent)
@@ -291,7 +291,7 @@ class MainActivity : Activity() {
         label("動かせる位置の上限（cm）",settingsPanel)
         handyUpper = EditText(this).apply {
             inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setText(HandyTrialPlan.number(handyPrefs.getFloat("upper_mm",85f)/10.0))
+            setText(HandyTrialPlan.number(handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM)/10.0))
             contentDescription="Handyの位置上限（cm）"; minHeight=dp(48)
         }
         settingsPanel.addView(handyUpper)
@@ -351,9 +351,9 @@ class MainActivity : Activity() {
             if(findViewById<CheckBox>(R.id.audio_follow).isChecked && !control.audioReady) append("\n音に合わせる場合は、接続・設定で音声取得を開始してください")
             if(!live.error.isNullOrEmpty()) append("\n${live.error}")
             live.positionMm?.let { append("\n受信位置 %.1fmm".format(Locale.ROOT,it)) }
-            append(" · 設定上限 %.1fcm".format(Locale.ROOT,handyPrefs.getFloat("upper_mm",85f)/10.0))
+            append(" · 設定上限 %.1fcm".format(Locale.ROOT,handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM)/10.0))
             if(h.running) append("\n${HandyTrack.names.getOrElse(h.pattern) { "動作" }} · 保持 ${h.ageMs/1000}秒"+
-                if(h.plannedRest) " · 短い休み" else " · 指定速度 %.0fmm/秒".format(Locale.ROOT,h.speedMmPerSec))
+                if(h.plannedRest) " · 休憩" else " · 指定速度 %.0fmm/秒".format(Locale.ROOT,h.speedMmPerSec))
         }
         val busy=live.running || live.trialActive || live.stopping || live.connecting
         handyConnect.isEnabled = !live.stopping && !live.running && !live.trialActive

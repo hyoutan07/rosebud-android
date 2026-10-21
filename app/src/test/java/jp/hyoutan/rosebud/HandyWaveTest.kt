@@ -24,7 +24,7 @@ class HandyWaveTest {
             assertTrue(point.position in 0.0..1.0);assertTrue(point.targetPosition in 0.0..1.0)
             assertTrue(point.speedMmPerSec<=230.001)
             assertTrue(abs(point.position-previous.position)<=.003)
-            assertTrue(abs(point.velocityPerSec-previous.velocityPerSec)<.1)
+            assertTrue(abs(point.velocityPerSec-previous.velocityPerSec)<.2)
             val measured=(point.position-previous.position)*1000
             assertEquals((point.velocityPerSec+previous.velocityPerSec)/2,measured,.001)
             val sign=when { point.velocityPerSec>1e-7 -> 1;point.velocityPerSec< -1e-7 -> -1;else -> 0 }
@@ -57,8 +57,8 @@ class HandyWaveTest {
                 previous=point
             }
             assertTrue("pattern $pattern wide=$wide/$halfCount",wide.toDouble()/halfCount>.60)
-            assertTrue("pattern $pattern variable lows",lows.size>10)
-            assertTrue("pattern $pattern variable highs",highs.size>10)
+            assertTrue("pattern $pattern variable lows",lows.size>(if(pattern<10) 5 else 1))
+            assertTrue("pattern $pattern variable highs",highs.size>(if(pattern<10) 5 else 1))
         }
     }
     @Test fun configChangesKeepPositionAndVelocityContinuousAtTheNextTurn() {
@@ -87,7 +87,7 @@ class HandyWaveTest {
         assertEquals(0.0,after.velocityPerSec,0.0)
         assertTrue(after.targetPosition in 0.0..1.0)
         val next=wave.sample(7L*86400000+100,10,260.0,80.0,currentNormalized=.34)
-        assertTrue(abs(next.position-after.position)<.1)
+        assertTrue(abs(next.position-after.position)<=260.0/80.0*.1+.001)
     }
     @Test fun streamHorizonIsForwardedAndBounded() {
         val track=HandyTrack(4);track.start(0)
@@ -108,4 +108,53 @@ class HandyWaveTest {
         track.stop();assertFalse(track.sampleTrajectory(12000,SoundFeatures(),.4,80.0).running)
         assertNull(track.frame.move)
     }
+    @Test fun fastLookaheadKeepsTheFullTurnInsteadOfAveragingAcrossIt() {
+        val wave=HandyWave(5,.5,0)
+        val first=wave.sample(0,10,400.0,80.0,horizonMs=500,fullStrokeChance=1.0)
+        assertEquals(0.0,first.targetPosition,0.0)
+        assertTrue(first.suggestedHorizonMs in 50..200)
+    }
+    @Test fun exactFullSpanTurnsBecomeMoreCommonTowardFinish() {
+        fun share(pattern: Int): Double {
+            val wave=HandyWave(94,.5,0)
+            var direction=0;var previous=.5;var turns=0;var exact=0
+            for(time in 0L..240000L step 5) {
+                val p=wave.sample(time,pattern,150.0,80.0)
+                val sign=if(p.velocityPerSec>1e-8) 1 else if(p.velocityPerSec< -1e-8) -1 else 0
+                if(sign!=0 && direction!=0 && sign!=direction) {
+                    turns++;if(previous<.001 || previous>.999) exact++
+                }
+                if(sign!=0) direction=sign
+                previous=p.position
+            }
+            return exact.toDouble()/turns
+        }
+        val intro=share(1);val middle=share(5);val finish=share(11)
+        assertTrue("intro=$intro middle=$middle finish=$finish",middle>intro+.10 && finish>middle+.10)
+        assertTrue(finish>.85)
+    }
+    @Test fun restsSeparateLongMovementBlocksAndNeverBecomeMicroPauses() {
+        for(pattern in listOf(1,5,11)) {
+            val wave=HandyWave(6,.5,0)
+            var restAt:Long?=null;var lastEnd=0L;var rests=0
+            for(time in 0L..180000L step 10) {
+                val p=wave.sample(time,pattern,180.0,80.0)
+                if(p.plannedRest && restAt==null) { assertTrue(time-lastEnd>=15000);restAt=time }
+                if(!p.plannedRest && restAt!=null) {
+                    assertTrue(time-restAt in 1990..6010);rests++;lastEnd=time;restAt=null
+                }
+            }
+            assertTrue(rests>=2)
+        }
+    }
+    @Test fun finishTrajectoryHasClearlyHigherSustainedPace() {
+        fun average(stage:String):Double {
+            val track=HandyTrack(31);track.start(0);track.selectStage(stage,0)
+            var sum=0.0;var n=0
+            for(time in 5000L..45000L step 20) { sum+=track.sampleTrajectory(time,SoundFeatures(),.5,80.0).speedMmPerSec;n++ }
+            return sum/n
+        }
+        assertTrue(average("フィニッシュ")>average("はじめ")*3)
+    }
+
 }

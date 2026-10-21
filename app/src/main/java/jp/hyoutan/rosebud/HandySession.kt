@@ -48,7 +48,7 @@ internal data class HandySnapshot(
     val connected: Boolean = false, val connecting: Boolean = false,
     val running: Boolean = false, val trialActive: Boolean = false, val stopping: Boolean = false,
     val status: String = "未接続", val error: String? = null, val frame: HandyFrame = HandyFrame(),
-    val positionMm: Double? = null, val upperMm: Double = 85.0,
+    val positionMm: Double? = null, val upperMm: Double = 87.0,
     val minimumMm: Double? = null, val maximumMm: Double? = null,
     val trialStatus: String = "未実施",
 )
@@ -86,4 +86,9 @@ internal class HandyStreamCadence(initialSampleAt: Long) {
     fun commandSent(time: Long) { lastCommandAt = time }
     fun nextDelay(time: Long) = (100 - (time - lastCommandAt)).coerceIn(0, 100)
     fun stateFresh(sampledAt: Long, time: Long) = time - sampledAt in 0..4000
+}
+
+internal object HandyLimits {
+    const val DEFAULT_UPPER_MM = 87f
+    fun migratedUpper(previous: Float?): Float = if(previous==null || !previous.isFinite() || previous==85f) DEFAULT_UPPER_MM else previous
 }
