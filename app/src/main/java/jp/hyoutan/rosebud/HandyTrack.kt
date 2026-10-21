@@ -24,15 +24,17 @@ internal data class LinearMove(val target: Double, val durationMs: Long) {
 }
 internal data class HandyFrame(val running: Boolean = false, val weak: Boolean = false, val elapsedMs: Long = 0,
     val stage: String = "待機", val cycle: Long = 0, val pattern: Int = 0, val ageMs: Long = 0,
-    val move: LinearMove? = null, val segmentEndMs: Long = 0, val plannedRest: Boolean = false)
+    val move: LinearMove? = null, val segmentEndMs: Long = 0, val plannedRest: Boolean = false,
+    val speedMmPerSec: Double = 32.0)
 
-/** Each segment is a software schedule, not a claim that hardware moves for the entire duration.
- * Own PRNG and progress clock; a delayed tick produces one segment without replaying a backlog. */
+/** Position windows and explicit physical speeds. The service derives duration from actual distance,
+ * then completeSegment advances immediately on arrival. No scheduled endpoint dwell is required.
+ * Own PRNG and progress clock; clockFrame never consumes movement steps or random values. */
 internal class HandyTrack(seed: Long, val settings: HandySettings = HandySettings()) {
     companion object {
-        val names = listOf("ゆっくり幅の波", "やさしい反復", "動きと長めの間",
-            "上り坂と短い戻り", "大きな山と谷", "弱強のまとまり", "反復と抜き", "幅の行き来", "二連と余韻", "変形する反復",
-            "安定した反復", "幅の波", "反復密度の波")
+        val names = listOf("全体をゆっくり", "上側をゆっくり", "下側をゆっくり",
+            "上側の加速", "全体の緩急", "下側の弱強", "小刻みな往復", "上側と下側", "二連の小刻み", "全体と小刻み",
+            "全体を速く", "上下を速く", "小刻みを速く")
         fun candidates(stage: String): IntRange = when(stage) { "はじめ" -> 0..2; "中間" -> 3..9; else -> 10..12 }
     }
     private val random = SeededRandom(seed xor 0x48414e4459L)
@@ -50,16 +52,19 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
     private var weak = false
     private var weakCenter = (settings.lower+settings.upper)/2
     private var previousTarget = weakCenter
+    private var previousSpeed = 32.0
+    private var speedAt = 0L
     var frame = HandyFrame(); private set
     fun start(time: Long) {
         running = true; last = time; progress = 0; age = 0; segmentEnd = time; step = 0; weak = false
         forward = false; resumeAt = null; previousTarget = (settings.lower+settings.upper)/2
+        previousSpeed = 32.0; speedAt = time
         frame = HandyFrame(running = true)
     }
     fun stop() { running = false; weak = false; frame = frame.copy(running = false, weak = false, move = null) }
     fun weaken(value: Boolean, time: Long) {
         if(!running || value == weak) return
-        tick(time,lastSound)
+        clockFrame(time)
         if(value) weakCenter = previousTarget else resumeAt = time
         weak = value
         segmentEnd = time
@@ -71,15 +76,38 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
     }
     /** Caller first stops the physical leg and reads position before asking for a fresh segment. */
     fun interruptSegment(time: Long) { segmentEnd = time; frame = frame.copy(move = null, segmentEndMs = time) }
-    fun finish(time: Long) {
-        if(running && !weak) { tick(time,lastSound); progress = settings.introMs+settings.middleMs }
+    /** Actual arrival is independent of an earlier software estimate. */
+    fun completeSegment(time: Long) { if(running) interruptSegment(time) }
+    fun selectStage(stage: String, time: Long): Boolean {
+        if(!running || weak || stage !in listOf("はじめ","中間","フィニッシュ")) return false
+        clockFrame(time)
+        progress = when(stage) { "はじめ" -> 0; "中間" -> settings.introMs; else -> settings.introMs+settings.middleMs }
+        age = 0; step = 0; resumeAt = time
+        interruptSegment(time)
+        clockFrame(time)
+        return true
+    }
+    fun finish(time: Long) { selectStage("フィニッシュ",time) }
+    private fun currentStage() = when {
+        progress < settings.introMs -> "はじめ"
+        progress < settings.introMs+settings.middleMs -> "中間"
+        else -> "フィニッシュ"
+    }
+    /** Refresh only the clock/status; preserve the segment, direction, PRNG and last audio decision. */
+    fun clockFrame(time: Long): HandyFrame {
+        if(!running) return frame
+        val delta = (time-last).coerceAtLeast(0); last = maxOf(time,last)
+        if(!weak) { progress += delta; age += delta }
+        val stage = currentStage()
+        frame = frame.copy(running = true, weak = weak, elapsedMs = progress, ageMs = age, stage = stage,
+            cycle = if(stage=="フィニッシュ") (progress-settings.introMs-settings.middleMs)/settings.finishMs+1 else 0)
+        return frame
     }
     fun tick(time: Long, sound: SoundFeatures): HandyFrame {
         if(!running) return frame
         lastSound = sound
-        val delta = (time-last).coerceAtLeast(0); last = maxOf(time,last)
-        if(!weak) { progress += delta; age += delta }
-        val stage = when { progress < settings.introMs -> "はじめ"; progress < settings.introMs+settings.middleMs -> "中間"; else -> "フィニッシュ" }
+        clockFrame(time)
+        val stage = currentStage()
         var move = frame.move
         var rest = frame.plannedRest
         if(time >= segmentEnd) {
@@ -98,46 +126,73 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
                 pattern = pool.firstOrNull { draw -= scores[it-pool.first]; draw <= 0 } ?: pool.last
                 selectedSound = sound.kind; age = 0
             }
-            step++; forward = !forward
-            val wave = .5+.5*sin(step*.45)
-            val middleProgress = ((progress-settings.introMs).toDouble()/settings.middleMs).coerceIn(0.0,1.0)
-            var gain = when(stage) { "はじめ" -> .22+.18*wave; "中間" -> .45+.45*middleProgress; else -> .85 }
-            var pace = when(stage) { "はじめ" -> 2.5; "中間" -> 1.4-.5*middleProgress; else -> .7 }
-            rest = false
-            var restMs = 2000L
+            val seconds = age/1000.0
+            // Position and speed have different clocks/phases: the same area can feel slow or fast,
+            // while the same speed can visit upper/lower areas. Audio only nudges this combination.
+            val placeWave = .5+.5*sin(seconds/11.0+pattern*.7)
+            val speedWave = .5+.5*sin(seconds/4.7+pattern*.41)
+            val motif = (seconds/7).toLong()
+            // Every candidate defines a vertical window, independent of the speed envelope.
+            // Indices stay stable so existing thirteen preference keys retain their positions.
+            var windowLow: Double
+            var windowHigh: Double
+            var speed: Double
             when(pattern) {
-                0 -> gain *= .35+.65*wave
-                1 -> { gain *= if(step%6<3) .55 else 1.0; pace *= 1.25 }
-                2 -> { rest = step%4==0L; restMs = if(random.next()<.5) 2500 else 7000 }
-                3 -> { gain *= .45+.55*(step%8)/7.0; if(step%8==0L) gain *= .5 }
-                4 -> { gain *= .25+.75*wave; pace *= 1.0+.7*(1-wave) }
-                5 -> { val strong=step%10>=4; gain *= if(strong) 1.0 else .35; pace *= if(strong) .8 else 1.7 }
-                6 -> { rest = step%8==0L; restMs = 1800+(sound.density.coerceIn(0.0,1.0)*2200).toLong() }
-                7 -> gain *= .2+.8*wave
-                8 -> { if(step%3==0L) { gain *= .55; pace *= 2.4 } else pace *= .8 }
-                9 -> { gain *= .4+.6*((step%7)/6.0); pace *= .7+.6*((step%5)/4.0) }
-                10 -> { gain *= .9+.1*wave; pace *= if(step%12<8) 1.0 else 1.3 }
-                11 -> { gain *= .55+.45*wave; pace *= .85+.3*(1-wave) }
-                12 -> { pace *= if(step%12<8) .75 else 1.7; gain *= .8+.2*wave }
+                0 -> { windowLow=.05; windowHigh=.95; speed=32.0+8*speedWave }
+                1 -> { windowLow=.60; windowHigh=.95; speed=35.0+15*speedWave }
+                2 -> { windowLow=.05; windowHigh=.40; speed=32.0+28*speedWave }
+                3 -> { windowLow=.60; windowHigh=.95; speed=70.0+60*speedWave }
+                4 -> { windowLow=.05; windowHigh=.95; speed=60.0+45*speedWave }
+                5 -> { windowLow=.05; windowHigh=.40; speed=70.0+70*speedWave }
+                6 -> { val center=.2+.6*placeWave; windowLow=center-.09; windowHigh=center+.09; speed=90.0+45*speedWave }
+                7 -> { windowLow=if(motif%4<2) .05 else .60; windowHigh=if(motif%4<2) .40 else .95; speed=80.0+45*speedWave }
+                8 -> { val center=if(motif%4<2) .25 else .75; windowLow=center-.10; windowHigh=center+.10; speed=65.0+85*speedWave }
+                9 -> { val small=motif%4<2; windowLow=if(small) .38 else .05; windowHigh=if(small) .62 else .95; speed=90.0+60*speedWave }
+                10 -> { windowLow=.05; windowHigh=.95; speed=180.0+80*speedWave }
+                11 -> { windowLow=if(motif%4<2) .05 else .60; windowHigh=if(motif%4<2) .40 else .95; speed=170.0+80*speedWave }
+                else -> { val center=.2+.6*placeWave; windowLow=center-.10; windowHigh=center+.10; speed=160.0+100*speedWave }
             }
-            // Quiet audio remains a gentle movement; explicit rests are independent of silence.
-            if(sound.kind == SoundKind.QUIET) { gain *= .65; pace *= 1.35 }
-            val width = settings.upper-settings.lower
-            val center = (settings.lower+settings.upper)/2
-            val desired = if(weak) weakCenter+(if(forward) 1 else -1)*width*.035
-                else center+(if(forward) 1 else -1)*width*gain.coerceIn(0.0,1.0)/2
+            val floor = when(stage) { "はじめ" -> 32.0; "中間" -> 60.0; else -> 160.0 }
+            val ceiling = when(stage) { "はじめ" -> 60.0; "中間" -> 150.0; else -> 260.0 }
+            val density = sound.density.takeIf { it.isFinite() }?.coerceIn(0.0,1.0) ?: 0.0
+            val regularity = sound.regularity.takeIf { it.isFinite() }?.coerceIn(0.0,1.0) ?: 0.0
+            val soundGain = if(sound.kind==SoundKind.QUIET) .9 else .96+.06*density+.04*regularity
+            // The middle builds gradually, keeping its shorter independent rises and valleys.
+            val middleProgress = ((progress-settings.introMs).toDouble()/settings.middleMs).coerceIn(0.0,1.0)
+            val longTrend = if(stage=="中間") .85+.25*middleProgress else 1.0
+            speed = (speed*soundGain*longTrend).coerceIn(floor,ceiling)
             val recovery = resumeAt?.let { ((time-it)/3000.0).coerceIn(0.0,1.0) } ?: 1.0
-            val target = (if(!weak && recovery<1) previousTarget+(desired-previousTarget)*recovery else desired).coerceIn(settings.lower,settings.upper)
-            if(weak) { rest = false; pace = 2.5 }
-            val duration = (settings.halfMs*pace).toLong().coerceIn(250,20000).let {
-                if(!weak && recovery<1) minOf(it,500L) else it
+            if(!weak && recovery<1) speed = 32+(speed-32)*recovery
+            // Smooth candidate/stage changes instead of switching instantly to a new velocity.
+            val speedDelta = maxOf(1.0,(time-speedAt).coerceAtLeast(0)*.06)
+            speed = speed.coerceIn(previousSpeed-speedDelta,previousSpeed+speedDelta)
+            if(weak) speed = 32.0
+            // Rest is an occasional short event, never an implicit wait after arriving.
+            // Three candidates deliberately have no planned rest at all.
+            val restChance = when {
+                weak || pattern in setOf(0,4,10) -> 0.0
+                stage=="はじめ" -> .06
+                stage=="中間" -> .035
+                else -> .022
             }
+            rest = !frame.plannedRest && random.next()<restChance
+            val restMs = when(stage) { "はじめ" -> 300L; "中間" -> 250L; else -> 200L } + (random.next()*when(stage) { "はじめ" -> 350; "中間" -> 200; else -> 100 }).toLong()
+            step++
+            if(!rest) forward = !forward
+            val width = settings.upper-settings.lower
+            val desired = if(weak) weakCenter+(if(forward) 1 else -1)*width*.07
+                else settings.lower+width*(if(forward) windowHigh else windowLow)
+            // Recover speed over three seconds without creating a zero-distance waiting leg.
+            val target = desired.coerceIn(settings.lower,settings.upper)
+            // UI/legacy estimate only (85mm scale). BLE always uses its current physical distance.
+            val duration = (abs(target-previousTarget)*85/speed*1000).toLong().coerceIn(40,20000)
             move = if(rest) null else LinearMove(target,duration)
-            if(move != null) previousTarget = target
+            if(move != null) { previousTarget = target; previousSpeed = speed; speedAt = time }
             segmentEnd = time+if(rest) restMs else duration
+            frame = frame.copy(speedMmPerSec = speed)
         }
         frame = HandyFrame(true,weak,progress,stage,if(stage=="フィニッシュ") (progress-settings.introMs-settings.middleMs)/settings.finishMs+1 else 0,
-            pattern,age,move,segmentEnd,rest)
+            pattern,age,move,segmentEnd,rest,frame.speedMmPerSec)
         return frame
     }
 }

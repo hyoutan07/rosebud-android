@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-21 JST",
+  "version": "0.14.1",
+  "version_code": 19,
+  "sha256": "8018f9da74cbe9aed387a0b3ad4de1cc4622bbfbfdbf271a157b567404b3ee61",
+  "unit_tests": {
+    "tests": 179,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "build": "successful",
+  "lint": {
+    "errors": 0,
+    "warnings": 12
+  },
+  "device": "CPH2199",
+  "install": "successful",
+  "control_settings_preserved": true,
+  "handy_bounds_preserved": true,
+  "before_update": "Handy dedicated stop accepted; disconnected; Capture stop; no services or MediaProjection",
+  "after_update": "Handy idle, three stage buttons visible, initial configured upper 8.5cm; no services or MediaProjection; no automatic movement",
+  "physical": "User confirmed 0.14.0 movement; new 0.14.1 pacing/feel and live clock remain to confirm after user resumes"
+}

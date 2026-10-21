@@ -26,6 +26,16 @@ internal data class HandyBounds(val minimumMm: Double, val upperMm: Double) {
         require(maximumSpeed.isFinite() && maximumSpeed > 0)
         return maxOf(plannedMs, ceil(abs(target - from) / maximumSpeed * 1000).toLong(), 250)
     }
+    /** Scenario pace is a physical speed request; no input-test wait is added at the endpoint. */
+    fun scenarioDuration(from: Double, target: Double, requestedSpeed: Double, minimumSpeed: Double, maximumSpeed: Double): Long {
+        require(contains(from) && contains(target))
+        require(requestedSpeed.isFinite() && requestedSpeed > 0)
+        require(minimumSpeed.isFinite() && maximumSpeed.isFinite() && minimumSpeed > 0 && maximumSpeed >= minimumSpeed)
+        val speed = requestedSpeed.coerceIn(minimumSpeed, maximumSpeed)
+        val duration = ceil(abs(target - from) / speed * 1000).toLong().coerceAtLeast(1)
+        require(duration <= 120000) { "指定速度での移動時間が長すぎます" }
+        return duration
+    }
     companion object {
         fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double): HandyBounds {
             require(deviceMinimum.isFinite() && deviceMaximum.isFinite() && userUpper.isFinite())
@@ -42,3 +52,15 @@ internal data class HandySnapshot(
     val minimumMm: Double? = null, val maximumMm: Double? = null,
     val trialStatus: String = "未実施",
 )
+
+/** A firmware acknowledgement does not mean the carriage has reached the requested position. */
+internal class HandyArrivalGate(private val targetMm: Double, private val minimumWaitMs: Long = 0) {
+    private var acceptedAt: Long? = null
+    init { require(targetMm.isFinite() && minimumWaitMs >= 0) }
+    fun acknowledge(time: Long) { if (acceptedAt == null) acceptedAt = time }
+    fun canContinue(positionMm: Double, speedMmPerSec: Double, time: Long): Boolean {
+        val accepted = acceptedAt ?: return false
+        return time >= accepted && time - accepted >= minimumWaitMs && positionMm.isFinite() && speedMmPerSec.isFinite() &&
+            abs(positionMm - targetMm) <= 1.0 && abs(speedMmPerSec) <= .1
+    }
+}

@@ -49,3 +49,40 @@ class HandySessionTest {
         assertThrows(IllegalArgumentException::class.java) { HandyBounds.create(5.0, 119.0, Double.POSITIVE_INFINITY) }
     }
 }
+
+class HandyScenarioPacingTest {
+    private val bounds = HandyBounds(5.0, 85.0)
+
+    @Test fun scenarioUsesPhysicalSpeedWithinReadDeviceLimits() {
+        assertEquals(390L, bounds.scenarioDuration(6.0, 84.0, 500.0, 32.0, 200.0))
+        assertEquals(2438L, bounds.scenarioDuration(6.0, 84.0, 1.0, 32.0, 400.0))
+        assertEquals(300L, bounds.scenarioDuration(6.0, 84.0, 260.0, 32.0, 400.0))
+    }
+    @Test fun shortScenarioMovesHaveNoQuarterSecondOrMultiSecondFloor() {
+        assertEquals(10L, bounds.scenarioDuration(45.0, 46.0, 100.0, 32.0, 400.0))
+        assertEquals(1L, bounds.scenarioDuration(45.0, 45.0, 100.0, 32.0, 400.0))
+        assertTrue(bounds.target(1.0) < 85.0)
+        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(45.0, 90.0, 100.0, 32.0, 400.0) }
+    }
+    @Test fun invalidSpeedInformationCannotArmANewLeg() {
+        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, Double.NaN, 32.0, 400.0) }
+        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, 100.0, 0.0, 400.0) }
+        assertThrows(IllegalArgumentException::class.java) { bounds.scenarioDuration(6.0, 84.0, 100.0, 100.0, 32.0) }
+    }
+    @Test fun delayedFirmwareAcknowledgementDoesNotReplaceArrivalConfirmation() {
+        val gate = HandyArrivalGate(84.0)
+        assertFalse(gate.canContinue(84.0, 0.0, 2000))
+        gate.acknowledge(3000)
+        assertFalse(gate.canContinue(40.0, 0.0, 3000))
+        assertFalse(gate.canContinue(84.0, 32.0, 3000))
+        assertFalse(gate.canContinue(84.0, 0.0, 2999))
+        assertTrue(gate.canContinue(84.0, 0.0, 3000))
+    }
+    @Test fun inputTestRetainsItsExplicitWaitAfterAcknowledgement() {
+        val gate = HandyArrivalGate(84.0, 10000)
+        gate.acknowledge(3000)
+        assertFalse(gate.canContinue(84.0, 0.0, 3500))
+        assertFalse(gate.canContinue(84.0, 0.0, 12999))
+        assertTrue(gate.canContinue(84.0, 0.0, 13000))
+    }
+}

@@ -201,7 +201,7 @@ class MainActivity : Activity() {
     private lateinit var handyStatus: TextView
     private lateinit var handyStart: Button
     private lateinit var handyWeak: Button
-    private lateinit var handyFinish: Button
+    private val handyStages = linkedMapOf<String,Button>()
     private val handySliders = mutableListOf<SeekBar>()
     private lateinit var handyConnect: Button
     private lateinit var handyUpper: EditText
@@ -249,6 +249,18 @@ class MainActivity : Activity() {
         clockRow.addView(handyPhase,LinearLayout.LayoutParams(0,-2,1f))
         handyStatus = label(getString(R.string.handy_waiting),summary,13f)
         handyStatus.setPadding(0,dp(10),0,0)
+        val stages = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        summary.addView(stages)
+        listOf("はじめ" to "はじめ", "中間" to "中盤", "フィニッシュ" to "フィニッシュ").forEach { (stage,title) ->
+            val choice = Button(this).apply {
+                text=title;isAllCaps=false;textSize=13f;minHeight=dp(48)
+                setBackgroundResource(R.drawable.stage_button);backgroundTintList=null
+                contentDescription="Handyを${title}へ移動"
+                setOnClickListener { handySend(HandyService.ACTION_STAGE) { it.putExtra("stage",stage) } }
+            }
+            val lp=LinearLayout.LayoutParams(0,-2,1f).apply { setMargins(dp(2),dp(10),dp(2),0) }
+            stages.addView(choice,lp);handyStages[stage]=choice
+        }
         handyConnect = button(R.string.handy_connect,panel) { connectHandy() }
         label("Handyはスマホへ直接接続します。IntifaceではHandyの接続を外してください。",panel,12f)
         handyStart = button(R.string.handy_start_preview,panel) { handyCommand(if(handyState.running) "stop" else "start") }
@@ -256,8 +268,7 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         panel.addView(actions)
         handyWeak = button(R.string.handy_weaken,actions) { handyCommand("weak") }
-        handyFinish = button(R.string.handy_finish,actions) { handyCommand("finish") }
-        listOf(handyWeak,handyFinish).forEach { it.layoutParams = LinearLayout.LayoutParams(0,-2,1f) }
+        handyWeak.layoutParams = LinearLayout.LayoutParams(-1,-2)
         label(getString(R.string.handy_preparing),panel,12f).apply { setTextColor(0xFFFCA5A5.toInt()); setPadding(0,dp(10),0,dp(12)) }
         button(R.string.handy_trial_open,panel) {
             if(handyTrialDialog == null) {
@@ -307,6 +318,7 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar) { prefs.edit().putInt(if(i in 3..4 || i>=6) "handy_live_$i" else "handy_$i",seekBar.progress).apply() }
             })
             handySliders.add(slider); parent.addView(slider,LinearLayout.LayoutParams(-1,dp(48))); show()
+            if(i==5) { text.visibility=View.GONE;slider.visibility=View.GONE } // Retain old stored setting only; scenarios use physical speed.
         }
         button(R.string.handy_weights_settings,panel) { weightsPanel.visibility = if(weightsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
         panel.addView(weightsPanel)
@@ -341,7 +353,7 @@ class MainActivity : Activity() {
             live.positionMm?.let { append("\n受信位置 %.1fmm".format(Locale.ROOT,it)) }
             append(" · 設定上限 %.1fcm".format(Locale.ROOT,handyPrefs.getFloat("upper_mm",85f)/10.0))
             if(h.running) append("\n${HandyTrack.names.getOrElse(h.pattern) { "動作" }} · 保持 ${h.ageMs/1000}秒"+
-                if(h.plannedRest) " · 予定された間" else "")
+                if(h.plannedRest) " · 短い休み" else " · 指定速度 %.0fmm/秒".format(Locale.ROOT,h.speedMmPerSec))
         }
         val busy=live.running || live.trialActive || live.stopping || live.connecting
         handyConnect.isEnabled = !live.stopping && !live.running && !live.trialActive
@@ -349,9 +361,14 @@ class MainActivity : Activity() {
         handyStart.isEnabled = !live.stopping && !live.trialActive && !live.connecting && live.connected &&
             (h.running || !findViewById<CheckBox>(R.id.audio_follow).isChecked || control.audioReady)
         handyStart.setText(if(h.running) R.string.handy_end_preview else R.string.handy_start_preview)
+        handyStart.alpha=if(handyStart.isEnabled) 1f else .45f
         handyWeak.isEnabled = h.running && !live.stopping
         handyWeak.setText(if(h.weak) R.string.handy_release else R.string.handy_weaken)
-        handyFinish.isEnabled = h.running && !h.weak && h.stage!="フィニッシュ" && !live.stopping
+        handyStages.forEach { (stage,button) ->
+            button.isEnabled=h.running && !h.weak && !live.stopping && stage!=h.stage
+            button.setTextColor(if(h.running && stage==h.stage) 0xFFF472B6.toInt() else 0xFFD1D5DB.toInt())
+            button.alpha=if(button.isEnabled || h.running && stage==h.stage) 1f else .45f
+        }
         handySliders.forEach { it.isEnabled = !busy }
         handyUpper.isEnabled = !busy;handyUpperSave.isEnabled = !busy
         fun rosebudState() = when { control.stopping -> "停止確認中"; control.paused -> "一時停止"; control.active -> "進行中"; else -> "待機" }

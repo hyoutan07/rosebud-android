@@ -23,9 +23,9 @@ class HandyTrackTest {
         val t=HandyTrack(15);t.start(0); val first=t.tick(0,SoundFeatures(SoundKind.SMOOTH))
         val before=t.tick(19999,SoundFeatures(SoundKind.REGULAR))
         assertEquals(first.pattern,before.pattern); assertEquals(19999,before.ageMs)
-        val mid=t.tick(20000,SoundFeatures(SoundKind.BROKEN))
+        val mid=t.clockFrame(20000)
         assertEquals(20000,mid.ageMs)
-        val boundary=t.tick(mid.segmentEndMs,SoundFeatures(SoundKind.BROKEN))
+        val boundary=t.tick(maxOf(20000,mid.segmentEndMs),SoundFeatures(SoundKind.BROKEN))
         assertEquals(0,boundary.ageMs)
     }
     @Test fun eightySecondsUpdatesAtNextBoundary() {
@@ -67,7 +67,7 @@ class HandyTrackTest {
         val t=HandyTrack(11,settings);t.start(0);var observedWide=false
         for(time in 0L..4000000L step 1000) {
             val f=t.tick(time,SoundFeatures(SoundKind.REGULAR))
-            f.move?.let { m -> assertTrue(m.target in settings.lower..settings.upper);assertTrue(m.durationMs in 250..20000)
+            f.move?.let { m -> assertTrue(m.target in settings.lower..settings.upper);assertTrue(m.durationMs in 40..20000)
                 if(m.target>.55 || m.target<.45) observedWide=true }
         }
         assertTrue(observedWide)
@@ -113,7 +113,7 @@ class HandyTrackTest {
         var time=0L
         repeat(1000) {
             val f=track.tick(time,SoundFeatures(SoundKind.REGULAR))
-            f.move?.let { assertTrue(it.target in 0.0..1.0);assertTrue(it.durationMs in 250..20000) }
+            f.move?.let { assertTrue(it.target in 0.0..1.0);assertTrue(it.durationMs in 40..20000) }
             time=f.segmentEndMs
         }
     }
@@ -124,9 +124,9 @@ class HandyTrackTest {
         assertTrue(weak.weak);assertTrue(weak.segmentEndMs<before.segmentEndMs+20000)
         val paused=weak.elapsedMs
         track.tick(100000,SoundFeatures());assertEquals(paused,track.frame.elapsedMs)
-        val lastTarget=track.frame.move!!.target
         track.weaken(false,100000);val resumed=track.tick(100000,SoundFeatures())
-        assertEquals(lastTarget,resumed.move!!.target,0.0)
+        assertNotNull(resumed.move)
+        assertTrue(resumed.speedMmPerSec<=33.0)
         assertEquals("フィニッシュ",resumed.stage)
         assertEquals(paused+1000,track.tick(101000,SoundFeatures()).elapsedMs)
     }
@@ -134,10 +134,11 @@ class HandyTrackTest {
         val track=HandyTrack(8);track.start(0);track.finish(0);track.tick(0,SoundFeatures())
         track.weaken(true,100);track.alignPosition(.1);track.interruptSegment(100)
         val weak=track.tick(100,SoundFeatures())
-        assertTrue(kotlin.math.abs(weak.move!!.target-.1)<=.035001)
+        assertTrue(kotlin.math.abs(weak.move!!.target-.1)<=.070001)
         track.weaken(false,1000);track.alignPosition(.11);track.interruptSegment(1000)
         val first=track.tick(1000,SoundFeatures())
-        assertEquals(.11,first.move!!.target,1e-9);assertTrue(first.move.durationMs<=500)
+        assertNotNull(first.move);assertTrue(first.move!!.target in 0.0..1.0)
+        assertTrue(first.speedMmPerSec<=33.0)
         assertEquals("フィニッシュ",first.stage)
     }
     @Test fun cancelledSegmentCannotKeepReturningAnOldMove() {
@@ -145,6 +146,91 @@ class HandyTrackTest {
         track.interruptSegment(100);assertNull(track.frame.move)
         val after=track.tick(100,SoundFeatures())
         assertTrue(after.segmentEndMs>100);assertNotEquals(before.move,after.move)
+    }
+    @Test fun clockRefreshDoesNotGenerateMovementOrConsumeRandomSequence() {
+        val a=HandyTrack(41);val b=HandyTrack(41);a.start(0);b.start(0)
+        assertEquals(a.tick(0,SoundFeatures()),b.tick(0,SoundFeatures()))
+        val first=a.frame
+        for(time in 1L..10000L step 73) {
+            val clock=a.clockFrame(time)
+            assertEquals(first.move,clock.move);assertEquals(first.segmentEndMs,clock.segmentEndMs)
+            assertEquals(first.pattern,clock.pattern);assertEquals(first.speedMmPerSec,clock.speedMmPerSec,0.0)
+        }
+        a.completeSegment(10000);b.completeSegment(10000)
+        assertEquals(b.tick(10000,SoundFeatures()),a.tick(10000,SoundFeatures()))
+    }
+    @Test fun arrivalImmediatelyStartsNextLegWithoutOriginalScheduledWait() {
+        val t=HandyTrack(1);t.start(0);val initial=t.tick(0,SoundFeatures())
+        assertTrue(initial.segmentEndMs>100)
+        t.completeSegment(100);val next=t.tick(100,SoundFeatures())
+        assertNotEquals(initial.move!!.target,next.move!!.target,0.0)
+        assertTrue(next.segmentEndMs>100)
+    }
+    @Test fun selectingEachStageResetsItsClockButWeakRejectsStageChanges() {
+        val t=HandyTrack(41);t.start(0)
+        assertTrue(t.selectStage("中間",100));assertEquals(480000,t.frame.elapsedMs)
+        assertTrue(t.selectStage("フィニッシュ",200));assertEquals(900000,t.frame.elapsedMs)
+        assertTrue(t.selectStage("はじめ",300));assertEquals(0,t.frame.elapsedMs)
+        t.weaken(true,400);val held=t.clockFrame(400)
+        assertFalse(t.selectStage("中間",9000));assertFalse(t.selectStage("unknown",9000))
+        assertEquals(held.elapsedMs,t.clockFrame(9000).elapsedMs)
+    }
+    private fun sampledStage(stage: String, seed: Long = 3): List<HandyFrame> {
+        val t=HandyTrack(seed,HandySettings(introMs=3600000,middleMs=3600000,finishMs=3600000))
+        t.start(0);t.selectStage(stage,0)
+        return (0L..600000L step 250).map { time ->
+            t.completeSegment(time);t.tick(time,SoundFeatures(SoundKind.REGULAR,.6,.6,.7))
+        }
+    }
+    @Test fun finishIsFasterAndEveryStageHasSpeedVariation() {
+        val ranges=listOf("はじめ" to (32.0..60.0),"中間" to (60.0..150.0),"フィニッシュ" to (160.0..260.0))
+        val averages=mutableListOf<Double>()
+        ranges.forEach { (stage,range) ->
+            val speeds=sampledStage(stage).filter { it.ageMs>=5000 && it.move!=null }.map { it.speedMmPerSec }
+            assertTrue("$stage speed range",speeds.all { it in range })
+            assertTrue("$stage speed variation",speeds.max()-speeds.min()>10)
+            averages+=speeds.average()
+        }
+        assertTrue(averages[2]>averages[1]+60);assertTrue(averages[1]>averages[0]+25)
+    }
+    @Test fun middleBuildsItsLongTermSpeedWithoutLosingShortValleys() {
+        fun sample(offset: Long): List<Double> {
+            val t=HandyTrack(11,HandySettings(introMs=60000,middleMs=420000,finishMs=60000))
+            t.start(0);t.selectStage("中間",0);t.clockFrame(offset)
+            return (0L..40000L step 250).map { relative ->
+                val time=offset+relative;t.completeSegment(time)
+                t.tick(time,SoundFeatures(SoundKind.REGULAR,.6,.6,.7))
+            }.filter { it.ageMs>=5000 && it.move!=null }.map { it.speedMmPerSec }
+        }
+        val early=sample(1000);val late=sample(330000)
+        assertTrue(late.average()>early.average()+8)
+        assertTrue(late.max()-late.min()>15)
+    }
+    @Test fun windowsIncludeUpperLowerWholeAndSmallWithIndependentSpeeds() {
+        val frames=(1L..5L).flatMap { sampledStage("中間",it) }.filter { it.move!=null }
+        assertTrue(frames.any { it.pattern==3 && it.move!!.target>=.60 })
+        assertTrue(frames.any { it.pattern==5 && it.move!!.target<=.40 })
+        assertTrue(frames.any { it.pattern==4 && it.move!!.target==.05 })
+        assertTrue(frames.any { it.pattern==4 && it.move!!.target==.95 })
+        val upper=frames.filter { it.pattern==3 && it.ageMs>=5000 }.map { it.speedMmPerSec }
+        assertTrue(upper.max()-upper.min()>35) // The same upper-only window has slow and fast passes.
+        val sharedSpeed=frames.filter { it.speedMmPerSec in 95.0..105.0 }
+        assertTrue(sharedSpeed.any { it.move!!.target<.4 });assertTrue(sharedSpeed.any { it.move!!.target>.6 })
+        val small=frames.filter { it.pattern==6 }
+        assertTrue(small.any { it.move!!.target<.35 });assertTrue(small.any { it.move!!.target>.65 })
+    }
+    @Test fun restsAreOccasionalShortAndWeakIsContinuous() {
+        val limits=listOf("はじめ" to (.025.. .065),"中間" to (.015.. .045),"フィニッシュ" to (.005.. .025))
+        limits.forEach { (stage,range) ->
+            val fs=(1L..12L).flatMap { sampledStage(stage,it) }
+            val rate=fs.count { it.plannedRest }.toDouble()/fs.size
+            assertTrue("$stage rest fraction $rate",rate in range)
+            assertTrue(fs.filter { it.plannedRest }.all { it.move==null })
+            assertTrue(fs.filter { it.pattern in setOf(0,4,10) }.none { it.plannedRest })
+        }
+        val t=HandyTrack(2);t.start(0);t.weaken(true,0)
+        repeat(200) { i -> t.completeSegment(i*100L);val f=t.tick(i*100L,SoundFeatures())
+            assertFalse(f.plannedRest);assertEquals(32.0,f.speedMmPerSec,0.0);assertEquals(0,f.elapsedMs) }
     }
     @Test fun linearBodyUsesDeviceAndFeatureIndicesAndMilliseconds() {
         val body=LinearMove(.52,2500).body(8,2);val v=body.getJSONArray("Vectors").getJSONObject(0)

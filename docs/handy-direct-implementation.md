@@ -28,3 +28,11 @@
 [検証記録](validation/2026-10-21-handy-direct-0.14.0.json)・[導入画面](validation/handy-direct/installed-handy.png)。APKは`app/build/releases/rosebud-0.14.0-debug.apk`、SHA-256 `8140cab9444d3b13ed9fa5b943d20930f9003a8002ae74cb0c5ed51aad41a24c`。
 
 Android端末での接続/実移動/途中停止、画面オフと併用の確認は未実施。実機調査のMac結果だけでAndroidの成功とは扱わない。次は本人が「Handyに接続」で付近のデバイスを許可して接続し、短い実動作を別ケースとして確認する。接続だけでは移動命令を送らない。
+
+### Androidからの初回接続（21:04 JST）
+
+本人が接続成功と申告。handy_stateでconnected=true、preflight成立、受信位置12mm・設定上限85mmを読取確認。running=false、trial_active=falseで開始要求ログなし。保存設定follow=trueかつ音声未取得のため開始ボタンが無効だった。単体で試すなら接続・設定の「音に合わせる」をOFF、音連動なら先に音声取得が必要と案内。機器運動はこの確認では開始していない。
+
+### 動作確認とシナリオ改善（0.14.1/code19）
+
+本人がAndroidから「動いてる」と確認。0.14.0の実接続/実送信は成立。その上で、長い端点待ち・中心固定の往復・弱いfinish・秒表示の飛びを改善する依頼。現在は[位置と速度の緩急・段階ボタン・時計の修正](handy-scenario-retune.md)がシナリオの正本。入力テストの指定時間待ちとは区別する。

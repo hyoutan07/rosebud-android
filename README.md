@@ -1,6 +1,6 @@
 # Rosebud Android
 
-スマホの再生音と時間から動きを自動生成する個人用アプリ。ROSEBUDはMacのIntiface経由、Handyはスマホから直接Bluetoothで接続します。**最新版0.14.0／versionCode18（Handy直接BLE）**。CPH2199へ上書き導入済み・保存設定を維持。ID・署名・接続設定・保存済み上限/休止割合を保持します。
+スマホの再生音と時間から動きを自動生成する個人用アプリ。ROSEBUDはMacのIntiface経由、Handyはスマホから直接Bluetoothで接続します。**最新版0.14.1／versionCode19（Handyの位置・速度の緩急）**。CPH2199へ上書き導入済み・保存設定を維持。ID・署名・接続設定・保存済み上限/休止割合を保持します。
 
 **吸引の追加・本人による実機動作確認まで完了**：[吸引の仕様・再送・検証](docs/suction.md)。セッション画面を下へスクロールすると、独立した手動0〜5・自動ON/OFF・間隔/継続/目標を操作できます。音声取得・V/F開始は不要。自動OFF・指令0で起動します。2026-10-20、本人から実機確認とタスク完了の報告を受領しました。
 
@@ -13,6 +13,10 @@
 [0.8の休止割合](docs/stage-rest-ratio-spec.md)、[0.7の操作/配色](docs/interaction-refinement-spec.md)、[独立生成の土台](docs/dual-track-spec.md)、[単発確認](docs/flicker-trial.md)。中央選択・往復・承認済みダークUI・休止予算は保持。
 
 第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功。**本人と2台の動作・実音声・静かな区間・一時停止／再開・全停止を短時間確認済み**です。実動作は約3分39秒、USB充電・画面ON・Wake Lockなし。導入の小ささは調整候補、長時間などは未検証です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
+
+## Handyの動き・時計の改善 0.14.1/code19
+
+本人の実動作確認と要望を受け、シナリオ全13候補を上側・下側・全体・小刻みと速度の独立した緩急へ変更。フィニッシュを高速化し、到着後の長い待機を撤廃。基本は移動を続け、ときどき短く休む。はじめ/中盤/フィニッシュの3ボタン、移動待ちから独立した秒表示を追加。179テスト・ビルド・Lintエラー0/警告12、CPH2199更新・設定維持・3ボタン表示を確認。新しい動きの体感は本人の再開後に確認する。[仕様・結果](docs/handy-scenario-retune.md)。
 
 ## Handy直接接続 0.14.0/code18
 

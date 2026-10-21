@@ -13,7 +13,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
-import kotlin.math.abs
 
 /** Owns the Handy BLE connection; the Intiface/Capture service continues to own Rosebud. */
 class HandyService : Service() {
@@ -27,6 +26,7 @@ class HandyService : Service() {
     private var trial: HandyTrialPlan? = null
     private var trialIndex = -1
     private var lastSegment = Long.MIN_VALUE
+    private var lastTargetMm: Double? = null
     private var follow = false
     private var wake: PowerManager.WakeLock? = null
     private var nextWakeRenew = 0L
@@ -45,7 +45,11 @@ class HandyService : Service() {
                 "connected" to value.connected, "connecting" to value.connecting, "running" to value.running,
                 "trial_active" to value.trialActive, "stopping" to value.stopping, "status" to value.status,
                 "error" to (value.error ?: ""), "position_mm" to (value.positionMm ?: org.json.JSONObject.NULL), "upper_mm" to value.upperMm,
-                "stage" to value.frame.stage, "elapsed_ms" to value.frame.elapsedMs))
+                "stage" to value.frame.stage, "elapsed_ms" to value.frame.elapsedMs,
+                "pattern" to value.frame.pattern,
+                "requested_speed_mm_s" to (if (track != null) value.frame.speedMmPerSec else org.json.JSONObject.NULL),
+                "actual_speed_mm_s" to (state?.speedMmPerSec ?: org.json.JSONObject.NULL),
+                "last_target_mm" to (lastTargetMm ?: org.json.JSONObject.NULL)))
         }
     }
     private fun update(transform: (HandySnapshot) -> HandySnapshot) = publish(transform(app.handyState))
@@ -58,6 +62,7 @@ class HandyService : Service() {
         ble = HandyBleTransport(this,
             onState = { message -> update { it.copy(status = message) } },
             onFailure = { message ->
+                state = null
                 update { it.copy(connected = false, connecting = false) }
                 fail(message)
             })
@@ -74,7 +79,8 @@ class HandyService : Service() {
                 ACTION_TRIAL -> beginTrial(intent)
                 ACTION_STOP -> stopMotion("停止要求を送りました")
                 ACTION_WEAK -> changeScenario(weak = true)
-                ACTION_FINISH -> changeScenario(weak = false)
+                ACTION_FINISH -> changeScenario(weak = false, stage = "フィニッシュ")
+                ACTION_STAGE -> changeScenario(weak = false, stage = intent.getStringExtra("stage"))
                 ACTION_ALL_STOP -> {
                     if (app.serviceActive) startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP)
                         .putExtra("reason", "handy_notification_all_stop"))
@@ -125,6 +131,7 @@ class HandyService : Service() {
             alignTrack()
             update { it.copy(running = true, trialActive = false, trialStatus = "未実施", error = null, status = "シナリオ実行中") }
             acquireWake()
+            startClock(epoch)
             pump(epoch)
         }
     }
@@ -169,6 +176,19 @@ class HandyService : Service() {
         track?.alignPosition(envelope.normalized(received.positionMm))
     }
 
+    /** UI progress and stale-audio checks continue while BLE acknowledgement/arrival is pending. */
+    private fun startClock(epoch: Long) {
+        fun advance() {
+            if (epoch != generation || destroyed || track == null || !app.handyState.running) return
+            if (follow && !freshSound()) { fail("音声の更新が途切れたため停止しました"); return }
+            renewWake()
+            val frame = checkNotNull(track).clockFrame(now())
+            update { it.copy(frame = frame) }
+            main.postDelayed({ advance() }, 200)
+        }
+        advance()
+    }
+
     private fun pump(epoch: Long) {
         if (epoch != generation || track == null || destroyed) return
         renewWake()
@@ -180,7 +200,10 @@ class HandyService : Service() {
             if (frame.segmentEndMs != lastSegment) {
                 lastSegment = frame.segmentEndMs
                 if (frame.move != null) {
-                    leg(epoch, checkNotNull(bounds).target(frame.move.target), frame.move.durationMs) { pump(epoch) }
+                    leg(epoch, checkNotNull(bounds).target(frame.move.target), frame.move.durationMs, frame.speedMmPerSec) {
+                        track?.completeSegment(now())
+                        pump(epoch)
+                    }
                     return
                 }
             }
@@ -205,17 +228,21 @@ class HandyService : Service() {
     }
 
     /** Only one move, then one acknowledged state poll at a time. Nothing accumulates behind a slow device. */
-    private fun leg(epoch: Long, target: Double, plannedMs: Long, done: () -> Unit) {
+    private fun leg(epoch: Long, target: Double, plannedMs: Long, scenarioSpeed: Double? = null, done: () -> Unit) {
         val envelope = checkNotNull(bounds)
         val previous = checkNotNull(state)
         check(envelope.contains(previous.positionMm) && envelope.contains(target)) { "設定した上限の外へは動かせません" }
-        val duration = envelope.duration(previous.positionMm, target, plannedMs, previous.maximumSpeedMmPerSec)
+        val duration = if (scenarioSpeed == null) envelope.duration(previous.positionMm, target, plannedMs, previous.maximumSpeedMmPerSec)
+            else envelope.scenarioDuration(previous.positionMm, target, scenarioSpeed, previous.minimumSpeedMmPerSec, previous.maximumSpeedMmPerSec)
+        val gate = HandyArrivalGate(target, if (scenarioSpeed == null) duration else 0)
+        val pollMs = if (scenarioSpeed == null) 250L else 75L
+        lastTargetMm = target
         val began = now()
         var finished = false
         main.postDelayed({ if (epoch == generation && !finished) fail("目標への到達を確認できなかったため停止しました") }, duration + 5000)
         ble.move(target, duration) {
             if (epoch != generation || destroyed) return@move
-            val end = now() + duration
+            gate.acknowledge(now())
             fun poll() {
                 if (epoch != generation || destroyed || finished) return
                 renewWake()
@@ -229,31 +256,31 @@ class HandyService : Service() {
                     }
                     state = received
                     update { it.copy(positionMm = received.positionMm) }
-                    val arrived = abs(received.positionMm - target) <= 1.0 && abs(received.speedMmPerSec) <= .1
-                    if (arrived && now() >= end) {
+                    if (gate.canContinue(received.positionMm, received.speedMmPerSec, now())) {
                         finished = true
                         done()
                     } else if (now() - began > duration + 4000) {
                         fail("移動の応答が遅れたため停止しました")
-                    } else main.postDelayed({ poll() }, 250)
+                    } else main.postDelayed({ poll() }, pollMs)
                 }
             }
             poll()
         }
     }
 
-    private fun changeScenario(weak: Boolean) {
+    private fun changeScenario(weak: Boolean, stage: String? = null) {
         val current = track ?: return
         if (!app.handyState.running || app.handyState.stopping) return
+        if (weak) current.weaken(!app.handyState.frame.weak, now())
+        else if (!current.selectStage(stage ?: return, now())) return
         val epoch = ++generation
-        if (weak) current.weaken(!app.handyState.frame.weak, now()) else current.finish(now())
         current.interruptSegment(now())
         lastSegment = Long.MIN_VALUE
         update { it.copy(stopping = true, status = "動作を切り替えるため停止中") }
         ble.stop { accepted ->
             if (epoch != generation || destroyed) return@stop
             if (!accepted) { fail("停止応答を確認できません。本体の停止ボタンを押してください"); return@stop }
-            prepare(epoch) { pump(epoch) }
+            prepare(epoch) { startClock(epoch); pump(epoch) }
         }
     }
 
@@ -328,6 +355,7 @@ class HandyService : Service() {
         const val ACTION_STOP = "jp.hyoutan.rosebud.handy.STOP"
         const val ACTION_WEAK = "jp.hyoutan.rosebud.handy.WEAK"
         const val ACTION_FINISH = "jp.hyoutan.rosebud.handy.FINISH"
+        const val ACTION_STAGE = "jp.hyoutan.rosebud.handy.STAGE"
         const val ACTION_TRIAL = "jp.hyoutan.rosebud.handy.TRIAL"
         private const val ACTION_ALL_STOP = "jp.hyoutan.rosebud.handy.ALL_STOP"
         private const val CHANNEL = "handy-direct"
