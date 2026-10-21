@@ -102,5 +102,24 @@
       "errors": "0",
       "skipped": "0"
     }
-  ]
+  ],
+  "installation_followup": {
+    "date_jst": "2026-10-21",
+    "model": "CPH2199",
+    "method": "adb install -r",
+    "result": "Success",
+    "installed_version": "0.11.0",
+    "installed_code": 15,
+    "settings_byte_identical": true,
+    "settings_sha256": "5cc16bed34229ad3fafe863c22f69c6bed27746c1de547fb09a79572c93540b3",
+    "cold_launch": "success",
+    "control_service_running": false,
+    "media_projection": null,
+    "ui_visual_check": "session and Handy waiting panel screenshot inspected; no start pressed",
+    "scan_or_motion_performed": false,
+    "screenshots": [
+      "ui-handy/installed.png",
+      "ui-handy/panel.png"
+    ]
+  }
 }
