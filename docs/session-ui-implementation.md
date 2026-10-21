@@ -28,6 +28,12 @@
 
 APK：`app/build/outputs/apk/debug/app-debug.apk`。端末確認の有無は、APK作成と区別して上の検証記録へ残す。
 
-最終結果：**130件成功、失敗/エラー/スキップ0、ビルド成功、Lintエラー0/警告9（従来同数）**。APKの署名は従来と一致。端末のUSB接続がないため、上書き導入・ネイティブ画面の目視確認は未実施。接続のお願いを本人へ提示済み。コードとレイアウトの静的確認・ビルドを、実画面検証と区別する。
+最終結果：**130件成功、失敗/エラー/スキップ0、ビルド成功、Lintエラー0/警告9（従来同数）**。APKの署名は従来と一致。ビルド完了時点ではUSB未接続で端末更新・実画面確認待ち。その後、下記の更新と実画面確認を実施。
 
 版固定のAPK：`app/build/releases/rosebud-0.12.0-debug.apk`。SHA-256：`48c30086fb86364be6a9d1166f38d9484e718903dc4558bc5ddc8e94cc3ea79b`。
+
+## 端末への更新・実画面確認
+
+本人がUSB接続設定を変更した後、CPH2199を認識。更新前の再確認でServiceなし、MediaProjection null、control_closed（未接続・active=false・吸引0・Handy停止）を確認して上書き更新した。0.12.0/code16、cold起動成功。control_settings.xmlは更新前から画面確認後までバイト一致。
+
+[ROSEBUD画面](validation/ui-device-tabs/rosebud.png)、[Handyタブ](validation/ui-device-tabs/handy.png)、[常時展開の吸引](validation/ui-device-tabs/suction.png)、[接続・設定](validation/ui-device-tabs/settings.png)を目視確認。タブの切り替えとスクロールのみで、機器の接続・スキャン・開始、音声取得、プレビューの開始は行っていない。確認後もServiceなし・MediaProjection null。吸引0・自動OFF、ROSEBUDとHandyは待機。コード/APKは`00c9f8a`から変更なし。

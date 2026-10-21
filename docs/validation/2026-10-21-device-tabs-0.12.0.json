@@ -29,7 +29,33 @@
   "scan_or_motion_started": false,
   "handy_real_output_enabled": false,
   "remaining": [
-    "USB connection required for installation and native UI verification",
     "Handy physical stop and live linear output remain pending"
-  ]
+  ],
+  "installation_followup": {
+    "date_jst": "2026-10-21",
+    "device_model": "CPH2199",
+    "result": "adb install -r: Success",
+    "version_name": "0.12.0",
+    "version_code": 16,
+    "cold_launch": "success",
+    "settings_byte_identical": true,
+    "settings_sha256": "5cc16bed34229ad3fafe863c22f69c6bed27746c1de547fb09a79572c93540b3",
+    "service_running_after": false,
+    "media_projection_after": null,
+    "native_ui_visual_check": true,
+    "checked": [
+      "ROSEBUD screen",
+      "Handy tab and waiting controls",
+      "always expanded full-size suction controls",
+      "connection/settings screen",
+      "global stop and two main tabs remain visible"
+    ],
+    "scan_or_motion_started": false,
+    "screenshots": [
+      "ui-device-tabs/rosebud.png",
+      "ui-device-tabs/handy.png",
+      "ui-device-tabs/suction.png",
+      "ui-device-tabs/settings.png"
+    ]
+  }
 }
