@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private var permissionStage: String? = null
     private var permissionSession: String? = null
+    private var handyTrialDialog: HandyTrialDialog? = null
     private var exporting = false
     private var sessionDevice = "rosebud"
     private var mainPage = "session"
@@ -230,6 +231,13 @@ class MainActivity : Activity() {
         handyFinish = button(R.string.handy_finish,actions) { handyCommand("finish") }
         listOf(handyWeak,handyFinish).forEach { it.layoutParams = LinearLayout.LayoutParams(0,-2,1f) }
         label(getString(R.string.handy_preparing),panel,12f).apply { setTextColor(0xFFFCA5A5.toInt()); setPadding(0,dp(10),0,dp(12)) }
+        button(R.string.handy_trial_open,panel) {
+            if(handyTrialDialog == null) {
+                handyTrialDialog = HandyTrialDialog(this, stopAll = {
+                    if((application as ProbeApplication).serviceActive || repo.snapshot.busy) command(CaptureService.ACTION_STOP) { it.putExtra("reason","handy_trial_ui_all_stop") }
+                }, onClosed = { handyTrialDialog = null }).also { it.show() }
+            }
+        }
         val settingsPanel = column().apply { visibility = View.GONE }
         val weightsPanel = column().apply { visibility = View.GONE }
         button(R.string.handy_range_settings,panel) { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
@@ -625,7 +633,7 @@ class MainActivity : Activity() {
         if (repo.snapshot.busy) repo.event("probe_ui_visible")
         main.post(refresh)
     }
-    override fun onPause() { main.removeCallbacks(refresh); super.onPause() }
+    override fun onPause() { handyTrialDialog?.close(); main.removeCallbacks(refresh); super.onPause() }
     override fun onStop() {
         if (repo.snapshot.busy) repo.event("probe_ui_hidden")
         super.onStop()

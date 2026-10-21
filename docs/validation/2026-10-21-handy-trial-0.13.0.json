@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-21",
+  "version": "0.13.0",
+  "versionCode": 17,
+  "tests": {
+    "total": 144,
+    "failures": 0,
+    "errors": 0,
+    "new": 14,
+    "firstRun": "Existing MotionControllerTest cleanup stop-ack await failed once; full retry passed. New trial tests passed on both runs."
+  },
+  "build": "successful",
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "apk": "app/build/releases/rosebud-0.13.0-debug.apk",
+  "sha256": "2b76d4843daf5d8a2ab1ebaf9e254687718d0116dc1f54f337a2cb5f322ea69d",
+  "certificateSha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "installation": {
+    "device": "CPH2199",
+    "success": true,
+    "controlSettingsByteIdentical": true,
+    "qaInputReset": true
+  },
+  "nativeChecked": [
+    "range and sequence forms",
+    "numeric input and keyboard return",
+    "6 second finite range diagram preview completion",
+    "fixed global stop visibility"
+  ],
+  "notPerformed": [
+    "hardware scan",
+    "device connection",
+    "hardware output",
+    "audio capture",
+    "external sharing"
+  ],
+  "handyPhysicalTestEnabled": false,
+  "handyArrival": "Not arrived, confirmed by user",
+  "serviceActiveAfter": false,
+  "mediaProjectionAfter": false
+}

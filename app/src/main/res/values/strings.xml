@@ -112,4 +112,26 @@
   <string name="handy_clock_waiting">待機</string>
   <string name="handy_clock_paused">時計を保留</string>
   <string name="elapsed_clock">%1$02d:%2$02d</string>
+  <string name="handy_trial_open">動きを入力してテスト・共有</string>
+  <string name="handy_trial_title">Handy · テストと共有</string>
+  <string name="handy_trial_range">かんたん往復</string>
+  <string name="handy_trial_sequence">位置列</string>
+  <string name="handy_trial_preview_only">入力プレビューは送信なし。実機テストは停止方式・初期位置の確認後に対応します。</string>
+  <string name="handy_trial_check">入力を確認</string>
+  <string name="handy_trial_not_checked">入力を確認してください · 実機未確認</string>
+  <string name="handy_trial_preview">入力プレビューを開始</string>
+  <string name="handy_trial_end_preview">入力プレビューを終了</string>
+  <string name="handy_trial_preview_completed">入力プレビュー完了 · 実機未確認</string>
+  <string name="handy_trial_preview_stopped">入力プレビューを終了 · 実機未確認</string>
+  <string name="handy_trial_real">実機で試す（準備中）</string>
+  <string name="handy_trial_limits">入力できる範囲 ▾</string>
+  <string name="handy_trial_summary">%1$d区間 / 合計 %2$.3f秒
+入力した目標列の図です。現在位置・到達の実測ではありません。</string>
+  <string name="handy_trial_progress">区間 %1$d / %2$d · %3$.1f / %4$.1f秒
+図上の進行 · 送信なし</string>
+  <string name="handy_trial_chart_description">入力した目標列の図。%1$d区間、合計%2$.3f秒。実測ではありません。</string>
+  <string name="handy_trial_share">共有</string>
+  <string name="handy_trial_copy">条件をコピー</string>
+  <string name="handy_trial_close">閉じる</string>
+  <string name="handy_trial_copied">条件と感想をコピーしました</string>
 </resources>
