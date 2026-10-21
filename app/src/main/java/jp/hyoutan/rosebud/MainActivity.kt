@@ -64,6 +64,7 @@ class MainActivity : Activity() {
         setupControl()
         setupScreens()
         setupSuction()
+        setupHandy()
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
         findViewById<Button>(R.id.stop).setOnClickListener {
             startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP).putExtra("reason", "ui_stop"))
@@ -82,7 +83,7 @@ class MainActivity : Activity() {
     private fun command(action: String, fill: (Intent) -> Unit = {}) {
         val intent = Intent(this, CaptureService::class.java).setAction(action)
         fill(intent)
-        if (action == CaptureService.ACTION_CONNECT || action == CaptureService.ACTION_MOTION_START || action == CaptureService.ACTION_SUCTION || action == CaptureService.ACTION_SUCTION_SETTINGS) startForegroundService(intent) else startService(intent)
+        if (action == CaptureService.ACTION_HANDY || action == CaptureService.ACTION_CONNECT || action == CaptureService.ACTION_MOTION_START || action == CaptureService.ACTION_SUCTION || action == CaptureService.ACTION_SUCTION_SETTINGS) startForegroundService(intent) else startService(intent)
     }
     private fun settingsIntent(intent: Intent) {
         intent.putExtra("follow", findViewById<CheckBox>(R.id.audio_follow).isChecked)
@@ -151,9 +152,11 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.scan).setOnClickListener { command(CaptureService.ACTION_SCAN) }
         findViewById<Button>(R.id.select_device).setOnClickListener {
             val position = findViewById<Spinner>(R.id.devices).selectedItemPosition
-            if (position == 0) command(CaptureService.ACTION_SELECT) { it.putExtra("device", -1) }
+            val hasHandy = deviceItems.any { it.linearCompatible }
+            if (position == 0) command(CaptureService.ACTION_SELECT) { it.putExtra("device", -2) }
+            else if(hasHandy && position == 1) command(CaptureService.ACTION_SELECT) { it.putExtra("device", -1) }
             else {
-                val d = deviceItems.getOrNull(position - 1) ?: return@setOnClickListener
+                val d = deviceItems.getOrNull(position - if(hasHandy) 2 else 1) ?: return@setOnClickListener
                 if (!d.compatible) { toast(d.problem); return@setOnClickListener }
                 command(CaptureService.ACTION_SELECT) { it.putExtra("device", d.index) }
             }
@@ -184,6 +187,70 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.all_stop).setOnClickListener { command(CaptureService.ACTION_STOP) { it.putExtra("reason", "all_ui_stop") } }
     }
+    private lateinit var handyStatus: TextView
+    private lateinit var handyStart: Button
+    private lateinit var handyWeak: Button
+    private lateinit var handyFinish: Button
+    private val handySliders = mutableListOf<SeekBar>()
+    private fun setupHandy() {
+        val panel = findViewById<LinearLayout>(R.id.handy_panel)
+        fun label(text: String, parent: LinearLayout = panel) = TextView(this).also { it.text = text; parent.addView(it) }
+        label("Handy · 無送信プレビュー").apply { textSize = 18f; setTextColor(0xFFF472B6.toInt()) }
+        label(HandyStopPolicy.reason).apply { textSize = 12f; setTextColor(0xFFFCA5A5.toInt()) }
+        label("範囲・時間・音との対応は調整用の仮値です。現在位置は取得していません。")
+        handyStatus = label("待機中")
+        fun button(text: String, operation: String) = Button(this).also { b ->
+            b.text = text; panel.addView(b); b.setOnClickListener { handyCommand(operation) }
+        }
+        handyStart = button("Handyプレビューを開始", "start")
+        handyWeak = button("Handyだけ弱める", "weak")
+        handyFinish = button("Handyをフィニッシュへ", "finish")
+        button("Handyプレビュー終了", "stop")
+        val settingsPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        Button(this).also { b -> b.setText(R.string.handy_settings_toggle); panel.addView(b)
+            b.setOnClickListener { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE } }
+        panel.addView(settingsPanel)
+        val values = intArrayOf(8,7,5,45,55,3,100,100,100)
+        val titles = listOf("はじめ（分）","中間（分）","フィニッシュ1展開（分）","位置下限（%・仮）","位置上限（%・仮）","片道の基準（秒・仮）")+HandyTrack.names.map { "$it · 出やすさ" }
+        val minima = intArrayOf(1,1,1,40,52,2,10,10,10)
+        val maxima = intArrayOf(60,60,60,48,60,10,200,200,200)
+        values.indices.forEach { i ->
+            val text = label("",settingsPanel)
+            val slider = SeekBar(this).apply { min = minima[i]; max = maxima[i]; progress = prefs.getInt("handy_$i",values[i]).coerceIn(min,max); contentDescription = titles[i] }
+            fun show() { text.text = getString(R.string.handy_setting_value,titles[i],slider.progress) }
+            slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) { show() }
+                override fun onStartTrackingTouch(seekBar: SeekBar) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar) { prefs.edit().putInt("handy_$i",seekBar.progress).apply() }
+            })
+            handySliders.add(slider); settingsPanel.addView(slider,LinearLayout.LayoutParams(-1,(48*resources.displayMetrics.density).toInt())); show()
+        }
+    }
+    private fun handyCommand(operation: String) {
+        command(CaptureService.ACTION_HANDY) { intent ->
+            intent.putExtra("operation",operation)
+            if(operation=="start") {
+                settingsIntent(intent)
+                intent.putExtra("intro_ms",handySliders[0].progress*60000L).putExtra("middle_ms",handySliders[1].progress*60000L)
+                    .putExtra("finish_ms",handySliders[2].progress*60000L).putExtra("lower",handySliders[3].progress/100.0)
+                    .putExtra("upper",handySliders[4].progress/100.0).putExtra("half_ms",handySliders[5].progress*1000L)
+                    .putExtra("weights",handySliders.drop(6).map { it.progress }.toIntArray())
+            }
+        }
+    }
+    private fun renderHandy() {
+        val h = control.handy
+        handyStatus.text = if(!h.running) "待機 · 送信なし · 現在位置は未取得" else
+            "%02d:%02d · %s%s\n%s · 保持 %d秒%s\n%s".format(Locale.ROOT,h.elapsedMs/60000,h.elapsedMs/1000%60,h.stage,
+                if(h.cycle>0) " · 展開${h.cycle}" else "",HandyTrack.names[h.pattern],h.ageMs/1000,
+                if(h.weak) " · Handy時計保留" else "", if(h.plannedRest) "予定された間（模擬）" else h.move?.let { "生成目標 %.1f%% / %.2f秒 · 到達は未確認".format(Locale.ROOT,it.target*100,it.durationMs/1000.0) } ?: "区間待ち")
+        handyStart.isEnabled = !h.running && !control.stopping && !control.trialActive && (!control.follow || control.audioReady)
+        handyWeak.isEnabled = h.running && !control.stopping
+        handyWeak.text = if(h.weak) "Handyの弱化を解除" else "Handyだけ弱める"
+        handyFinish.isEnabled = h.running && !h.weak && h.stage!="フィニッシュ" && !control.stopping
+        handySliders.forEach { it.isEnabled = !h.running }
+    }
+
     private fun suctionCommand(fill: (Intent) -> Unit) {
         command(CaptureService.ACTION_SUCTION) {
             it.putExtra("preview",findViewById<CheckBox>(R.id.preview).isChecked)
@@ -234,6 +301,7 @@ class MainActivity : Activity() {
             }.setNegativeButton("閉じる",null).show()
     }
     private fun renderControl() {
+        renderHandy()
         val c = control
         val connected = c.connection == "接続済み"
         setText(R.id.connection, getString(R.string.connection_detail, c.connection,
@@ -243,13 +311,13 @@ class MainActivity : Activity() {
         if (deviceItems != c.devices) {
             deviceItems = c.devices
             deviceSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
-                (listOf("対応する機器すべて（${deviceItems.count { it.compatible }}台）") + deviceItems.map { "${it.index}: ${it.name}${if (it.compatible) "（V/F${if(it.suctionCompatible) " / 吸引" else "・吸引非対応"}）" else "（非対応：${it.problem}）"}" }))
+                (listOf("Rosebud対象すべて（${deviceItems.count { it.scalarCompatible }}台）") + (if(deviceItems.any { it.linearCompatible }) listOf("識別した全機器（Handy実出力は無効）") else emptyList()) + deviceItems.map { "${it.index}: ${it.name}${if (it.linearCompatible) "（位置・停止未確認）" else if (it.compatible) "（V/F${if(it.suctionCompatible) " / 吸引" else "・吸引非対応"}）" else "（非対応：${it.problem}）"}" }))
         }
         findViewById<Button>(R.id.connect).isEnabled = c.connection == "未接続" && !c.stopping && !repo.snapshot.busy
         findViewById<EditText>(R.id.server_url).isEnabled = c.connection == "未接続"
         findViewById<Button>(R.id.scan).isEnabled = connected
-        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending && deviceItems.isNotEmpty()
-        deviceSpinner.isEnabled = !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending
+        findViewById<Button>(R.id.select_device).isEnabled = connected && !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending && !c.handy.running && deviceItems.isNotEmpty()
+        deviceSpinner.isEnabled = !c.handy.running && !c.active && !c.paused && !c.trialActive && !c.stopping && !c.suctionAuto && c.suctionLevel==0 && !c.suctionPending
         val previewCheck = findViewById<CheckBox>(R.id.preview)
         val scenarioPicker = findViewById<Spinner>(R.id.scenario)
         val startButton = findViewById<Button>(R.id.motion_start)

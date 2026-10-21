@@ -1,0 +1,106 @@
+{
+  "date_jst": "2026-10-21",
+  "version_name": "0.11.0",
+  "version_code": 15,
+  "base_commit": "ff16433",
+  "command": "./gradlew testDebugUnitTest assembleDebug lint --console=plain",
+  "result": "BUILD SUCCESSFUL",
+  "tests": {
+    "tests": 130,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "error": 0,
+    "warning": 9
+  },
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "apk_sha256": "d64b342c097f641e45c275b8f7e9f5fbe833a370f767cf348bbcd20c378cfea1",
+  "application_id": "jp.hyoutan.rosebud",
+  "signer_sha256": "acfab0c3112f8845810ee601d972eae73d7565dd0d0ec15a5c6122e5e0076b99",
+  "handy_real_output_enabled": false,
+  "linear_controller_live_binding": false,
+  "physical_stop_established": false,
+  "device_connected": false,
+  "installed": false,
+  "ui_visual_check": false,
+  "ble_scan_or_motion_performed": false,
+  "local_central_version": "2.6.8",
+  "comparison_central_tag": "v3.2.2+46",
+  "comparison_server_crate_sha256": "46d6ce21f035cb8f87c24973e8ea0f17633b94b67144aeaf9b75377c745d6f7c",
+  "comparison_config_crate_sha256": "22f04026ed8b9ad540cff6f30b8bb45eeb80c6d3bfa7c2cebc91e4bb426d1ea0",
+  "intermediate_failure": "One overlapping intermediate build failed in existing suction test teardown await. After stopping overlapping builds, final full run passed 130/130. No test disabled.",
+  "suites": [
+    {
+      "name": "jp.hyoutan.rosebud.AudioStatsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.BoilingFrogTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.FavoriteCrescendoTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.FlickerTrackTest",
+      "tests": "18",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.FlickerTrialTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.HandyTrackTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.LinearWireTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.MotionControllerTest",
+      "tests": "47",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.ScenarioEngineTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "jp.hyoutan.rosebud.SuctionTrackTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ]
+}

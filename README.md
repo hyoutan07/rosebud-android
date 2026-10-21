@@ -1,6 +1,6 @@
 # Rosebud Android
 
-スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**0.10.0／versionCode14、100テスト・ビルド・Lint成功、端末更新済み**。ID・署名・接続設定・保存済み上限/休止割合を保持します。
+スマホの再生音と時間から動きを自動生成し、MacのIntifaceへ送る個人用アプリ。**最新版0.11.0／versionCode15（Handyは無送信準備版）**。端末導入済みの確認版は0.10.0/code14。ID・署名・接続設定・保存済み上限/休止割合を保持します。
 
 **吸引の追加・本人による実機動作確認まで完了**：[吸引の仕様・再送・検証](docs/suction.md)。セッション画面を下へスクロールすると、独立した手動0〜5・自動ON/OFF・間隔/継続/目標を操作できます。音声取得・V/F開始は不要。自動OFF・指令0で起動します。2026-10-20、本人から実機確認とタスク完了の報告を受領しました。
 
@@ -13,6 +13,10 @@
 [0.8の休止割合](docs/stage-rest-ratio-spec.md)、[0.7の操作/配色](docs/interaction-refinement-spec.md)、[独立生成の土台](docs/dual-track-spec.md)、[単発確認](docs/flicker-trial.md)。中央選択・往復・承認済みダークUI・休止予算は保持。
 
 第2の実装・初期値・検証・APKは **[docs/android-second-task.md](docs/android-second-task.md)**。ビルド・Lint・33テストは成功。**本人と2台の動作・実音声・静かな区間・一時停止／再開・全停止を短時間確認済み**です。実動作は約3分39秒、USB充電・画面ON・Wake Lockなし。導入の小ささは調整候補、長時間などは未検証です。第1の0.3.2で確認した内容は [docs/android-e2e.md](docs/android-e2e.md)、残件は [docs/TODO.md](docs/TODO.md)、再開は [docs/handoff.md](docs/handoff.md)。
+
+## Handy第1実装 0.11.0/code15
+
+[仕様・停止方式の残件・検証](docs/handy-first-implementation.md)。130テスト成功、ビルド成功、Lintエラー0/警告9。セッション下部にHandy専用の無送信プレビューを追加。8/7/5分反復、独立時計・乱数、3候補の重み、Handyだけの弱化/時計保留、手動フィニッシュに対応。**Handyの実機出力は停止経路未成立のため無効**。位置機器を含む実機開始は拒否します。従来の実機V/F/吸引はRosebudだけを明示選択してください。端末への導入・Handyの実機確認は未実施。APKは下記の同じ出力先です。
 
 ## 画面と操作
 

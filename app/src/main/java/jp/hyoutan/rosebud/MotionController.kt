@@ -10,12 +10,22 @@ import org.json.JSONObject
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-internal data class ControlDevice(val index: Int, val name: String, val gapMs: Long, val vibrateSteps: Int, val flickerSteps: Int, val problem: String, val suctionSteps: Int = 0) {
-    val suctionCompatible get() = compatible && suctionSteps == 5
+internal data class ControlDevice(val index: Int, val name: String, val gapMs: Long, val vibrateSteps: Int, val flickerSteps: Int, val problem: String, val suctionSteps: Int = 0, val linearIndex: Int = -1, val linearSteps: Int = 0) {
+    val scalarCompatible get() = compatible && linearIndex < 0
+    val linearCompatible get() = compatible && linearIndex >= 0
+    val suctionCompatible get() = scalarCompatible && suctionSteps == 5
     val compatible get() = problem.isEmpty()
     companion object {
         fun parse(j: JSONObject): ControlDevice {
             val messages = j.getJSONObject("DeviceMessages")
+            val linear = messages.optJSONArray("LinearCmd")
+            val name = j.optString("DeviceDisplayName").ifBlank { j.getString("DeviceName") }
+            if (linear != null && linear.length() == 1 && linear.optJSONObject(0)?.optString("ActuatorType") == "Position" &&
+                name.contains("Handy", true) && !messages.has("ScalarCmd")) {
+                val steps = linear.getJSONObject(0).optInt("StepCount", 0)
+                return ControlDevice(j.getInt("DeviceIndex"), name, j.optLong("DeviceMessageTimingGap",0).coerceAtLeast(0),0,0,
+                    if(steps in 1..65535 && messages.has("StopDeviceCmd")) "" else "位置機能の定義を確認できません", linearIndex = 0, linearSteps = steps)
+            }
             val scalars = messages.optJSONArray("ScalarCmd")
             val v = scalars?.optJSONObject(0)
             val f = scalars?.optJSONObject(1)
@@ -42,6 +52,7 @@ internal data class DeviceOutput(val sent: Output = Output(), val acknowledged: 
 }
 
 internal data class ControlSnapshot(
+    val handy: HandyFrame = HandyFrame(), val handySettings: HandySettings = HandySettings(),
     val suctionPending: Boolean = false, val suctionAuto: Boolean = false, val suctionLevel: Int = 0, val suctionIntervalMs: Long = 9000,
     val suctionDurationMs: Long = 300, val suctionTarget: Int = 5,
     val introRestPercent: Int = RestDefaults.intro, val middleRestPercent: Int = RestDefaults.middle, val finishRestPercent: Int = RestDefaults.finish,
@@ -63,6 +74,8 @@ internal data class ControlSnapshot(
     val stopStatus: String = "未要求", val error: String = "", val maxPingMs: Long = 0,
 ) {
     fun json() = JSONObject().apply {
+        put("handy_running",handy.running); put("handy_progress_ms",handy.elapsedMs); put("handy_weak",handy.weak)
+        put("handy_target",handy.move?.target ?: JSONObject.NULL); put("handy_stop_block",HandyStopPolicy.reason)
         put("suction_auto", suctionAuto); put("suction_level", suctionLevel); put("suction_interval_ms", suctionIntervalMs)
         put("suction_duration_ms", suctionDurationMs); put("suction_target", suctionTarget)
         put("connection", connection); put("server", server); put("selected", JSONArray(selected)); put("device_outputs", JSONArray(outputs.map { (index, output) -> output.json(index) }))
@@ -106,6 +119,8 @@ internal class MotionController(
     private var disposed = false
     private var nextId = 1
     private val suction = SuctionTrack()
+    private var handy = HandyTrack(0)
+    private var selectedLinear = emptySet<Int>()
     private var suctionEpoch = 0L
     private val suctionSentRevision = mutableMapOf<Int, Long>()
     private val suctionAckRevision = mutableMapOf<Int, Long>()
@@ -144,6 +159,26 @@ internal class MotionController(
     }
     private fun update(s: ControlSnapshot) { state = s; publish(s) }
     private fun log(type: String, fields: Map<String, Any> = emptyMap()) = event(type, fields)
+
+    fun configureHandy(settings: HandySettings) = post {
+        if (!state.handy.running && !state.stopping && !closing) update(state.copy(handySettings = settings))
+    }
+    fun handyOperation(operation: String, seed: Long = 0) = post {
+        if (closing || state.stopping || state.trialActive) return@post
+        when(operation) {
+            "start" -> {
+                if(state.handy.running || (state.follow && !freshAudio())) return@post
+                handy = HandyTrack(seed,state.handySettings); handy.start(now())
+            }
+            "stop" -> handy.stop()
+            "weak" -> handy.weaken(!state.handy.weak,now())
+            "finish" -> handy.finish(now())
+            "real" -> { update(state.copy(error = HandyStopPolicy.reason)); return@post }
+            else -> return@post
+        }
+        update(state.copy(handy = handy.tick(now(),if(state.follow) features.snapshot else SoundFeatures())))
+        log("handy_preview_operation",mapOf("operation" to operation,"state" to state.json()))
+    }
 
     fun configure(follow: Boolean, vibrateCap: Int, flickerCap: Int) = post {
         if(state.trialActive || state.stopping) return@post
@@ -214,11 +249,16 @@ internal class MotionController(
         send("StartScanning", JSONObject()) { log("scan_started") }
     }
     fun select(index: Int) = post {
-        if (suction.busy || state.suctionPending) return@post
+        if (suction.busy || state.suctionPending || state.handy.running) return@post
         check(!state.active && !state.paused && !state.trialActive && !state.stopping && !closing) { "停止完了後に対象を変更してください" }
-        val targets = if (index == -1) state.devices.filter { it.compatible } else state.devices.filter { it.index == index }
+        val targets = when(index) {
+            -1 -> state.devices.filter { it.compatible }
+            -2 -> state.devices.filter { it.scalarCompatible }
+            else -> state.devices.filter { it.index == index }
+        }
         check(targets.isNotEmpty()) { "対応機器が見つかりません" }
         check(targets.all { it.compatible }) { "対応しない機能定義です" }
+        selectedLinear = targets.filter { it.linearCompatible }.map { it.index }.toSet()
         suction.reset(); suctionEpoch++; suctionSentRevision.clear()
         update(state.copy(selected = targets.map { it.index }, outputs = targets.associate { it.index to DeviceOutput() }, error = ""))
         log("devices_selected", mapOf("state" to state.json()))
@@ -251,6 +291,7 @@ internal class MotionController(
     fun start(seed: Long) = post {
         if (closing || (!ready && !state.preview) || state.active || state.paused || state.trialActive || state.stopping) { log("motion_start_rejected", mapOf("reason" to "not_ready_or_stopping")); return@post }
         val targets = state.devices.filter { it.index in state.selected }
+        if(!state.preview && targets.any { it.linearCompatible }) { update(state.copy(error = HandyStopPolicy.reason)); return@post }
         if ((!state.preview && (targets.isEmpty() || targets.size != state.selected.size || targets.any { !it.compatible })) || (state.follow && !freshAudio())) {
             update(state.copy(error = "対象機器を決定し、追従ONなら音声取得を開始してください")); return@post
         }
@@ -319,7 +360,7 @@ internal class MotionController(
         }
         if(closing || suction.busy || state.active || state.paused || state.trialActive || state.stopping) { reject("停止完了後に1回ずつ試してください"); return@post }
         if(!ready || state.preview || state.selected.size!=1) { reject("実機モードで対象を1台だけ決定してください"); return@post }
-        val device = state.devices.singleOrNull { it.index==state.selected.single() && it.compatible }
+        val device = state.devices.singleOrNull { it.index==state.selected.single() && it.scalarCompatible }
         if(device==null) { reject("選択した機器の接続を確認してください"); return@post }
         if(durationMs !in FlickerTrialLimits.minMs..FlickerTrialLimits.maxMs) { reject("動かす長さは0.1〜10.0秒で設定してください"); return@post }
         val value = FlickerTrialLimits.output(percent,state.flickerCap,device.flickerSteps)
@@ -412,6 +453,7 @@ internal class MotionController(
     }
 
     private fun stopMotionInternal(reason: String) {
+        handy.stop(); update(state.copy(handy = handy.frame))
         suction.reset(); suctionEpoch++; suctionSentRevision.clear(); suctionNeedsZero.clear(); publishSuction()
         trialStop?.cancel(false); trialStop = null
         val trialWasActive = state.trialActive
@@ -440,7 +482,7 @@ internal class MotionController(
         for (index in state.selected) {
             update(state.copy(outputs = state.outputs + (index to state.outputs.getValue(index).copy(stop = "停止応答待ち"))))
             send("StopDeviceCmd", JSONObject().put("DeviceIndex", index), device = index) {
-                stopResult(index, null)
+                stopResult(index, if(index in selectedLinear) HandyStopPolicy.reason else null)
             }
             log("stop_sent", mapOf("reason" to reason, "device_index" to index))
         }
@@ -475,6 +517,7 @@ internal class MotionController(
     private fun fail(message: String) {
         if (disposed) return
         log("control_error", mapOf("error" to message, "state" to state.json()))
+        handy.stop(); update(state.copy(handy = handy.frame))
         suction.reset(); suctionEpoch++; publishSuction()
         run++
         pauseRequested = false
@@ -552,6 +595,10 @@ internal class MotionController(
             }
             return
         }
+        if (state.handy.running) {
+            if (state.follow && !freshAudio()) { fail("audio_samples_stale"); return }
+            update(state.copy(handy = handy.tick(time,if(state.follow) features.snapshot else SoundFeatures())))
+        }
         if (socket == null && !state.preview) return
         if (!state.preview && !ready && time - connectAt > 5000) { fail("connect_or_handshake_timeout"); return }
         val expired = pending.values.firstOrNull { time - it.at > if (it.type == "ScalarCmd") 1500 else 3000 }
@@ -592,7 +639,7 @@ internal class MotionController(
                 })
             lastGenerate = time
             if (state.preview) update(state.copy(sent = Output(), acknowledged = Output()))
-            for (d in if(state.preview) emptyList() else targets) {
+            for (d in if(state.preview) emptyList() else targets.filter { it.scalarCompatible }) {
                 val output = if(state.classic) Output(
                     quantize(frame.output.vibrate * gain, state.vibrateCap / 100.0, d.vibrateSteps),
                     quantize(frame.output.flicker * gain, state.flickerCap / 100.0, d.flickerSteps)) else Output(

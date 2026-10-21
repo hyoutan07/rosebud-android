@@ -27,6 +27,7 @@ class MotionControllerTest {
     @Volatile private var stopAck = true
     private var pingMs = 0L
     private var compatible = true
+    private var withHandy = false
     private var dual = false
     private var suctionSupported = true
     private var deviceGap = 150L
@@ -45,7 +46,7 @@ class MotionControllerTest {
                 requests.add(type to body)
                 when (type) {
                     "RequestServerInfo" -> reply("ServerInfo", JSONObject().put("Id", body.getInt("Id")).put("MessageVersion", 3).put("MaxPingTime", pingMs))
-                    "RequestDeviceList" -> reply("DeviceList", JSONObject().put("Id", body.getInt("Id")).put("Devices", JSONArray().put(device()).apply { if (dual) put(device(8)) }))
+                    "RequestDeviceList" -> reply("DeviceList", JSONObject().put("Id", body.getInt("Id")).put("Devices", JSONArray().put(device()).apply { if (dual) put(device(8)); if(withHandy) put(handyDevice()) }))
                     "ScalarCmd" -> if (scalarAck && body.getInt("DeviceIndex") !in holdScalars) ok(body)
                     "StopDeviceCmd" -> if (body.getInt("DeviceIndex") in rejectStops) {
                         reply("Error", JSONObject().put("Id", body.getInt("Id")).put("ErrorCode", 4).put("ErrorMessage", "DeviceNotAvailable"))
@@ -61,6 +62,71 @@ class MotionControllerTest {
         control.connect(server.url("/").toString().replace("http://", "ws://"))
         await { state.get().connection == "接続済み" }
     }
+    private fun handyDevice(index: Int = 9) = JSONObject().put("DeviceIndex",index).put("DeviceName","The Handy 2 Standard")
+        .put("DeviceMessageTimingGap",50).put("DeviceMessages",JSONObject().put("StopDeviceCmd",JSONObject()).put("LinearCmd",JSONArray()
+            .put(JSONObject().put("ActuatorType","Position").put("StepCount",100))))
+    @Test fun handyCapabilityDoesNotLoosenScalarValidation() {
+        val d=ControlDevice.parse(handyDevice());assertTrue(d.linearCompatible);assertFalse(d.scalarCompatible);assertFalse(d.suctionCompatible)
+        val bad=handyDevice();bad.getJSONObject("DeviceMessages").getJSONArray("LinearCmd").getJSONObject(0).put("ActuatorType","Vibrate")
+        assertFalse(ControlDevice.parse(bad).compatible)
+        assertFalse(ControlDevice.parse(handyDevice().put("DeviceName","unknown linear")).compatible)
+        compatible=false;assertFalse(ControlDevice.parse(device()).compatible)
+    }
+    @Test fun handyConnectSelectAndRestoreNeverOutputOrScan() {
+        withHandy=true;setup();control.select(9);await { state.get().selected==listOf(9) }
+        control.configureHandy(HandySettings(60000,60000,60000));advance(100000)
+        assertFalse(state.get().handy.running)
+        assertTrue(requests.none { it.first in listOf("LinearCmd","ScalarCmd","StartScanning") })
+    }
+    @Test fun handyRealStartIsBlockedEvenWithAdvertisedStop() {
+        withHandy=true;setup();control.select(9);await { state.get().selected==listOf(9) }
+        control.start(2);await { state.get().error==HandyStopPolicy.reason }
+        assertFalse(state.get().active);assertTrue(requests.none { it.first=="LinearCmd" || it.first=="ScalarCmd" })
+    }
+    @Test fun handyPreviewAndWeakClockDoNotAlterTwoExistingClocksOrSendLinear() {
+        withHandy=true;dual=true;deviceGap=0;setup();control.select(7);await { state.get().selected==listOf(7) }
+        control.start(55);await { state.get().active }
+        control.handyOperation("start",55);await { state.get().handy.running }
+        advance(1000);val h=state.get().handy.elapsedMs
+        control.handyOperation("weak");await { state.get().handy.weak }
+        val existing=state.get().elapsedMs;advance(1000)
+        assertEquals(h,state.get().handy.elapsedMs);assertTrue(state.get().elapsedMs>existing)
+        control.handyOperation("weak");await { !state.get().handy.weak };advance(1000)
+        assertTrue(state.get().handy.elapsedMs>h);assertTrue(requests.none { it.first=="LinearCmd" })
+        assertTrue(requests.filter { it.first=="ScalarCmd" }.all { it.second.getInt("DeviceIndex")==7 })
+    }
+    @Test fun handyPreviewGlobalPauseStopsPreviewAndLateTicksCannotReviveIt() {
+        setup();selectAndStart();control.handyOperation("start",1);await { state.get().handy.running }
+        control.pause();await { state.get().paused };assertFalse(state.get().handy.running)
+        advance(500);assertFalse(state.get().handy.running)
+        control.resume();await { state.get().active };assertFalse(state.get().handy.running)
+    }
+    @Test fun threeTargetsGetGlobalStopButHandyOkNeverMeansStopped() {
+        withHandy=true;dual=true;setup();control.select(-1);await { state.get().selected.size==3 }
+        control.stopMotion("all");await { ended }
+        assertEquals(setOf(7,8,9),requests.filter { it.first=="StopDeviceCmd" }.map { it.second.getInt("DeviceIndex") }.toSet())
+        assertTrue(state.get().outputs.getValue(9).stop.contains("停止未確認"))
+        assertFalse(state.get().stopStatus=="停止応答OK（全対象）")
+        assertTrue(requests.none { it.first=="LinearCmd" })
+    }
+    @Test fun rosebudGroupExcludesHandyAndKeepsBothExistingDevicesUsable() {
+        withHandy=true;dual=true;setup();control.select(-2);await { state.get().selected==listOf(7,8) }
+        control.start(1);await { state.get().active };advance(300)
+        await { requests.filter { it.first=="ScalarCmd" }.map { it.second.getInt("DeviceIndex") }.toSet()==setOf(7,8) }
+        assertTrue(requests.none { it.first=="LinearCmd" });assertTrue(state.get().error.isEmpty())
+    }
+    @Test fun newlyDiscoveredHandyCannotJoinExistingSelection() {
+        setup();control.select(7);await { state.get().selected==listOf(7) }
+        reply("DeviceAdded",handyDevice());await { state.get().devices.size==2 }
+        assertEquals(listOf(7),state.get().selected)
+    }
+    @Test fun selectedHandyRemovalStopsPreviewWithoutAutomaticRestart() {
+        withHandy=true;setup();control.select(9);await { state.get().selected==listOf(9) }
+        control.handyOperation("start",1);await { state.get().handy.running }
+        reply("DeviceRemoved",JSONObject().put("DeviceIndex",9));await { ended }
+        assertFalse(state.get().handy.running);assertFalse(state.get().active)
+    }
+
     private fun device(index: Int = 7) = JSONObject().put("DeviceIndex", index).put("DeviceName", "test Rosebud")
         .put("DeviceMessageTimingGap", deviceGap).put("DeviceMessages", JSONObject().put("StopDeviceCmd", JSONObject()).put("ScalarCmd", JSONArray()
             .put(JSONObject().put("ActuatorType", "Vibrate").put("FeatureDescriptor", "Vibration").put("StepCount", 255))

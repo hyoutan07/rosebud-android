@@ -57,6 +57,7 @@
           <SeekBar android:id="@+id/suction_manual" android:layout_width="match_parent" android:layout_height="48dp" android:max="5" android:contentDescription="@string/suction_manual" />
           <TextView android:id="@+id/suction_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#9CA3AF" android:textSize="12sp" />
         </LinearLayout>
+        <LinearLayout android:id="@+id/handy_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:layout_marginTop="12dp" />
         <Button android:id="@+id/toggle_rest" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/toggle_rest" />
         <LinearLayout android:id="@+id/rest_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/panel" android:visibility="gone">
           <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/rest_help" android:textSize="12sp" android:textColor="#9CA3AF" android:paddingBottom="12dp" />

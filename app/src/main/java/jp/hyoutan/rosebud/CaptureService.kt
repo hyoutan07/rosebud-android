@@ -85,6 +85,17 @@ class CaptureService : Service() {
                     automatic = if(intent.hasExtra("automatic")) intent.getBooleanExtra("automatic",false) else null)
                 return START_NOT_STICKY
             }
+            ACTION_HANDY -> {
+                foreground(projection != null)
+                if(intent.hasExtra("intro_ms")) controller.configure(intent.getBooleanExtra("follow",false),intent.getIntExtra("vibrate_cap",30),intent.getIntExtra("flicker_cap",30))
+                if(intent.hasExtra("intro_ms")) controller.configureHandy(HandySettings(
+                    introMs = intent.getLongExtra("intro_ms",480000), middleMs = intent.getLongExtra("middle_ms",420000),
+                    finishMs = intent.getLongExtra("finish_ms",300000), lower = intent.getDoubleExtra("lower",.45),
+                    upper = intent.getDoubleExtra("upper",.55), halfMs = intent.getLongExtra("half_ms",3000),
+                    weights = intent.getIntArrayExtra("weights")?.toList() ?: listOf(100,100,100)))
+                controller.handyOperation(intent.getStringExtra("operation") ?: "",SystemClock.elapsedRealtime())
+                return START_NOT_STICKY
+            }
             ACTION_SCAN -> { controller.scan(); return START_NOT_STICKY }
             ACTION_SELECT -> { controller.select(intent.getIntExtra("device", -1)); return START_NOT_STICKY }
             ACTION_SETTINGS -> {
@@ -328,6 +339,7 @@ class CaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_HANDY = "jp.hyoutan.rosebud.HANDY"
         const val ACTION_CONNECT = "jp.hyoutan.rosebud.CONNECT"
         const val ACTION_SUCTION = "jp.hyoutan.rosebud.SUCTION"
         const val ACTION_SUCTION_SETTINGS = "jp.hyoutan.rosebud.SUCTION_SETTINGS"
