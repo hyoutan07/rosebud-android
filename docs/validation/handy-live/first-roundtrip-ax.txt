@@ -1,0 +1,167 @@
+Window: "Handy BLE Probe — 限定診断", App: Handy BLE Probe.
+0 standard window Handy BLE Probe — 限定診断, Secondary Actions: Raise
+	1 text Firmware応答の確認用です。物理停止を確認した表示ではありません。
+身体に使用せず、可動部に触れず、本体の停止ボタンをすぐ押せる状態でお使いください。
+	2 button 接続・状態を確認
+	3 button (disabled) 10mm幅を1往復
+	4 button 停止要求
+	5 text 停止要求は受理されました。物理停止は本体で確認してください。
+	6 scroll area Secondary Actions: Scroll Up, Scroll Down
+		7 text entry area [20:24:51] 起動。スキャン・送信なし。実機未確認。
+[20:24:57] 明示スキャン開始：OHD_hw3_対象、20秒で終了。
+[20:25:17] 広告名prefix一致の1台へ接続（アドレスは記録しません）。
+[20:25:18] RPC 715 送信。Firmware応答待ち（ID 1837382969）。
+[20:25:18] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:25:18] RPC 840 送信。Firmware応答待ち（ID 1837382970）。
+[20:25:18] RPC 840, transport=1: max=0.7099999785423279, maxAbsoluteMm=85.93502807617188, min=0.0, minAbsoluteMm=5.0
+[20:25:18] RPC 842 送信。Firmware応答待ち（ID 1837382971）。
+[20:25:18] RPC 842, transport=1: dir=1.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:18] preflight完了。移動は本人のボタン操作でのみ開始します。
+[20:25:32] RPC 842 送信。Firmware応答待ち（ID 1837382972）。
+[20:25:32] RPC 842, transport=1: dir=1.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:32] 10mm幅1往復の試運転。start=5.333333492279053mm, outbound=15.333333969116211mm。片道3000ms。自動反復なし。
+[20:25:32] 743送信条件: target=15.333333969116211mm, time=3000ms, stop_on_target=true。再送なし。
+[20:25:32] RPC 743 送信。Firmware応答待ち（ID 1837382973）。
+[20:25:32] 743のFirmware受理応答。到達・物理停止の確認ではありません。
+[20:25:32] RPC 842 送信。Firmware応答待ち（ID 1837382974）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382975）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382976）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382977）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382978）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382979）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382980）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382981）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382982）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382983）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382984）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382985）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] 受信値: 目標との差1mm以内・速度0.1mm/s以下。物理停止の確認とは別です。
+[20:25:35] 743送信条件: target=5.333333492279053mm, time=3000ms, stop_on_target=true。再送なし。
+[20:25:35] RPC 743 送信。Firmware応答待ち（ID 1837382986）。
+[20:25:35] 743のFirmware受理応答。到達・物理停止の確認ではありません。
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382987）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382988）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382989）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2342.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382990）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382991）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382992）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382993）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382994）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382995）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382996）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382997）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2338.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:39] RPC 842 送信。Firmware応答待ち（ID 1837382998）。
+[20:25:39] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:39] 受信値: 目標との差1mm以内・速度0.1mm/s以下。物理停止の確認とは別です。
+[20:25:39] 1往復の位置応答を確認。追加移動を作らず停止要求へ。
+[20:25:39] RPC 715 送信。Firmware応答待ち（ID 1837382999）。
+[20:25:39] 停止要求のFirmware応答あり。物理停止未確認。
+
+		8 scroll bar (settable, float) 1
+			9 value indicator (settable, float) 1
+			10 increment arrow button
+			11 decrement arrow button
+			12 increment page button
+			13 decrement page button
+	14 close button
+	15 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	16 minimize button
+	17 text Handy BLE Probe — 限定診断
+18 menu bar
+	19 Handy BLE Probe
+
+The focused UI element is 7 text entry area [20:24:51] 起動。スキャン・送信なし。実機未確認。
+[20:24:57] 明示スキャン開始：OHD_hw3_対象、20秒で終了。
+[20:25:17] 広告名prefix一致の1台へ接続（アドレスは記録しません）。
+[20:25:18] RPC 715 送信。Firmware応答待ち（ID 1837382969）。
+[20:25:18] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:25:18] RPC 840 送信。Firmware応答待ち（ID 1837382970）。
+[20:25:18] RPC 840, transport=1: max=0.7099999785423279, maxAbsoluteMm=85.93502807617188, min=0.0, minAbsoluteMm=5.0
+[20:25:18] RPC 842 送信。Firmware応答待ち（ID 1837382971）。
+[20:25:18] RPC 842, transport=1: dir=1.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:18] preflight完了。移動は本人のボタン操作でのみ開始します。
+[20:25:32] RPC 842 送信。Firmware応答待ち（ID 1837382972）。
+[20:25:32] RPC 842, transport=1: dir=1.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:32] 10mm幅1往復の試運転。start=5.333333492279053mm, outbound=15.333333969116211mm。片道3000ms。自動反復なし。
+[20:25:32] 743送信条件: target=15.333333969116211mm, time=3000ms, stop_on_target=true。再送なし。
+[20:25:32] RPC 743 送信。Firmware応答待ち（ID 1837382973）。
+[20:25:32] 743のFirmware受理応答。到達・物理停止の確認ではありません。
+[20:25:32] RPC 842 送信。Firmware応答待ち（ID 1837382974）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382975）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382976）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382977）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:33] RPC 842 送信。Firmware応答待ち（ID 1837382978）。
+[20:25:33] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382979）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382980）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382981）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2341.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:34] RPC 842 送信。Firmware応答待ち（ID 1837382982）。
+[20:25:34] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382983）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382984）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2339.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] RPC 842 送信。Firmware応答待ち（ID 1837382985）。
+[20:25:35] RPC 842, transport=1: dir=1.0, motorPosition=5.0, motorTempAdcValue=2340.0, motorTempC=36.36509704589844, position=0.1276744306087494, positionAbsoluteMm=15.333333969116211, speedAbsoluteMmPerSec=0.0
+[20:25:35] 受信値: 目標との差1mm以内・速度0.1mm/s以下。物理停止の確認とは別です。
+[20:25:35] 743送信条件: target=5.333333492279053mm, time=3000ms, stop_on_target=true。再送なし。
+[20:25:35] RPC 743 送信。Firmware応答待ち（ID 1837382986）。
+[20:25:35] 743のFirmware受理応答。到達・物理停止の確認ではありません。
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382987）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382988）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:36] RPC 842 送信。Firmware応答待ち（ID 1837382989）。
+[20:25:36] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2342.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382990）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382991）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382992）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:37] RPC 842 送信。Firmware応答待ち（ID 1837382993）。
+[20:25:37] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382994）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2341.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382995）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382996）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2340.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:38] RPC 842 送信。Firmware応答待ち（ID 1837382997）。
+[20:25:38] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2338.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:39] RPC 842 送信。Firmware応答待ち（ID 1837382998）。
+[20:25:39] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2339.0, motorTempC=36.590599060058594, position=0.004118531942367554, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:25:39] 受信値: 目標との差1mm以内・速度0.1mm/s以下。物理停止の確認とは別です。
+[20:25:39] 1往復の位置応答を確認。追加移動を作らず停止要求へ。
+[20:25:39] RPC 715 送信。Firmware応答待ち（ID 1837382999）。
+[20:25:39] 停止要求のFirmware応答あり。物理停止未確認。

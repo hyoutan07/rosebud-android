@@ -1,0 +1,60 @@
+Window: "Handy BLE Probe — 限定診断", App: Handy BLE Probe.
+0 standard window Handy BLE Probe — 限定診断, Secondary Actions: Raise
+	1 text Firmware応答の確認用です。物理停止を確認した表示ではありません。
+身体に使用せず、可動部に触れず、本体の停止ボタンをすぐ押せる状態でお使いください。
+	2 button 接続・状態を確認
+	3 button (disabled) 10mm幅を1往復（片道10秒指定）（準備中）
+	4 button 停止要求
+	5 text 4つのFirmware応答を確認しました。実移動・物理停止は未確認です。
+	6 scroll area Secondary Actions: Scroll Up, Scroll Down
+		7 text entry area [20:34:27] 起動。スキャン・送信なし。実機未確認。
+[20:34:33] 明示スキャン開始：OHD_hw3_対象、20秒で終了。
+[20:34:53] 広告名prefix一致の1台へ接続（アドレスは記録しません）。
+[20:34:54] RPC 715 送信。Firmware応答待ち（ID 1724957391）。
+[20:34:54] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:34:54] RPC 840 送信。Firmware応答待ち（ID 1724957392）。
+[20:34:54] RPC 840, transport=1: max=1.0, maxAbsoluteMm=118.99299621582031, min=0.0, minAbsoluteMm=5.0
+[20:34:54] RPC 2003 送信。Firmware応答待ち（ID 1724957393）。
+[20:34:54] RPC 2003, transport=1: xEndBuffer=5.0, xEndZoneSize=10.0, xEndZoneSpeed=200.0, xLimitStart=0.0, xLimitStop=123.99299621582031, xMaxSpeed=400.0, xMaxSpeedTheoretical=1600.0, xMinSpeed=32.0, xMinSpeedTheoretical=45.0
+[20:34:54] RPC 842 送信。Firmware応答待ち（ID 1724957394）。
+[20:34:54] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2348.0, motorTempC=36.665771484375, position=0.002924157539382577, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:34:54] preflight完了。移動は本人のボタン操作でのみ開始します。
+[20:35:24] RPC 715 送信。Firmware応答待ち（ID 1724957395）。
+[20:35:25] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:35:25] RPC 840 送信。Firmware応答待ち（ID 1724957396）。
+[20:35:25] RPC 840, transport=1: max=1.0, maxAbsoluteMm=118.99299621582031, min=0.0, minAbsoluteMm=5.0
+[20:35:25] RPC 2003 送信。Firmware応答待ち（ID 1724957397）。
+[20:35:25] RPC 2003, transport=1: xEndBuffer=5.0, xEndZoneSize=10.0, xEndZoneSpeed=200.0, xLimitStart=0.0, xLimitStop=123.99299621582031, xMaxSpeed=400.0, xMaxSpeedTheoretical=1600.0, xMinSpeed=32.0, xMinSpeedTheoretical=45.0
+[20:35:25] RPC 842 送信。Firmware応答待ち（ID 1724957398）。
+[20:35:25] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2349.0, motorTempC=36.70335388183594, position=0.002924157539382577, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:35:25] preflight完了。移動は本人のボタン操作でのみ開始します。
+
+		8 scroll bar (disabled, settable, float) 0
+	9 close button
+	10 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	11 minimize button
+	12 text Handy BLE Probe — 限定診断
+13 menu bar
+	14 Handy BLE Probe
+
+The focused UI element is 7 text entry area [20:34:27] 起動。スキャン・送信なし。実機未確認。
+[20:34:33] 明示スキャン開始：OHD_hw3_対象、20秒で終了。
+[20:34:53] 広告名prefix一致の1台へ接続（アドレスは記録しません）。
+[20:34:54] RPC 715 送信。Firmware応答待ち（ID 1724957391）。
+[20:34:54] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:34:54] RPC 840 送信。Firmware応答待ち（ID 1724957392）。
+[20:34:54] RPC 840, transport=1: max=1.0, maxAbsoluteMm=118.99299621582031, min=0.0, minAbsoluteMm=5.0
+[20:34:54] RPC 2003 送信。Firmware応答待ち（ID 1724957393）。
+[20:34:54] RPC 2003, transport=1: xEndBuffer=5.0, xEndZoneSize=10.0, xEndZoneSpeed=200.0, xLimitStart=0.0, xLimitStop=123.99299621582031, xMaxSpeed=400.0, xMaxSpeedTheoretical=1600.0, xMinSpeed=32.0, xMinSpeedTheoretical=45.0
+[20:34:54] RPC 842 送信。Firmware応答待ち（ID 1724957394）。
+[20:34:54] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2348.0, motorTempC=36.665771484375, position=0.002924157539382577, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:34:54] preflight完了。移動は本人のボタン操作でのみ開始します。
+[20:35:24] RPC 715 送信。Firmware応答待ち（ID 1724957395）。
+[20:35:25] 715のFirmware受理応答。物理停止の確認ではありません。
+[20:35:25] RPC 840 送信。Firmware応答待ち（ID 1724957396）。
+[20:35:25] RPC 840, transport=1: max=1.0, maxAbsoluteMm=118.99299621582031, min=0.0, minAbsoluteMm=5.0
+[20:35:25] RPC 2003 送信。Firmware応答待ち（ID 1724957397）。
+[20:35:25] RPC 2003, transport=1: xEndBuffer=5.0, xEndZoneSize=10.0, xEndZoneSpeed=200.0, xLimitStart=0.0, xLimitStop=123.99299621582031, xMaxSpeed=400.0, xMaxSpeedTheoretical=1600.0, xMinSpeed=32.0, xMinSpeedTheoretical=45.0
+[20:35:25] RPC 842 送信。Firmware応答待ち（ID 1724957398）。
+[20:35:25] RPC 842, transport=1: dir=0.0, motorPosition=2.0, motorTempAdcValue=2349.0, motorTempC=36.70335388183594, position=0.002924157539382577, positionAbsoluteMm=5.333333492279053, speedAbsoluteMmPerSec=0.0
+[20:35:25] preflight完了。移動は本人のボタン操作でのみ開始します。
