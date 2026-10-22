@@ -25,7 +25,7 @@ internal data class LinearMove(val target: Double, val durationMs: Long) {
 internal data class HandyFrame(val running: Boolean = false, val weak: Boolean = false, val elapsedMs: Long = 0,
     val stage: String = "待機", val cycle: Long = 0, val pattern: Int = 0, val ageMs: Long = 0,
     val move: LinearMove? = null, val segmentEndMs: Long = 0, val plannedRest: Boolean = false,
-    val speedMmPerSec: Double = 32.0, val speedLimitMmPerSec: Double = 400.0)
+    val speedMmPerSec: Double = 32.0, val speedLimitMmPerSec: Double = 400.0, val motion: String = "")
 
 /** Position windows and explicit physical speeds. The service derives duration from actual distance,
  * then completeSegment advances immediately on arrival. No scheduled endpoint dwell is required.
@@ -142,7 +142,7 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         val planner=wave ?: HandyWave(waveSeed,currentNormalized.coerceIn(settings.lower,settings.upper),time).also { wave=it }
         val point=planner.sample(time,pattern,peak,physicalSpanMm,settings.lower,settings.upper,weak,horizonMs,currentNormalized,
             if(stage=="はじめ") .08+.10*(progress.toDouble()/settings.introMs).coerceIn(0.0,1.0) else if(stage=="中間") .25+.25*middleProgress else .96)
-        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=minOf(peak,point.speedLimitMmPerSec),
+        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=minOf(peak,point.speedLimitMmPerSec),motion=point.motion,
             move=if(point.plannedRest) null else LinearMove(point.targetPosition,point.suggestedHorizonMs),
             segmentEndMs=time+point.suggestedHorizonMs,plannedRest=point.plannedRest)
         return frame

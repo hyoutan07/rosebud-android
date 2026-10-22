@@ -347,7 +347,7 @@ class MainActivity : Activity() {
             val maximum=if(useMaximum) live.maximumMm else handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM).toDouble()
             if(maximum==null) append(" · 本体上限まで")
             else append(if(useMaximum) " · 本体上限 %.1fcm".format(Locale.ROOT,maximum/10.0) else " · 設定上限 %.1fcm".format(Locale.ROOT,maximum/10.0))
-            if(h.running) append("\n${HandyTrack.names.getOrElse(h.pattern) { "動作" }} · 保持 ${h.ageMs/1000}秒"+
+            if(h.running) append("\n${h.motion.ifEmpty { HandyTrack.names.getOrElse(h.pattern) { "動作" } }} · 保持 ${h.ageMs/1000}秒"+
                 if(h.plannedRest) " · 休憩" else " · 指定速度 %.0fmm/秒".format(Locale.ROOT,h.speedMmPerSec))
         }
         val busy=live.running || live.trialActive || live.stopping || live.connecting

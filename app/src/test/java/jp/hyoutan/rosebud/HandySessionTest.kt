@@ -208,3 +208,12 @@ class HandyMaximumRangeTest {
         org.junit.Assert.assertEquals(118.0,wideCommand.targetMm,0.0)
     }
 }
+
+class HandyMechanicalRangeTest {
+    @org.junit.Test fun expandingTheUpperEndpointPreservesThePreviousLowerFloor() {
+        val bounds=HandyBounds.create(0.0,123.992996,87.0,true,5.0)
+        org.junit.Assert.assertEquals(6.0,bounds.target(0.0),0.0)
+        org.junit.Assert.assertEquals(122.992996,bounds.target(1.0),.000001)
+        org.junit.Assert.assertTrue(bounds.streamCommand(50.0,1.0,200,32.0).durationMs>=2281)
+    }
+}

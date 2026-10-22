@@ -49,7 +49,7 @@ class HandyService : Service() {
                 "device_maximum_mm" to (value.maximumMm ?: org.json.JSONObject.NULL),
                 "use_device_maximum" to value.useDeviceMaximum,
                 "stage" to value.frame.stage, "elapsed_ms" to value.frame.elapsedMs,
-                "pattern" to value.frame.pattern,
+                "pattern" to value.frame.pattern,"motion" to value.frame.motion,
                 "requested_speed_mm_s" to (if (track != null) value.frame.speedMmPerSec else org.json.JSONObject.NULL),
                 "actual_speed_mm_s" to (state?.speedMmPerSec ?: org.json.JSONObject.NULL),
                 "last_target_mm" to (lastTargetMm ?: org.json.JSONObject.NULL)))
@@ -73,6 +73,7 @@ class HandyService : Service() {
             foreground()
             when (intent.action) {
                 ACTION_CONNECT -> connect()
+                ACTION_REMOVE_END_BUFFER -> removeEndBuffer()
                 ACTION_DISCONNECT -> stopMotion("切断中", disconnect = true)
                 ACTION_START -> if (track == null && !app.handyState.stopping) beginScenario(intent)
                 ACTION_TRIAL -> beginTrial(intent)
@@ -98,7 +99,7 @@ class HandyService : Service() {
         ble.connect(useDeviceMaximum()) { received ->
             if (epoch != generation || destroyed) return@connect
             state = received
-            val upper = HandyBounds.create(received.minimumMm,received.maximumMm,readUpper(),useDeviceMaximum()).upperMm
+            val upper = createBounds(received).upperMm
             update { it.copy(connected = true, connecting = false, stopping = false, positionMm = received.positionMm,
                 minimumMm = received.minimumMm, maximumMm = received.maximumMm, upperMm = upper,useDeviceMaximum = useDeviceMaximum(),
                 status = "接続しました。開始するまで動きません", error = null) }
@@ -107,6 +108,40 @@ class HandyService : Service() {
 
     private fun useDeviceMaximum() = getSharedPreferences("handy_connection",MODE_PRIVATE).getBoolean("use_device_maximum",true)
     private fun readUpper(): Double = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", HandyLimits.DEFAULT_UPPER_MM).toDouble()
+    private fun createBounds(received: HandyDeviceState): HandyBounds = HandyBounds.create(
+        received.minimumMm,received.maximumMm,readUpper(),useDeviceMaximum(),
+        getSharedPreferences("handy_connection",MODE_PRIVATE).getFloat("minimum_mm",received.minimumMm.toFloat()).toDouble())
+
+    private fun removeEndBuffer() {
+        ready()
+        val epoch=++generation
+        update { it.copy(stopping=true,error=null,status="停止と終端余白の設定を確認しています") }
+        fun inspectStopped() {
+            if(epoch!=generation || destroyed || leaving) return
+            ble.readState { before ->
+                if(epoch!=generation || destroyed || leaving) return@readState
+                if(kotlin.math.abs(before.speedMmPerSec)>.1) { main.postDelayed({inspectStopped()},250);return@readState }
+                // Preserve the existing lower end: this request expands only the upper travel.
+                val prefs=getSharedPreferences("handy_connection",MODE_PRIVATE)
+                if(!prefs.contains("minimum_mm")) prefs.edit().putFloat("minimum_mm",before.minimumMm.toFloat()).apply()
+                ble.removeEndBuffer { received ->
+                    if(epoch!=generation || destroyed || leaving) return@removeEndBuffer
+                    prefs.edit().putBoolean("use_device_maximum",true).apply()
+                    state=received
+                    val envelope=createBounds(received)
+                    update { it.copy(stopping=false,connected=true,positionMm=received.positionMm,
+                        minimumMm=received.minimumMm,maximumMm=received.maximumMm,upperMm=envelope.upperMm,
+                        useDeviceMaximum=true,status="終端余白を0mmに変更しました。開始するまで動きません",error=null) }
+                }
+            }
+        }
+        ble.stop { accepted ->
+            if(epoch!=generation || destroyed || leaving) return@stop
+            if(!accepted) {fail("停止応答を確認できませんでした");return@stop}
+            inspectStopped()
+        }
+    }
+
     private fun ready() {
         require(app.handyState.connected && !app.handyState.connecting && !app.handyState.stopping) { "Handyに接続してから開始してください" }
         require(!app.handyState.running && !app.handyState.trialActive) { "先に現在の動作を停止してください" }
@@ -162,7 +197,7 @@ class HandyService : Service() {
                 received ->
                 if (epoch != generation || destroyed || leaving) return@readState
                 try {
-                    val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper(),useDeviceMaximum())
+                    val envelope = createBounds(received)
                     val position = HandyStartReadiness.position(envelope,received,now())
                     ProbeRepository.get(this).controlEvent("handy_prepare_sample", mapOf(
                         "position_mm" to received.positionMm,"speed_mm_s" to received.speedMmPerSec,
@@ -264,7 +299,7 @@ class HandyService : Service() {
             val sound = if (follow) app.handySound else SoundFeatures()
             val frame = checkNotNull(track).sampleTrajectory(now(), sound, envelope.normalized(received.positionMm),
                 envelope.targetMaximumMm - envelope.targetMinimumMm, cadence.horizonMs())
-            update { it.copy(frame = frame, status = if (frame.weak) "Handyだけ弱めています" else "${frame.stage}：${HandyTrack.names[frame.pattern]}") }
+            update { it.copy(frame = frame, status = if (frame.weak) "Handyだけ弱めています" else "${frame.stage}：${frame.motion.ifEmpty { HandyTrack.names[frame.pattern] }}") }
             val move = frame.move
             if (move == null) {
                 // Explicit pattern rests let the last bounded command finish; no mode stop/restart.
@@ -428,6 +463,7 @@ class HandyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_REMOVE_END_BUFFER = "jp.hyoutan.rosebud.handy.REMOVE_END_BUFFER"
         const val ACTION_CONNECT = "jp.hyoutan.rosebud.handy.CONNECT"
         const val ACTION_DISCONNECT = "jp.hyoutan.rosebud.handy.DISCONNECT"
         const val ACTION_START = "jp.hyoutan.rosebud.handy.START"

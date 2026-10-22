@@ -13,7 +13,7 @@ import android.os.SystemClock
 import java.util.ArrayDeque
 import java.util.UUID
 
-/** One explicit BLE session. No reconnect, mode change, calibration or motor settings write. Maximum stroke may be reset to 0..1 while stopped. */
+/** One explicit BLE session. No reconnect, mode change or calibration. Maximum stroke and explicit end-buffer configuration are stopped operations. */
 @SuppressLint("MissingPermission")
 internal class HandyBleTransport(
     context: Context,
@@ -178,6 +178,21 @@ internal class HandyBleTransport(
             readRange()
         } else readRange()
     }
+    /** Explicit one-time user request; caller has stopped and read speed zero. */
+    fun removeEndBuffer(done: (HandyDeviceState) -> Unit) = dispatch {
+        send(2003) { before ->
+            ProbeRepository.get(context).controlEvent("handy_end_buffer_before",before.values)
+            val oldBuffer=before.values["setting3"]
+            if(oldBuffer==null || oldBuffer !in 0.0..100.0) { fail("本体の終端余白を確認できませんでした");return@send }
+            fun finish(after: HandyRpc.Reply) {
+                ProbeRepository.get(context).controlEvent("handy_end_buffer_after",after.values)
+                if(!HandyEndBufferChange.verified(before,after)) { fail("終端余白以外の設定が変わっていないか確認できませんでした");return }
+                refreshStroke(true) { readState(done=done) }
+            }
+            if(oldBuffer==0.0) finish(before)
+            else send(2004) { send(2003) { after -> finish(after) } }
+        }
+    }
     private fun preflight() {
         minimum = null; maximum = null
         onState("Handyの停止・範囲・状態を確認しています。")
@@ -185,6 +200,7 @@ internal class HandyBleTransport(
             if (!accepted || closing) return@stop
             refreshStroke(fullStrokeRequested) {
                 send(2003) { settings ->
+                    ProbeRepository.get(context).controlEvent("handy_slider_settings",settings.values)
                     val speed = settings.values["setting6"] ?: 0.0
                     if (!speed.isFinite() || speed <= 0 || speed > 10000) { fail("Handyの速度設定を確認できませんでした。"); return@send }
                     val maxSpeed = settings.values["setting7"] ?: 0.0
@@ -313,7 +329,9 @@ internal class HandyBleTransport(
             pending = null; rpcTimer?.let(main::removeCallbacks); rpcTimer = null
             request.done(reply)
             pump()
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            ProbeRepository.get(context).controlEvent("handy_rpc_rejection",mapOf("method" to request.method,
+                "reason" to (e.message ?: "invalid_reply"),"reply_hex" to bytes.take(512).joinToString("") { "%02x".format(it.toInt() and 255) }))
             if (request.unavailable != null) unreadable(request, "invalid_read_reply")
             else fail("Handyからの応答を確認できませんでした。")
         }

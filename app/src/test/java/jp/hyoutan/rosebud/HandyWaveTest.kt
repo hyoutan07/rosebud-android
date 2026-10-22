@@ -212,7 +212,8 @@ class HandyWaveTest {
                 val frame=track.sampleTrajectory(time,SoundFeatures(),.5,80.0)
                 if(frame.move!=null) {
                     if(stage=="中間") assertTrue(frame.speedLimitMmPerSec<=130)
-                    else assertTrue(frame.speedLimitMmPerSec>=300)
+                    else if(frame.motion=="全幅往復") assertTrue(frame.speedLimitMmPerSec>=300)
+                    else assertTrue(frame.speedLimitMmPerSec in 32.0..400.0)
                     moving++
                 }
             }
@@ -254,6 +255,43 @@ class HandyWaveTest {
         assertTrue(finish.running)
         assertEquals("フィニッシュ",finish.stage)
         assertEquals(before.move,finish.move)
+    }
+
+    @Test fun expandedRepertoireHasDistinctUpperLowerAndPartialTravelEndpoints() {
+        val seen=mutableSetOf<String>();var endpoints=0
+        for(pattern in listOf(0,3,5,7)) {
+            val wave=HandyWave(25+pattern.toLong(),.5,0)
+            for(time in 0L..180000L step 20) {
+                val p=wave.sample(time,pattern,110.0,117.0,fullStrokeChance=0.0)
+                assertTrue(p.position in 0.0..1.0 && p.targetPosition in 0.0..1.0)
+                if(!p.plannedRest && p.suggestedHorizonMs<200) {
+                    seen+=p.motion;endpoints++
+                    when(p.motion) {
+                        "下側を細かく" -> assertTrue(p.targetPosition in .01.. .21)
+                        "上側を細かく" -> assertTrue(p.targetPosition in .79.. .99)
+                        "下から中間" -> assertTrue(p.targetPosition in .01.. .13 || p.targetPosition in .39.. .63)
+                        "中間から上" -> assertTrue(p.targetPosition in .37.. .59 || p.targetPosition in .87.. .99)
+                    }
+                }
+            }
+        }
+        assertTrue(seen.containsAll(HandyWave.motionNames.drop(1)))
+        assertTrue(endpoints>200)
+    }
+    @Test fun smallWavesRepeatInClustersInsteadOfOneIsolatedTinyLeg() {
+        val wave=HandyWave(95,.5,0);var lastMotion="";var direction=0;var turns=0;var cluster=false
+        for(time in 0L..180000L step 5) {
+            val p=wave.sample(time,5,100.0,117.0,fullStrokeChance=0.0)
+            val sign=if(p.velocityPerSec>1e-8) 1 else if(p.velocityPerSec< -1e-8) -1 else 0
+            if(p.motion!=lastMotion) {turns=0;direction=0}
+            if(p.motion in listOf("下側を細かく","上側を細かく") && sign!=0) {
+                if(direction!=0 && direction!=sign) turns++
+                if(turns>=4) cluster=true
+                direction=sign
+            }
+            lastMotion=p.motion
+        }
+        assertTrue(cluster)
     }
 
 }

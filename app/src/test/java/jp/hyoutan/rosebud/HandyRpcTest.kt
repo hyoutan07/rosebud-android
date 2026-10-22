@@ -35,6 +35,11 @@ class HandyRpcTest {
         assertEquals(32.0, settings.values["setting6"]!!, 0.0)
         assertEquals(400.0, settings.values["setting7"]!!, 0.0)
     }
+    @Test fun firmwareErrorReasonIsAvailableForSettingDiagnosis() {
+        val payload=HandyRpc.uint(1,5)+HandyRpc.bytes(2,"setting blocked".toByteArray())
+        val reply=HandyRpc.reply(response(extra=HandyRpc.bytes(2,payload)))!!
+        assertEquals(5,reply.errorCode);assertEquals("setting blocked",reply.errorMessage)
+    }
     @Test fun errorPresenceFailsEvenWhenFirmwareCodeIsZero() {
         val reply = HandyRpc.reply(response(extra = HandyRpc.bytes(2, HandyRpc.uint(1, 0))))!!
         rejected { HandyRpc.validate(reply, id, 715) }
@@ -62,7 +67,7 @@ class HandyRpcTest {
         rejected { HandyRpc.fields(ByteArray(4097)) }
     }
     @Test fun onlyWhitelistedReadAndMotionMethodsCanBeEncoded() {
-        rejected { HandyRpc.request(id, 2004) }
+        rejected { HandyRpc.request(id, 2005) }
         rejected { HandyRpc.request(id, 715, 5.0, 1000) }
         rejected { HandyRpc.request(1, 715) }
         rejected { HandyRpc.request(id, 743, 5.0, 0) }
@@ -91,5 +96,26 @@ class HandyFullStrokeRpcTest {
         assertEquals(119.0,full.values["maximumMm"]!!,0.0)
         assertFalse(HandyStrokeRange.isFull(reply(840,0f,.73f)))
         assertFalse(HandyStrokeRange.isFull(reply(840,.2f,1f)))
+    }
+}
+
+class HandyEndBufferRpcTest {
+    @Test fun writesOnlyEndBufferZeroWithItsPresenceFlag() {
+        val outer=HandyRpc.fields(HandyRpc.request(0x41234567L,2004))
+        val request=HandyRpc.fields(outer.single { it.tag==2 }.bytes)
+        val fields=HandyRpc.fields(request.single { it.tag==2004 }.bytes)
+        assertEquals(setOf(3,19),fields.map { it.tag }.toSet())
+        assertEquals(0L,fields.single { it.tag==3 }.number)
+        assertEquals(1L,fields.single { it.tag==19 }.number)
+        val ack=HandyRpc.Reply(0x41234567L,false,null,1,emptyMap())
+        assertTrue(HandyRpc.validate(ack,0x41234567L,2004))
+    }
+    @Test fun readbackRejectsAnyOtherChangedSetting() {
+        val values=mapOf("xLimitStart" to 0.0,"xLimitStop" to 123.993,"setting3" to 5.0,"setting6" to 32.0,"setting7" to 400.0)
+        val before=HandyRpc.Reply(1,false,2003,1,values)
+        val after=before.copy(values=values+("setting3" to 0.0))
+        assertTrue(HandyEndBufferChange.verified(before,after))
+        assertFalse(HandyEndBufferChange.verified(before,after.copy(values=after.values+("setting7" to 500.0))))
+        assertFalse(HandyEndBufferChange.verified(before,before))
     }
 }

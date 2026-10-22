@@ -4,12 +4,12 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** Minimal firmware 4.3 RPC schema confirmed by the standalone BLE probe. No settings writes. */
+/** Minimal firmware 4.3 RPC schema confirmed by the standalone BLE probe. The only settings write is an explicit zero end-buffer command. */
 internal object HandyRpc {
-    data class Reply(val id: Long, val error: Boolean, val result: Int?, val transport: Int, val values: Map<String, Double>)
+    data class Reply(val id: Long, val error: Boolean, val result: Int?, val transport: Int, val values: Map<String, Double>, val errorCode: Int? = null, val errorMessage: String? = null)
     internal data class Field(val tag: Int, val wire: Int, val number: Long = 0, val bytes: ByteArray = byteArrayOf())
     fun request(id: Long, method: Int, targetMm: Double? = null, durationMs: Long? = null): ByteArray {
-        require(id in 0x40000000L..0xffffffffL && method in setOf(715, 743, 840, 841, 842, 2003))
+        require(id in 0x40000000L..0xffffffffL && method in setOf(715, 743, 840, 841, 842, 2003, 2004))
         val params = if (method == 743) {
             require(targetMm != null && targetMm.isFinite() && targetMm.toFloat().isFinite())
             require(durationMs != null && durationMs in 1..120000L)
@@ -17,6 +17,9 @@ internal object HandyRpc {
         } else if(method==841) {
             require(targetMm==null && durationMs==null)
             float(1,0f)+float(2,1f) // Only the user-requested complete normalized stroke, never calibration/settings.
+        } else if(method==2004) {
+            require(targetMm==null && durationMs==null)
+            uint(3,0)+uint(19,1) // xEndBuffer=0; hasXEndBuffer=true. No other settings flags.
         } else { require(targetMm == null && durationMs == null); byteArrayOf() }
         return uint(1, 1) + bytes(2, uint(2, id) + bytes(method, params))
     }
@@ -26,7 +29,10 @@ internal object HandyRpc {
         require(envelope.count { it.tag in 2..5 } == 1) { "invalid_envelope" }
         val inner = fields(one(envelope, 4, 2, true)!!.bytes)
         val id = number(inner, 1, true)
-        val error = one(inner, 2, 2)?.let { fields(it.bytes); true } ?: false
+        val errorFields = one(inner, 2, 2)?.let { fields(it.bytes) }
+        val error = errorFields!=null
+        val errorCode = errorFields?.let { one(it,1,0)?.number?.toInt() ?: 0 }
+        val errorMessage = errorFields?.let { one(it,2,2)?.bytes?.toString(Charsets.UTF_8) }
         val transport = number(inner, 3).also { require(it in 0..5) }.toInt()
         val result = inner.filter { it.tag !in 1..3 }.also { require(it.size <= 1) }.firstOrNull()
         val values = mutableMapOf<String, Double>()
@@ -40,14 +46,18 @@ internal object HandyRpc {
                 else -> emptyList()
             }
             names.forEachIndexed { i, name -> values[name] = floatValue(fs, i + 1) }
-            if (it.tag == 2003) for (tag in 3..9) values["setting$tag"] = number(fs, tag).toDouble()
+            if (it.tag == 2003) {
+                for(tag in 3..12) values["setting$tag"]=number(fs,tag).toDouble()
+                for(tag in 14..16) values["setting$tag"]=floatValue(fs,tag)
+                for(tag in 17..21) values["setting$tag"]=number(fs,tag).toDouble()
+            }
         }
-        return Reply(id, error, result?.tag, transport, values)
+        return Reply(id, error, result?.tag, transport, values,errorCode,errorMessage)
     }
     /** An unrelated (late) reply is ignored; a matching error is always a failure, even code zero. */
     fun validate(reply: Reply, id: Long, method: Int): Boolean {
         if (reply.id != id) return false
-        require(!reply.error) { "firmware_error" }
+        require(!reply.error) { "firmware_error:${reply.errorCode}:${reply.errorMessage.orEmpty()}" }
         require(reply.result == if (method in setOf(840, 841, 842, 2003)) method else null) { "unexpected_result" }
         return true
     }

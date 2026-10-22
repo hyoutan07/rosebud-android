@@ -37,10 +37,11 @@ internal data class HandyBounds(val minimumMm: Double, val upperMm: Double) {
         return HandyStreamCommand(target, duration)
     }
     companion object {
-        fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double, useDeviceMaximum: Boolean = false): HandyBounds {
+        fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double, useDeviceMaximum: Boolean = false, minimumFloor: Double = deviceMinimum): HandyBounds {
             require(deviceMinimum.isFinite() && deviceMaximum.isFinite() && userUpper.isFinite())
             require(userUpper in 1.0..200.0) { "上限は1〜200mmで入力してください" }
-            return HandyBounds(deviceMinimum, if(useDeviceMaximum) deviceMaximum else minOf(deviceMaximum, userUpper))
+            require(minimumFloor.isFinite())
+            return HandyBounds(maxOf(deviceMinimum,minimumFloor), if(useDeviceMaximum) deviceMaximum else minOf(deviceMaximum, userUpper))
         }
     }
 }
@@ -116,4 +117,10 @@ internal object HandyStrokeRange {
         val high=reply.values["max"] ?: return false
         return low.isFinite() && high.isFinite() && abs(low)<=.0001 && abs(high-1.0)<=.0001
     }
+}
+
+internal object HandyEndBufferChange {
+    fun verified(before: HandyRpc.Reply, after: HandyRpc.Reply): Boolean =
+        before.result==2003 && after.result==2003 && after.values["setting3"]==0.0 &&
+            before.values.filterKeys { it!="setting3" }==after.values.filterKeys { it!="setting3" }
 }
