@@ -15,7 +15,7 @@ internal data class HandyWaveFrame(val position: Double, val velocityPerSec: Dou
 internal class HandyWave(seed: Long, initialPosition: Double, private val beganAt: Long) {
     companion object { val motionNames=listOf("全幅往復","下側を細かく","上側を細かく","下から中間","中間から上","中央の波") }
     private val random = SeededRandom(seed xor 0x57415645L)
-    private data class Segment(val from: Double, val to: Double, val began: Long, val duration: Long, val rest: Boolean, val speedLimit: Double, val motif: Int) {
+    private data class Segment(val from: Double, val to: Double, val began: Long, val duration: Long, val rest: Boolean, val speedLimit: Double, val motif: Int, val upperFast: Boolean = false) {
         val end get() = began+duration
         fun at(time: Long): Pair<Double,Double> {
             val u=((time-began).toDouble()/duration).coerceIn(0.0,1.0)
@@ -43,6 +43,9 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
     private var nextRestAt: Long? = null
     private var restFamily=-1
     private var wasWeak=false
+    private val burstRandom=SeededRandom(seed xor 0x5550504552L)
+    private var nextUpperFastAt=Long.MAX_VALUE
+    private var upperFastUntil=0L
 
     fun sample(time: Long, pattern: Int, peakSpeedMmPerSec: Double, physicalSpanMm: Double,
         lower: Double=0.0, upper: Double=1.0, weak: Boolean=false, horizonMs: Long=200, currentNormalized: Double?=null, fullStrokeChance: Double = if(pattern<3) .12 else if(pattern<10) .40 else .96): HandyWaveFrame {
@@ -61,7 +64,11 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
         }
         if(nextRestAt==null || restFamily!=family || wasWeak && !weak) {
             nextRestAt=time+activeBlockMs()
-            if(restFamily!=family) motifRemaining=0
+            if(restFamily!=family) {
+                motifRemaining=0
+                upperFastUntil=0
+                nextUpperFastAt=if(family==1) time+45000L+(burstRandom.next()*45000).toLong() else Long.MAX_VALUE
+            }
             restFamily=family
         }
         wasWeak=weak
@@ -69,7 +76,19 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
             val previous=segments.peekLast()
             val from=previous?.to ?: anchorPosition
             val began=previous?.end ?: anchorAt
-            val rest=family!=2 && previous!=null && !previous.rest && !weak && began>=checkNotNull(nextRestAt)
+            if(family==1 && !weak && began>=nextUpperFastAt) {
+                upperFastUntil=began+30000L
+                nextUpperFastAt=Long.MAX_VALUE
+                motifRemaining=0
+            }
+            if(upperFastUntil>0 && began>=upperFastUntil) {
+                upperFastUntil=0
+                nextUpperFastAt=began+90000L+(burstRandom.next()*60000).toLong()
+                nextRestAt=began+activeBlockMs()
+                motifRemaining=0
+            }
+            val upperFast=family==1 && !weak && began<upperFastUntil
+            val rest=!upperFast && family!=2 && previous!=null && !previous.rest && !weak && began>=checkNotNull(nextRestAt)
             if(rest) {
                 val pause=when(family) {
                     0 -> 1000L+(random.next()*1000).toLong()
@@ -81,7 +100,7 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
                 return
             }
             // Keep small upper/lower waves in short clusters, instead of one isolated short leg.
-            if(!weak && motifRemaining<=0) {
+            if(!weak && !upperFast && motifRemaining<=0) {
                 motif=if(random.next()<fullStrokeChance) 0 else {
                     val choices=when(pattern) {
                         1,3,11 -> listOf(2,2,4,5)
@@ -93,13 +112,16 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
                 }
                 motifRemaining=if(family==2 || motif==0) 2 else if(motif in 1..2) 6+(random.next()*7).toInt() else 2+(random.next()*3).toInt()
             }
-            val whole=!weak && motif==0
+            val whole=!weak && !upperFast && motif==0
             val width=upper-lower
             val low: Double
             val high: Double
             if(weak) {
                 val center=((from-lower)/width).coerceIn(.09,.91)
                 low=(center-.07).coerceAtLeast(.01);high=(center+.07).coerceAtMost(.99)
+            } else if(upperFast) {
+                // A wider upper window keeps the faster movement visible over BLE lookahead.
+                low=.68+.07*random.next();high=.95+.04*random.next()
             } else when(motif) {
                 0 -> { low=0.0;high=1.0 }
                 1 -> { low=.015+.045*random.next();high=low+.06+.08*random.next() }
@@ -117,14 +139,14 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
             // Sensitive broad travel stays slow before finish, including transitions between local areas.
             val broad=abs(target-from)>=width*.75
             val broadLimit=if(family==0) 32.0 else if(family==1) 40.0 else peakSpeedMmPerSec
-            val localLimit=if(!weak && motif in 1..2) minOf(peakSpeedMmPerSec,if(family==0) 32.0 else if(family==1) 85.0 else 220.0) else peakSpeedMmPerSec
+            val localLimit=if(upperFast) 180.0+40*(.5+.5*kotlin.math.sin((began-(upperFastUntil-30000))/2300.0)) else if(!weak && motif in 1..2) minOf(peakSpeedMmPerSec,if(family==0) 32.0 else if(family==1) 85.0 else 220.0) else peakSpeedMmPerSec
             val limit=if(!weak && (whole || broad)) minOf(localLimit,broadLimit) else localLimit
             val peak=if(weak) 32.0 else limit*(.92+.08*random.next())
             // Rounded ramp maximum derivative=1/(1-.18). Keep a long fast middle within the physical peak.
-            val minimumDuration=if(!weak && motif in 1..2) 200.0 else 120.0
+            val minimumDuration=if(upperFast) 160.0 else if(!weak && motif in 1..2) 200.0 else 120.0
             val duration=ceil(max(minimumDuration,abs(target-from)*physicalSpanMm/(1-.18)/peak*1000)).toLong()
-            segments.addLast(Segment(from,target,began,duration,false,if(weak) 32.0 else limit,motif))
-            forward=!forward;count++;if(!weak) motifRemaining--
+            segments.addLast(Segment(from,target,began,duration,false,if(weak) 32.0 else limit,motif,upperFast))
+            forward=!forward;count++;if(!weak && !upperFast) motifRemaining--
         }
         var caughtUp=0
         while(segments.isEmpty() || checkNotNull(segments.peekLast()).end<=time+horizonMs) {
@@ -143,6 +165,6 @@ internal class HandyWave(seed: Long, initialPosition: Double, private val beganA
         val lookahead=minOf(time+horizonMs,current.end)
         val target=current.at(lookahead).first
         val travelHorizon=(lookahead-time).coerceAtLeast(50)
-        return HandyWaveFrame(position,velocity,abs(velocity)*physicalSpanMm,target,travelHorizon,current.rest,current.speedLimit,if(weak) "小さな波" else motionNames[current.motif])
+        return HandyWaveFrame(position,velocity,abs(velocity)*physicalSpanMm,target,travelHorizon,current.rest,current.speedLimit,if(weak) "小さな波" else if(current.upperFast) "上側を高速・30秒" else motionNames[current.motif])
     }
 }

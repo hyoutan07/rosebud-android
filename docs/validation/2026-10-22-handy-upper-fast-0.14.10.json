@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-22",
+  "version": "0.14.10",
+  "version_code": 28,
+  "tests": {
+    "tests": 220,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "build": "passed",
+  "lint_errors": 0,
+  "apk_sha256": "cfb7bb7f9f3949dafac6e5657d148abbbbaa2d1d1ef7590ef91e3ed6ebccbc90",
+  "installed_on": "CPH2199 Android12",
+  "control_preferences_unchanged": true,
+  "handy_connection_preferences_unchanged": true,
+  "configuration": {
+    "first_delay_ms": [
+      45000,
+      90000
+    ],
+    "passage_ms": 30000,
+    "normal_gap_ms": [
+      90000,
+      150000
+    ],
+    "lower_endpoint_normalized": [
+      0.68,
+      0.75
+    ],
+    "upper_endpoint_normalized": [
+      0.95,
+      0.99
+    ],
+    "speed_envelope_mm_s": [
+      180,
+      220
+    ],
+    "minimum_half_wave_ms": 160,
+    "broad_transition_limit_mm_s": 40
+  },
+  "movement_started_by_agent": false,
+  "physical_feel": "not_verified",
+  "final_state": {
+    "utc": "2026-10-22T02:56:54.873068Z",
+    "elapsed_realtime_ms": 224936258,
+    "event": "handy_state",
+    "app_version": "0.14.10",
+    "connected": true,
+    "connecting": false,
+    "running": false,
+    "trial_active": false,
+    "stopping": false,
+    "status": "接続しました。開始するまで動きません",
+    "error": "",
+    "position_mm": 69.33333587646484,
+    "upper_mm": 118.99299621582031,
+    "device_minimum_mm": 5,
+    "device_maximum_mm": 118.99299621582031,
+    "use_device_maximum": true,
+    "stage": "待機",
+    "elapsed_ms": 0,
+    "pattern": 0,
+    "motion": "",
+    "requested_speed_mm_s": null,
+    "actual_speed_mm_s": 0,
+    "last_target_mm": null
+  },
+  "settings_readback": {
+    "utc": "2026-10-22T02:56:54.757224Z",
+    "elapsed_realtime_ms": 224936142,
+    "event": "handy_slider_settings",
+    "app_version": "0.14.10",
+    "xLimitStart": 0,
+    "xLimitStop": 123.99299621582031,
+    "setting3": 5,
+    "setting4": 10,
+    "setting5": 200,
+    "setting6": 32,
+    "setting7": 400,
+    "setting8": 45,
+    "setting9": 1600,
+    "setting10": 0,
+    "setting11": 10,
+    "setting12": 80,
+    "setting14": 0,
+    "setting15": 0,
+    "setting16": 1,
+    "setting17": 0,
+    "setting18": 10,
+    "setting19": 0,
+    "setting20": 0,
+    "setting21": 0
+  }
+}

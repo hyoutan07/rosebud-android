@@ -121,6 +121,8 @@ class HandyWaveTest {
             var direction=0;var previous=.5;var turns=0;var exact=0
             for(time in 0L..240000L step 5) {
                 val p=wave.sample(time,pattern,150.0,80.0)
+                // Compare the normal repertoire; the new timed upper passage is deliberately local.
+                if(p.motion=="上側を高速・30秒") {direction=0;previous=p.position;continue}
                 val sign=if(p.velocityPerSec>1e-8) 1 else if(p.velocityPerSec< -1e-8) -1 else 0
                 if(sign!=0 && direction!=0 && sign!=direction) {
                     turns++;if(previous<.001 || previous>.999) exact++
@@ -292,6 +294,52 @@ class HandyWaveTest {
             lastMotion=p.motion
         }
         assertTrue(cluster)
+    }
+
+    @Test fun upperFastPassagesLastThirtySecondsAndAreOccasionalOnlyInMiddle() {
+        for(pattern in listOf(1,5,11)) {
+            val wave=HandyWave(41,.5,0)
+            val starts=mutableListOf<Long>();val durations=mutableListOf<Long>()
+            var started:Long?=null;var peak=0.0
+            for(time in 0L..420000L step 20) {
+                val p=wave.sample(time,pattern,100.0,112.0)
+                if(p.motion=="上側を高速・30秒") {
+                    assertEquals(5,pattern)
+                    assertFalse(p.plannedRest)
+                    if(started==null) {started=time;starts+=time}
+                    if(time-started>3000) assertTrue(p.position in .67.. .991)
+                    assertTrue(p.speedMmPerSec<=220.001)
+                    peak=maxOf(peak,p.speedMmPerSec)
+                } else if(started!=null) {durations+=time-started;started=null}
+            }
+            if(pattern==5) {
+                assertTrue(starts.size in 2..4)
+                assertTrue(starts.first() in 45000L..95000L)
+                assertTrue(durations.all { it in 29500L..31500L })
+                assertTrue(starts.zipWithNext().all { (a,b) -> b-a>=119000 })
+                assertTrue(peak>150)
+            } else assertTrue(starts.isEmpty())
+        }
+    }
+    @Test fun upperFastLimitReachesServiceAndStageExitReturnsToNormalWave() {
+        val track=HandyTrack(41);track.start(0);track.selectStage("中間",0)
+        var began:Long?=null
+        for(time in 0L..100000L step 50) {
+            val f=track.sampleTrajectory(time,SoundFeatures(),.5,112.0)
+            if(f.motion=="上側を高速・30秒" && f.speedLimitMmPerSec>130) {
+                began=time
+                assertTrue(f.speedLimitMmPerSec>130)
+                break
+            }
+        }
+        assertNotNull(began)
+        val at=checkNotNull(began)
+        track.selectStage("はじめ",at)
+        for(time in at+2000..at+45000 step 50) {
+            val f=track.sampleTrajectory(time,SoundFeatures(),.5,112.0)
+            assertNotEquals("上側を高速・30秒",f.motion)
+            assertTrue(f.speedLimitMmPerSec<=32.0)
+        }
     }
 
 }

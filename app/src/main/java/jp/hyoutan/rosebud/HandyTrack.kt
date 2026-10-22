@@ -142,7 +142,7 @@ internal class HandyTrack(seed: Long, val settings: HandySettings = HandySetting
         val planner=wave ?: HandyWave(waveSeed,currentNormalized.coerceIn(settings.lower,settings.upper),time).also { wave=it }
         val point=planner.sample(time,pattern,peak,physicalSpanMm,settings.lower,settings.upper,weak,horizonMs,currentNormalized,
             if(stage=="はじめ") .08+.10*(progress.toDouble()/settings.introMs).coerceIn(0.0,1.0) else if(stage=="中間") .25+.25*middleProgress else .96)
-        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=minOf(peak,point.speedLimitMmPerSec),motion=point.motion,
+        frame=frame.copy(pattern=pattern,ageMs=age,speedMmPerSec=point.speedMmPerSec,speedLimitMmPerSec=point.speedLimitMmPerSec,motion=point.motion,
             move=if(point.plannedRest) null else LinearMove(point.targetPosition,point.suggestedHorizonMs),
             segmentEndMs=time+point.suggestedHorizonMs,plannedRest=point.plannedRest)
         return frame
