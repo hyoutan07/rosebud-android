@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-22",
+  "appVersion": "0.14.7",
+  "reviewType": "read-only log review; no motion/stop/connection command issued",
+  "windowUtc": [
+    "2026-10-22T01:00:16.470487Z",
+    "2026-10-22T01:03:56.709775Z"
+  ],
+  "runDurationSeconds": 174.173,
+  "stageChanges": 18,
+  "finishStageSelections": 9,
+  "firstContinuousFinishSeconds": 140.831,
+  "finishSamples": 178,
+  "finishActualSpeedMaxMmSec": 362.31884765625,
+  "finishActualSpeedMedianMmSec": 171.57911682128906,
+  "finishPositionRangeMm": [
+    5.333333492279053,
+    86.66667175292969
+  ],
+  "telemetryOrFailureEvents": 0,
+  "lastState": {
+    "utc": "2026-10-22T01:03:56.709775Z",
+    "elapsed_realtime_ms": 218158094,
+    "event": "handy_state",
+    "app_version": "0.14.7",
+    "connected": true,
+    "connecting": false,
+    "running": false,
+    "trial_active": false,
+    "stopping": false,
+    "status": "停止要求を送りました。停止要求は受理されました",
+    "error": "",
+    "position_mm": 42.66666793823242,
+    "upper_mm": 87,
+    "stage": "フィニッシュ",
+    "elapsed_ms": 910645,
+    "pattern": 11,
+    "requested_speed_mm_s": null,
+    "actual_speed_mm_s": 297.0885314941406,
+    "last_target_mm": 6
+  },
+  "assessment": "Repeated stage changes and fast finish completed without observed failure; supports stage-switch fix. No invalid telemetry occurred, so recovery from invalid reads and all original failure causes remain unproven.",
+  "physicalStopVerification": "Only stop-request acknowledgement recorded; cached actual_speed in final state is not a post-stop physical reading."
+}

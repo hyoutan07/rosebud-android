@@ -1,0 +1,230 @@
+[
+  {
+    "utc": "2026-10-22T01:01:02.386282Z",
+    "elapsed_realtime_ms": 217983771,
+    "event": "handy_state",
+    "app_version": "0.14.7",
+    "connected": true,
+    "connecting": false,
+    "running": true,
+    "trial_active": false,
+    "stopping": false,
+    "status": "シナリオ実行中",
+    "error": "",
+    "position_mm": 5.333333492279053,
+    "upper_mm": 87,
+    "stage": "待機",
+    "elapsed_ms": 0,
+    "pattern": 0,
+    "requested_speed_mm_s": 32,
+    "actual_speed_mm_s": 0,
+    "last_target_mm": null
+  },
+  {
+    "utc": "2026-10-22T01:01:03.600409Z",
+    "elapsed_realtime_ms": 217984985,
+    "event": "handy_state",
+    "app_version": "0.14.7",
+    "connected": true,
+    "connecting": false,
+    "running": true,
+    "trial_active": false,
+    "stopping": false,
+    "status": "フィニッシュへ切り替えました",
+    "error": "",
+    "position_mm": 27.33333396911621,
+    "upper_mm": 87,
+    "stage": "フィニッシュ",
+    "elapsed_ms": 900002,
+    "pattern": 0,
+    "requested_speed_mm_s": 30.29439602842535,
+    "actual_speed_mm_s": 29.73402976989746,
+    "last_target_mm": 41.5995506609232
+  },
+  {
+    "utc": "2026-10-22T01:01:03.598923Z",
+    "elapsed_realtime_ms": 217984984,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:24.431748Z",
+    "elapsed_realtime_ms": 218125816,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:25.600661Z",
+    "elapsed_realtime_ms": 218126985,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:26.918077Z",
+    "elapsed_realtime_ms": 218128303,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:27.604543Z",
+    "elapsed_realtime_ms": 218128989,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:27.973386Z",
+    "elapsed_realtime_ms": 218129358,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:28.486639Z",
+    "elapsed_realtime_ms": 218129871,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:30.824106Z",
+    "elapsed_realtime_ms": 218132209,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "はじめ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:31.577862Z",
+    "elapsed_realtime_ms": 218132962,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:32.051966Z",
+    "elapsed_realtime_ms": 218133437,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:33.417776Z",
+    "elapsed_realtime_ms": 218134802,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:33.877151Z",
+    "elapsed_realtime_ms": 218135262,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:35.160173Z",
+    "elapsed_realtime_ms": 218136545,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:35.597536Z",
+    "elapsed_realtime_ms": 218136982,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:43.197331Z",
+    "elapsed_realtime_ms": 218144582,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:44.196644Z",
+    "elapsed_realtime_ms": 218145581,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:45.337207Z",
+    "elapsed_realtime_ms": 218146722,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "中間",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:45.776631Z",
+    "elapsed_realtime_ms": 218147161,
+    "event": "handy_stage_change",
+    "app_version": "0.14.7",
+    "stage": "フィニッシュ",
+    "weak": false
+  },
+  {
+    "utc": "2026-10-22T01:03:56.559616Z",
+    "elapsed_realtime_ms": 218157944,
+    "event": "handy_state",
+    "app_version": "0.14.7",
+    "connected": true,
+    "connecting": false,
+    "running": false,
+    "trial_active": false,
+    "stopping": true,
+    "status": "停止要求を送りました",
+    "error": "",
+    "position_mm": 42.66666793823242,
+    "upper_mm": 87,
+    "stage": "フィニッシュ",
+    "elapsed_ms": 910645,
+    "pattern": 11,
+    "requested_speed_mm_s": null,
+    "actual_speed_mm_s": 297.0885314941406,
+    "last_target_mm": 6
+  },
+  {
+    "utc": "2026-10-22T01:03:56.709775Z",
+    "elapsed_realtime_ms": 218158094,
+    "event": "handy_state",
+    "app_version": "0.14.7",
+    "connected": true,
+    "connecting": false,
+    "running": false,
+    "trial_active": false,
+    "stopping": false,
+    "status": "停止要求を送りました。停止要求は受理されました",
+    "error": "",
+    "position_mm": 42.66666793823242,
+    "upper_mm": 87,
+    "stage": "フィニッシュ",
+    "elapsed_ms": 910645,
+    "pattern": 11,
+    "requested_speed_mm_s": null,
+    "actual_speed_mm_s": 297.0885314941406,
+    "last_target_mm": 6
+  }
+]
