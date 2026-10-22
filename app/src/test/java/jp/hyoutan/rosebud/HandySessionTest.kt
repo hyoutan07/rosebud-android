@@ -185,3 +185,26 @@ class HandyStartReadinessTest {
         org.junit.Assert.assertEquals(66.6961669921875,bounds.target(1.0),0.0)
     }
 }
+
+class HandyMaximumRangeTest {
+    @org.junit.Test fun maximumModeUsesReportedLimitInsteadOfOld87Millimetres() {
+        val bounds=HandyBounds.create(5.0,119.0,87.0,true)
+        org.junit.Assert.assertEquals(119.0,bounds.upperMm,0.0)
+        org.junit.Assert.assertEquals(6.0,bounds.target(0.0),0.0)
+        org.junit.Assert.assertEquals(118.0,bounds.target(1.0),0.0)
+    }
+    @org.junit.Test fun manualCapRemainsEditableAndNeverOverridesTheReportedLimit() {
+        org.junit.Assert.assertEquals(87.0,HandyBounds.create(5.0,119.0,87.0,false).upperMm,0.0)
+        org.junit.Assert.assertEquals(100.0,HandyBounds.create(5.0,100.0,120.0,false).upperMm,0.0)
+        org.junit.Assert.assertEquals(100.0,HandyBounds.create(5.0,100.0,87.0,true).upperMm,0.0)
+    }
+    @org.junit.Test fun widerStrokeExtendsTravelTimeInsteadOfIncreasingItsSpeed() {
+        val old=HandyBounds.create(5.0,119.0,87.0)
+        val wide=HandyBounds.create(5.0,119.0,87.0,true)
+        val oldCommand=old.streamCommand(6.0,1.0,200,32.0)
+        val wideCommand=wide.streamCommand(6.0,1.0,200,32.0)
+        org.junit.Assert.assertEquals(2500L,oldCommand.durationMs)
+        org.junit.Assert.assertEquals(3500L,wideCommand.durationMs)
+        org.junit.Assert.assertEquals(118.0,wideCommand.targetMm,0.0)
+    }
+}

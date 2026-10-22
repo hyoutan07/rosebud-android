@@ -69,3 +69,27 @@ class HandyRpcTest {
         rejected { HandyRpc.request(id, 743, 5.0, 120001) }
     }
 }
+
+class HandyFullStrokeRpcTest {
+    @Test fun fullStrokeCommandIsOnlyZeroToOneAndIsNotAMoveOrCalibration() {
+        val envelope=HandyRpc.fields(HandyRpc.request(0x41234567L,841))
+        val request=HandyRpc.fields(envelope.single { it.tag==2 }.bytes)
+        val params=HandyRpc.fields(request.single { it.tag==841 }.bytes)
+        assertEquals(setOf(1,2),params.map { it.tag }.toSet())
+        fun value(tag:Int)=java.nio.ByteBuffer.wrap(params.single { it.tag==tag }.bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN).float
+        assertEquals(0f,value(1),0f);assertEquals(1f,value(2),0f)
+        assertFalse(request.any { it.tag in listOf(743,843,2004) })
+    }
+    @Test fun acknowledgementAndReadbackMustContainCompleteNormalizedStroke() {
+        val id=0x41234567L
+        fun reply(method:Int,low:Float,high:Float):HandyRpc.Reply {
+            return HandyRpc.reply(HandyRpc.uint(1,3)+HandyRpc.bytes(4,HandyRpc.uint(1,id)+HandyRpc.bytes(method,
+                HandyRpc.float(1,low)+HandyRpc.float(2,high)+HandyRpc.float(3,5f)+HandyRpc.float(4,119f))))!!
+        }
+        val full=reply(841,0f,1f)
+        assertTrue(HandyRpc.validate(full,id,841));assertTrue(HandyStrokeRange.isFull(full))
+        assertEquals(119.0,full.values["maximumMm"]!!,0.0)
+        assertFalse(HandyStrokeRange.isFull(reply(840,0f,.73f)))
+        assertFalse(HandyStrokeRange.isFull(reply(840,.2f,1f)))
+    }
+}

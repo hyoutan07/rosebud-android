@@ -202,6 +202,7 @@ class MainActivity : Activity() {
     private val handyStages = linkedMapOf<String,Button>()
     private val handySliders = mutableListOf<SeekBar>()
     private lateinit var handyConnect: Button
+    private lateinit var handyUseMaximum: CheckBox
     private lateinit var handyUpper: EditText
     private lateinit var handyUpperSave: Button
     private fun stopEverything() {
@@ -269,7 +270,17 @@ class MainActivity : Activity() {
         button(R.string.handy_range_settings,panel) { settingsPanel.visibility = if(settingsPanel.visibility==View.GONE) View.VISIBLE else View.GONE }
         panel.addView(settingsPanel)
         label(getString(R.string.handy_bounds_note),settingsPanel,12f)
-        label("動かせる位置の上限（cm）",settingsPanel)
+        handyUseMaximum = CheckBox(this).apply {
+            text="本体の上限まで使う"
+            isChecked=handyPrefs.getBoolean("use_device_maximum",true)
+            minHeight=dp(48)
+            setOnCheckedChangeListener { _, checked ->
+                handyPrefs.edit().putBoolean("use_device_maximum",checked).apply()
+                renderHandy()
+            }
+        }
+        settingsPanel.addView(handyUseMaximum)
+        label("上限を指定する場合（cm）",settingsPanel)
         handyUpper = EditText(this).apply {
             inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             setText(HandyTrialPlan.number(handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM)/10.0))
@@ -332,7 +343,10 @@ class MainActivity : Activity() {
             if(findViewById<CheckBox>(R.id.audio_follow).isChecked && !control.audioReady) append("\n音に合わせる場合は、接続・設定で音声取得を開始してください")
             if(!live.error.isNullOrEmpty()) append("\n${live.error}")
             live.positionMm?.let { append("\n受信位置 %.1fmm".format(Locale.ROOT,it)) }
-            append(" · 設定上限 %.1fcm".format(Locale.ROOT,handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM)/10.0))
+            val useMaximum=handyPrefs.getBoolean("use_device_maximum",true)
+            val maximum=if(useMaximum) live.maximumMm else handyPrefs.getFloat("upper_mm",HandyLimits.DEFAULT_UPPER_MM).toDouble()
+            if(maximum==null) append(" · 本体上限まで")
+            else append(if(useMaximum) " · 本体上限 %.1fcm".format(Locale.ROOT,maximum/10.0) else " · 設定上限 %.1fcm".format(Locale.ROOT,maximum/10.0))
             if(h.running) append("\n${HandyTrack.names.getOrElse(h.pattern) { "動作" }} · 保持 ${h.ageMs/1000}秒"+
                 if(h.plannedRest) " · 休憩" else " · 指定速度 %.0fmm/秒".format(Locale.ROOT,h.speedMmPerSec))
         }
@@ -349,7 +363,8 @@ class MainActivity : Activity() {
             button.alpha=if(button.isEnabled || h.running && stage==h.stage) 1f else .45f
         }
         handySliders.forEach { it.isEnabled = !busy }
-        handyUpper.isEnabled = !busy;handyUpperSave.isEnabled = !busy
+        handyUseMaximum.isEnabled = !busy
+        handyUpper.isEnabled = !busy && !handyUseMaximum.isChecked;handyUpperSave.isEnabled = !busy && !handyUseMaximum.isChecked
         fun rosebudState() = when { control.stopping -> "停止確認中"; control.paused -> "一時停止"; control.active -> "進行中"; else -> "待機" }
         val handyState = when { live.stopping->"停止確認中";live.trialActive->"テスト中";h.weak->"弱化・時計保留";h.running->"進行中";live.connected->"接続済み";live.connecting->"接続中";else->"未接続" }
         setText(R.id.device_rosebud,"ROSEBUD\n${rosebudState()}")

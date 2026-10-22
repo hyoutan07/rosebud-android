@@ -9,11 +9,14 @@ internal object HandyRpc {
     data class Reply(val id: Long, val error: Boolean, val result: Int?, val transport: Int, val values: Map<String, Double>)
     internal data class Field(val tag: Int, val wire: Int, val number: Long = 0, val bytes: ByteArray = byteArrayOf())
     fun request(id: Long, method: Int, targetMm: Double? = null, durationMs: Long? = null): ByteArray {
-        require(id in 0x40000000L..0xffffffffL && method in setOf(715, 743, 840, 842, 2003))
+        require(id in 0x40000000L..0xffffffffL && method in setOf(715, 743, 840, 841, 842, 2003))
         val params = if (method == 743) {
             require(targetMm != null && targetMm.isFinite() && targetMm.toFloat().isFinite())
             require(durationMs != null && durationMs in 1..120000L)
             float(1, targetMm.toFloat()) + uint(2, durationMs) + uint(3, 1)
+        } else if(method==841) {
+            require(targetMm==null && durationMs==null)
+            float(1,0f)+float(2,1f) // Only the user-requested complete normalized stroke, never calibration/settings.
         } else { require(targetMm == null && durationMs == null); byteArrayOf() }
         return uint(1, 1) + bytes(2, uint(2, id) + bytes(method, params))
     }
@@ -31,7 +34,7 @@ internal object HandyRpc {
             require(it.wire == 2)
             val fs = fields(it.bytes)
             val names = when (it.tag) {
-                840 -> listOf("min", "max", "minimumMm", "maximumMm")
+                840, 841 -> listOf("min", "max", "minimumMm", "maximumMm")
                 842 -> listOf("position", "positionMm", "motorTempC", "speedMmPerSec")
                 2003 -> listOf("xLimitStart", "xLimitStop")
                 else -> emptyList()
@@ -45,7 +48,7 @@ internal object HandyRpc {
     fun validate(reply: Reply, id: Long, method: Int): Boolean {
         if (reply.id != id) return false
         require(!reply.error) { "firmware_error" }
-        require(reply.result == if (method in setOf(840, 842, 2003)) method else null) { "unexpected_result" }
+        require(reply.result == if (method in setOf(840, 841, 842, 2003)) method else null) { "unexpected_result" }
         return true
     }
     internal fun fields(data: ByteArray): List<Field> {

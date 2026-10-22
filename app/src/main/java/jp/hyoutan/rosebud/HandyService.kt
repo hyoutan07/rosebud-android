@@ -45,6 +45,9 @@ class HandyService : Service() {
                 "connected" to value.connected, "connecting" to value.connecting, "running" to value.running,
                 "trial_active" to value.trialActive, "stopping" to value.stopping, "status" to value.status,
                 "error" to (value.error ?: ""), "position_mm" to (value.positionMm ?: org.json.JSONObject.NULL), "upper_mm" to value.upperMm,
+                "device_minimum_mm" to (value.minimumMm ?: org.json.JSONObject.NULL),
+                "device_maximum_mm" to (value.maximumMm ?: org.json.JSONObject.NULL),
+                "use_device_maximum" to value.useDeviceMaximum,
                 "stage" to value.frame.stage, "elapsed_ms" to value.frame.elapsedMs,
                 "pattern" to value.frame.pattern,
                 "requested_speed_mm_s" to (if (track != null) value.frame.speedMmPerSec else org.json.JSONObject.NULL),
@@ -58,7 +61,7 @@ class HandyService : Service() {
         super.onCreate()
         app.handyServiceActive = true
         val upper = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", HandyLimits.DEFAULT_UPPER_MM).toDouble()
-        publish(HandySnapshot(upperMm = upper))
+        publish(HandySnapshot(upperMm = upper,useDeviceMaximum = useDeviceMaximum()))
         ble = HandyBleTransport(this,
             onState = { message -> update { it.copy(status = message) } },
             onFailure = { message -> transportEnded(message) })
@@ -92,16 +95,17 @@ class HandyService : Service() {
         if (app.handyState.running || app.handyState.trialActive || app.handyState.stopping || app.handyState.connecting) return
         val epoch = ++generation
         update { it.copy(connecting = true, connected = false, error = null, status = "Handyを探しています") }
-        ble.connect { received ->
+        ble.connect(useDeviceMaximum()) { received ->
             if (epoch != generation || destroyed) return@connect
             state = received
-            val upper = readUpper()
+            val upper = HandyBounds.create(received.minimumMm,received.maximumMm,readUpper(),useDeviceMaximum()).upperMm
             update { it.copy(connected = true, connecting = false, stopping = false, positionMm = received.positionMm,
-                minimumMm = received.minimumMm, maximumMm = received.maximumMm, upperMm = upper,
+                minimumMm = received.minimumMm, maximumMm = received.maximumMm, upperMm = upper,useDeviceMaximum = useDeviceMaximum(),
                 status = "接続しました。開始するまで動きません", error = null) }
         }
     }
 
+    private fun useDeviceMaximum() = getSharedPreferences("handy_connection",MODE_PRIVATE).getBoolean("use_device_maximum",true)
     private fun readUpper(): Double = getSharedPreferences("handy_connection", MODE_PRIVATE).getFloat("upper_mm", HandyLimits.DEFAULT_UPPER_MM).toDouble()
     private fun ready() {
         require(app.handyState.connected && !app.handyState.connecting && !app.handyState.stopping) { "Handyに接続してから開始してください" }
@@ -158,7 +162,7 @@ class HandyService : Service() {
                 received ->
                 if (epoch != generation || destroyed || leaving) return@readState
                 try {
-                    val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper())
+                    val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper(),useDeviceMaximum())
                     val position = HandyStartReadiness.position(envelope,received,now())
                     ProbeRepository.get(this).controlEvent("handy_prepare_sample", mapOf(
                         "position_mm" to received.positionMm,"speed_mm_s" to received.speedMmPerSec,
@@ -170,7 +174,7 @@ class HandyService : Service() {
                         return@readState
                     }
                     state = received.copy(positionMm = position); bounds = envelope
-                    update { it.copy(stopping = false, positionMm = position, upperMm = envelope.upperMm,
+                    update { it.copy(stopping = false, positionMm = position, upperMm = envelope.upperMm,useDeviceMaximum = useDeviceMaximum(),
                         minimumMm = received.minimumMm, maximumMm = received.maximumMm) }
                     alignTrack()
                     done()
@@ -180,7 +184,9 @@ class HandyService : Service() {
         ble.stop { accepted ->
             if(epoch!=generation || destroyed || leaving) return@stop
             if(!accepted) { fail("開始前の停止応答を確認できませんでした");return@stop }
-            poll()
+            ble.refreshStroke(useDeviceMaximum()) {
+                if(epoch==generation && !destroyed && !leaving) poll()
+            }
         }
     }
 

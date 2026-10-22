@@ -37,10 +37,10 @@ internal data class HandyBounds(val minimumMm: Double, val upperMm: Double) {
         return HandyStreamCommand(target, duration)
     }
     companion object {
-        fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double): HandyBounds {
+        fun create(deviceMinimum: Double, deviceMaximum: Double, userUpper: Double, useDeviceMaximum: Boolean = false): HandyBounds {
             require(deviceMinimum.isFinite() && deviceMaximum.isFinite() && userUpper.isFinite())
             require(userUpper in 1.0..200.0) { "上限は1〜200mmで入力してください" }
-            return HandyBounds(deviceMinimum, minOf(deviceMaximum, userUpper))
+            return HandyBounds(deviceMinimum, if(useDeviceMaximum) deviceMaximum else minOf(deviceMaximum, userUpper))
         }
     }
 }
@@ -50,7 +50,7 @@ internal data class HandySnapshot(
     val status: String = "未接続", val error: String? = null, val frame: HandyFrame = HandyFrame(),
     val positionMm: Double? = null, val upperMm: Double = 87.0,
     val minimumMm: Double? = null, val maximumMm: Double? = null,
-    val trialStatus: String = "未実施",
+    val trialStatus: String = "未実施", val useDeviceMaximum: Boolean = true,
 )
 
 /** A firmware acknowledgement does not mean the carriage has reached the requested position. */
@@ -107,5 +107,13 @@ internal object HandyStartReadiness {
     fun position(bounds: HandyBounds, state: HandyDeviceState, time: Long): Double? {
         if(time-state.sampledAt !in 0..2000 || !state.speedMmPerSec.isFinite() || abs(state.speedMmPerSec)>.1) return null
         return HandyTelemetry.position(state.positionMm,bounds.minimumMm,bounds.upperMm)
+    }
+}
+
+internal object HandyStrokeRange {
+    fun isFull(reply: HandyRpc.Reply): Boolean {
+        val low=reply.values["min"] ?: return false
+        val high=reply.values["max"] ?: return false
+        return low.isFinite() && high.isFinite() && abs(low)<=.0001 && abs(high-1.0)<=.0001
     }
 }

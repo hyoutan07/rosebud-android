@@ -13,7 +13,7 @@ import android.os.SystemClock
 import java.util.ArrayDeque
 import java.util.UUID
 
-/** One explicit BLE session. No reconnect, mode change, calibration or settings write. */
+/** One explicit BLE session. No reconnect, mode change, calibration or motor settings write. Maximum stroke may be reset to 0..1 while stopped. */
 @SuppressLint("MissingPermission")
 internal class HandyBleTransport(
     context: Context,
@@ -37,6 +37,7 @@ internal class HandyBleTransport(
     private var closing = false
     private var failing = false
     private var ready: ((HandyDeviceState) -> Unit)? = null
+    private var fullStrokeRequested = false
     private var minimum: Double? = null
     private var maximum: Double? = null
     private var minimumSpeed = 32.0
@@ -49,7 +50,8 @@ internal class HandyBleTransport(
     private var stopCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var stopping = false
 
-    fun connect(onReady: (HandyDeviceState) -> Unit) = dispatch {
+    fun connect(useDeviceMaximum: Boolean = false, onReady: (HandyDeviceState) -> Unit) = dispatch {
+        fullStrokeRequested = useDeviceMaximum
         if (!permissions()) { onFailure("HandyのBluetooth権限を許可してください。"); return@dispatch }
         if (closing || failing) return@dispatch
         if (subscribed) { ready = onReady; preflight(); return@dispatch }
@@ -153,17 +155,35 @@ internal class HandyBleTransport(
         val callbacks = stopCallbacks.toList(); stopCallbacks.clear()
         callbacks.forEach { it(accepted) }
     }
+    /** Called only after a dedicated stop; changes stroke bounds, never moves or calibrates. */
+    fun refreshStroke(expandToMaximum: Boolean, done: () -> Unit): Unit = dispatch {
+        fun readRange() {
+            send(840) { reply ->
+                val low = reply.values["minimumMm"]; val high = reply.values["maximumMm"]
+                if(low==null || high==null || low<0 || high-low<=2 || high>1000) {
+                    fail("Handyの可動範囲を確認できませんでした。");return@send
+                }
+                minimum=low;maximum=high
+                ProbeRepository.get(context).controlEvent("handy_stroke_readback",mapOf(
+                    "min" to (reply.values["min"] ?: 0.0),"max" to (reply.values["max"] ?: 0.0),
+                    "minimum_mm" to low,"maximum_mm" to high,"requested_full" to expandToMaximum))
+                if(expandToMaximum && !HandyStrokeRange.isFull(reply)) {
+                    fail("本体のストロークを最大に設定できませんでした。");return@send
+                }
+                done()
+            }
+        }
+        if(expandToMaximum) send(841) { reply ->
+            if(!HandyStrokeRange.isFull(reply)) { fail("本体のストロークを最大に設定できませんでした。");return@send }
+            readRange()
+        } else readRange()
+    }
     private fun preflight() {
         minimum = null; maximum = null
         onState("Handyの停止・範囲・状態を確認しています。")
         stop { accepted ->
             if (!accepted || closing) return@stop
-            send(840) { reply ->
-                val low = reply.values["minimumMm"]; val high = reply.values["maximumMm"]
-                if (low == null || high == null || low < 0 || high <= low || high > 1000) {
-                    fail("Handyの可動範囲を確認できませんでした。"); return@send
-                }
-                minimum = low; maximum = high
+            refreshStroke(fullStrokeRequested) {
                 send(2003) { settings ->
                     val speed = settings.values["setting6"] ?: 0.0
                     if (!speed.isFinite() || speed <= 0 || speed > 10000) { fail("Handyの速度設定を確認できませんでした。"); return@send }

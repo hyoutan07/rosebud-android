@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-22",
+  "version": "0.14.8",
+  "versionCode": 26,
+  "tests": {
+    "tests": 212,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Error": 0,
+    "Warning": 16
+  },
+  "build": "success",
+  "apk": "app/build/releases/rosebud-0.14.8-debug.apk",
+  "sha256": "a229e6f9da81fc05000ab9207410902ddd91a93d784384b0ca3b1e089405c41f",
+  "device": {
+    "model": "CPH2199",
+    "installedCode": 26,
+    "controlSettingsByteIdentical": true,
+    "savedManualUpperMm": 87,
+    "useDeviceMaximum": true,
+    "reportedUpperBeforeStrokeResetMm": 88.10089111328125,
+    "reportedMinimumAfterMm": 5,
+    "reportedMaximumAfterMm": 118.99299621582031,
+    "strokeNormalized": [
+      0,
+      1
+    ],
+    "targetRangeMm": [
+      6,
+      117.99299621582031
+    ],
+    "connected": true,
+    "running": false,
+    "speedMmSec": 0,
+    "mediaProjectionAfter": "null",
+    "motionStartIssued": false,
+    "screenshot": "handy-maximum/connected-handy.png"
+  },
+  "deviceWrite": "Only stopped normalized stroke min=0 max=1 via841; verified full via841 response and840 readback. No calibration843 or motor setting2004.",
+  "scenario": "Existing physical-span based distance and duration now use full reported range; stage speed caps, resting, audio and randomness preserved.",
+  "physicalFullRangeMotion": "awaits user start"
+}
