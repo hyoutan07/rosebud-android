@@ -36,8 +36,12 @@
     "dedicated Handy log + GATT/RPC/preparation diagnostics"
   ],
   "limits": "Original initiating failure lost to Rosebud log rotation. Live physical reconnection/movement remains unverified because Handy not detected. No claim that every cause is fixed.",
-  "pendingUserQuestions": [
-    "whether original failure followed an action or occurred without input",
-    "whether Handy is powered on and advertising BLE"
-  ]
+  "pendingUserQuestions": [],
+  "userFollowup": {
+    "failureTime": "previous night, finish stage",
+    "possibleTrigger": "user suspects stronger motion; not confirmed",
+    "handyPowerNow": "off",
+    "scanNotFoundInterpretation": "consistent with power off, not evidence of another connection regression",
+    "physicalRetest": "pending next powered-on use"
+  }
 }
