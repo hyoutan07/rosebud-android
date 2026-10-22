@@ -240,4 +240,20 @@ class HandyWaveTest {
         }
     }
 
+    @Test fun manualStageSelectionPreservesTheAlreadyMovingWaveWithoutRearming() {
+        val track=HandyTrack(31);track.start(0)
+        track.sampleTrajectory(0,SoundFeatures(),.5,80.0)
+        val before=track.sampleTrajectory(1000,SoundFeatures(),.5,80.0)
+        assertTrue(track.selectStage("中間",1000))
+        val middle=track.sampleTrajectory(1000,SoundFeatures(),.5,80.0)
+        assertTrue(middle.running)
+        assertEquals("中間",middle.stage)
+        assertEquals(before.move,middle.move)
+        assertTrue(track.selectStage("フィニッシュ",1000))
+        val finish=track.sampleTrajectory(1000,SoundFeatures(),.5,80.0)
+        assertTrue(finish.running)
+        assertEquals("フィニッシュ",finish.stage)
+        assertEquals(before.move,finish.move)
+    }
+
 }

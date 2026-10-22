@@ -101,3 +101,11 @@ internal object HandyTelemetry {
         return positionMm.coerceIn(minimumMm, upperMm)
     }
 }
+
+/** Stop acknowledgement can arrive before physical speed reaches zero. Keep polling, never fail a session. */
+internal object HandyStartReadiness {
+    fun position(bounds: HandyBounds, state: HandyDeviceState, time: Long): Double? {
+        if(time-state.sampledAt !in 0..2000 || !state.speedMmPerSec.isFinite() || abs(state.speedMmPerSec)>.1) return null
+        return HandyTelemetry.position(state.positionMm,bounds.minimumMm,bounds.upperMm)
+    }
+}

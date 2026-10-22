@@ -142,7 +142,7 @@ internal class ProbeRepository(private val context: Context) {
                     part.bufferedReader().use { it.copyTo(writer) }
                 }
             }
-            listOf("control.2.jsonl", "control.1.jsonl", "control.jsonl").forEach { name ->
+            listOf("control.2.jsonl", "control.1.jsonl", "control.jsonl", "handy.2.jsonl", "handy.1.jsonl", "handy.jsonl").forEach { name ->
                 val part = File(context.filesDir, name)
                 if (part.exists()) {
                     writer.appendLine("\n--- $name ---")
@@ -168,6 +168,16 @@ internal class ProbeRepository(private val context: Context) {
             check(file.renameTo(File(context.filesDir, "control.1.jsonl")))
         }
         file.appendText(row)
+        if(type.startsWith("handy_")) {
+            // Rosebud's high-volume acknowledgements must not erase the Handy failure context.
+            val handy = File(context.filesDir,"handy.jsonl")
+            if(handy.length()+row.toByteArray().size>512*1024) {
+                File(context.filesDir,"handy.2.jsonl").delete()
+                File(context.filesDir,"handy.1.jsonl").let { if(it.exists()) check(it.renameTo(File(context.filesDir,"handy.2.jsonl"))) }
+                check(handy.renameTo(File(context.filesDir,"handy.1.jsonl")))
+            }
+            handy.appendText(row)
+        }
         (fields["state"] as? JSONObject)?.let { prefs.edit().putString("control_snapshot", it.toString()).apply() }
     }
 

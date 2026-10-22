@@ -192,6 +192,8 @@ internal class HandyBleTransport(
         }
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) = current(g) {
             if (status != BluetoothGatt.GATT_SUCCESS || newState == BluetoothProfile.STATE_DISCONNECTED) {
+                ProbeRepository.get(context).controlEvent("handy_gatt_disconnect",mapOf("status" to status,"new_state" to newState,
+                    "pending_method" to (pending?.method ?: -1),"closing" to closing,"failing" to failing))
                 subscribed = false
                 fail("Handyとの接続が切れました。物理停止は未確認です。"); return@current
             }
@@ -315,6 +317,8 @@ internal class HandyBleTransport(
         // Cancel old work first, then try the dedicated stop while ATT is still available.
         // A failure during this bounded stop releases immediately; no path claims physical stopping.
         if (failing) { release(); failing = false; return }
+        ProbeRepository.get(context).controlEvent("handy_transport_failure",mapOf("message" to message,
+            "pending_method" to (pending?.method ?: -1),"write_busy" to writeBusy,"subscribed" to subscribed,"stopping" to stopping))
         failing = true; ready = null
         if (subscribed && gatt != null && permissions()) {
             stop { release(); failing = false }

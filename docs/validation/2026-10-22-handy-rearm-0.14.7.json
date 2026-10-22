@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-22",
+  "version": "0.14.7",
+  "versionCode": 25,
+  "tests": {
+    "tests": 207,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Error": 0,
+    "Warning": 16
+  },
+  "build": "success",
+  "apk": "app/build/releases/rosebud-0.14.7-debug.apk",
+  "sha256": "fc90167335f0da80d78516e6d7b7a33a1a18f66d6a63759bfa37e86833cdc22a",
+  "device": {
+    "model": "CPH2199",
+    "installedCode": 25,
+    "controlSettingsByteIdentical": true,
+    "handySettingsByteIdentical": true,
+    "upperMm": 87,
+    "connectionAttempt": "not found during 20-second scan",
+    "mediaProjectionAfter": "null",
+    "startedMotionAutomatically": false,
+    "screenshot": "handy-rearm/connection.png",
+    "dedicatedHandyLogVerified": true,
+    "missingDeviceFailureHandledOnceWithoutRepeatedStop": true
+  },
+  "changes": [
+    "stage switch preserves active stream without stop/re-arm",
+    "startup polls residual velocity instead of failing at first read",
+    "duplicate start ignored while active/preparing",
+    "transport teardown not re-entered by service",
+    "dedicated Handy log + GATT/RPC/preparation diagnostics"
+  ],
+  "limits": "Original initiating failure lost to Rosebud log rotation. Live physical reconnection/movement remains unverified because Handy not detected. No claim that every cause is fixed.",
+  "pendingUserQuestions": [
+    "whether original failure followed an action or occurred without input",
+    "whether Handy is powered on and advertising BLE"
+  ]
+}

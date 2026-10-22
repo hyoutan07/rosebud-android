@@ -61,11 +61,7 @@ class HandyService : Service() {
         publish(HandySnapshot(upperMm = upper))
         ble = HandyBleTransport(this,
             onState = { message -> update { it.copy(status = message) } },
-            onFailure = { message ->
-                state = null
-                update { it.copy(connected = false, connecting = false) }
-                fail(message)
-            })
+            onFailure = { message -> transportEnded(message) })
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,7 +71,7 @@ class HandyService : Service() {
             when (intent.action) {
                 ACTION_CONNECT -> connect()
                 ACTION_DISCONNECT -> stopMotion("切断中", disconnect = true)
-                ACTION_START -> beginScenario(intent)
+                ACTION_START -> if (track == null && !app.handyState.stopping) beginScenario(intent)
                 ACTION_TRIAL -> beginTrial(intent)
                 ACTION_STOP -> stopMotion("停止要求を送りました")
                 ACTION_WEAK -> changeScenario(weak = true)
@@ -155,20 +151,36 @@ class HandyService : Service() {
     }
 
     private fun prepare(epoch: Long, done: () -> Unit) {
-        update { it.copy(stopping = true, status = "開始前の位置を確認中", error = null) }
-        ble.readState { received ->
-            if (epoch != generation || destroyed) return@readState
-            try {
-                val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper())
-                val position = HandyTelemetry.position(received.positionMm, envelope.minimumMm, envelope.upperMm)
-                    ?: error("現在位置が設定範囲の外です。位置を確認してから開始してください")
-                envelope.requireStart(position, received.speedMmPerSec, received.sampledAt, now())
-                state = received.copy(positionMm = position); bounds = envelope
-                update { it.copy(stopping = false, positionMm = position, upperMm = envelope.upperMm,
-                    minimumMm = received.minimumMm, maximumMm = received.maximumMm) }
-                alignTrack()
-                done()
-            } catch (e: Exception) { fail(e.message ?: "開始位置を確認できませんでした") }
+        update { it.copy(stopping = true, status = "開始前の位置と停止状態を確認中", error = null) }
+        fun poll() {
+            if (epoch != generation || destroyed || leaving) return
+            ble.readState {
+                received ->
+                if (epoch != generation || destroyed || leaving) return@readState
+                try {
+                    val envelope = HandyBounds.create(received.minimumMm, received.maximumMm, readUpper())
+                    val position = HandyStartReadiness.position(envelope,received,now())
+                    ProbeRepository.get(this).controlEvent("handy_prepare_sample", mapOf(
+                        "position_mm" to received.positionMm,"speed_mm_s" to received.speedMmPerSec,
+                        "sample_age_ms" to (now()-received.sampledAt),"ready" to (position!=null),
+                        "minimum_mm" to envelope.minimumMm,"upper_mm" to envelope.upperMm))
+                    if(position==null) {
+                        update { it.copy(status = "位置と停止状態を再確認しています。接続は維持しています", error = null) }
+                        main.postDelayed({ poll() },250)
+                        return@readState
+                    }
+                    state = received.copy(positionMm = position); bounds = envelope
+                    update { it.copy(stopping = false, positionMm = position, upperMm = envelope.upperMm,
+                        minimumMm = received.minimumMm, maximumMm = received.maximumMm) }
+                    alignTrack()
+                    done()
+                } catch (e: Exception) { fail(e.message ?: "開始設定を確認できませんでした") }
+            }
+        }
+        ble.stop { accepted ->
+            if(epoch!=generation || destroyed || leaving) return@stop
+            if(!accepted) { fail("開始前の停止応答を確認できませんでした");return@stop }
+            poll()
         }
     }
 
@@ -325,19 +337,9 @@ class HandyService : Service() {
         if (!app.handyState.running || app.handyState.stopping) return
         if (weak) current.weaken(!app.handyState.frame.weak, now())
         else if (!current.selectStage(stage ?: return, now())) return
-        val epoch = ++generation
-        current.interruptSegment(now())
-        streamCadence = null
-        update { it.copy(stopping = true, status = "動作を切り替えるため停止中") }
-        ble.stop { accepted ->
-            if (epoch != generation || destroyed) return@stop
-            if (!accepted) { fail("停止応答を確認できません。本体の停止ボタンを押してください"); return@stop }
-            prepare(epoch) {
-                streamCadence = HandyStreamCadence(checkNotNull(state).sampledAt)
-                startClock(epoch)
-                stream(epoch)
-            }
-        }
+        // Existing acknowledged stream takes the new stage at the next sample/turn. No stop/re-arm race.
+        ProbeRepository.get(this).controlEvent("handy_stage_change",mapOf("stage" to current.frame.stage,"weak" to current.frame.weak))
+        update { it.copy(frame = current.clockFrame(now()), error = null, status = "${current.frame.stage}へ切り替えました") }
     }
 
     private fun stopMotion(message: String, disconnect: Boolean = false, completedTrial: Boolean = false, error: String? = null) {
@@ -364,9 +366,24 @@ class HandyService : Service() {
         }
     }
 
+    private fun transportEnded(message: String) {
+        if (destroyed || leaving) return
+        ++generation
+        // Transport owns its single bounded stop/close. Re-entering stop here caused duplicate failure chains.
+        ProbeRepository.get(this).controlEvent("handy_session_transport_end",mapOf("message" to message,
+            "was_running" to app.handyState.running,"was_connecting" to app.handyState.connecting))
+        state = null; bounds = null; streamCadence = null
+        track?.stop(); track = null; trial = null
+        releaseWake()
+        update { it.copy(connected = false,connecting = false,running = false,trialActive = false,stopping = false,
+            frame = it.frame.copy(running = false,weak = false,move = null),status = message,error = message) }
+    }
+
     private fun fail(message: String) {
         if (destroyed || leaving) return
         val connected = app.handyState.connected
+        ProbeRepository.get(this).controlEvent("handy_session_failure",mapOf("message" to message,
+            "connected" to connected,"running" to app.handyState.running,"preparing" to app.handyState.stopping))
         stopMotion(message, error = message)
         // Transport failures close BLE themselves. A protocol/application failure still gets a stop request.
         if (!connected) update { it.copy(connected = false, connecting = false) }

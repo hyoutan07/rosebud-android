@@ -167,3 +167,21 @@ class HandyTelemetryRecoveryTest {
         }
     }
 }
+
+class HandyStartReadinessTest {
+    private val bounds=HandyBounds(5.0,67.6961669921875)
+    @org.junit.Test fun stopAcknowledgementDoesNotRequireTheFirstReadToBeStationary() {
+        fun state(speed:Double,at:Long)=HandyDeviceState(5.0,67.6961669921875,26.666667938232422,speed,at)
+        org.junit.Assert.assertNull(HandyStartReadiness.position(bounds,state(32.0,1000),1000))
+        org.junit.Assert.assertNull(HandyStartReadiness.position(bounds,state(.2,1250),1250))
+        org.junit.Assert.assertEquals(26.666667938232422,HandyStartReadiness.position(bounds,state(0.0,1500),1500)!!,0.0)
+    }
+    @org.junit.Test fun badReadWaitsAndTheNextValidReadCanStartWithoutChangingTheBounds() {
+        val normal=HandyDeviceState(5.0,67.6961669921875,68.0,0.0,1000)
+        org.junit.Assert.assertNull(HandyStartReadiness.position(bounds,normal.copy(speedMmPerSec=Double.NaN),1000))
+        org.junit.Assert.assertNull(HandyStartReadiness.position(bounds,normal.copy(positionMm=100.0),1000))
+        org.junit.Assert.assertNull(HandyStartReadiness.position(bounds,normal,3001))
+        org.junit.Assert.assertEquals(bounds.upperMm,HandyStartReadiness.position(bounds,normal.copy(sampledAt=3250),3250)!!,0.0)
+        org.junit.Assert.assertEquals(66.6961669921875,bounds.target(1.0),0.0)
+    }
+}

@@ -1,3 +1,5 @@
+再発対応：0.14.7で開始/切替時の停止判定を修正。[確認できた原因と不足](handy-rearm-recovery.md)。次は本人の開始/切替/継続使用と、再発時は専用handyログを確認する。
+
 # 次のTODO
 
 更新：2026-10-21 JST。**第2は0.9.1/code13で完了し、本人が完成と評価。** 81テスト成功・Lintエラー0・APKハッシュをメインでも既存成果物と照合した。追加運転・再ビルドはしていない。現行仕様は[favorite-crescendo-spec.md](favorite-crescendo-spec.md)。0.4.0の短時間2台動作・停止の結果は[第2初期記録](android-second-task.md)と[根拠](validation/2026-10-20-second-live.json)に残す。
